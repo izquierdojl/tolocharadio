@@ -100,7 +100,7 @@ Con la imagen publicada en GHCR (ver sección siguiente):
 docker run -d --name tolocharadio -p 127.0.0.1:3000:3000 \
   -e JWT_ACCESS_SECRET='...' -e JWT_REFRESH_SECRET='...' \
   -v tolocharadio_data:/data \
-  ghcr.io/<usuario>/tolocharadio:latest
+  ghcr.io/izquierdojl/tolocharadio:latest
 ```
 
 ## Integración continua y publicación (GitHub)
