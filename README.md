@@ -38,10 +38,15 @@ La API sirve también el frontend compilado (`STATIC_DIR`). En desarrollo, Vite 
 
 ```bash
 npm install          # instala todos los workspaces
-cp .env.example .env # completa al menos JWT_ACCESS_SECRET y JWT_REFRESH_SECRET
+cp .env.example .env # crea tu .env local (la API lo carga automaticamente)
+# opcional: genera secretos reales con `openssl rand -hex 32` y edita JWT_ACCESS_SECRET/JWT_REFRESH_SECRET
 
 npm run dev          # arranca API (puerto 3000) y web (puerto 5173, proxy /api) a la vez
 ```
+
+> El fichero `.env` de la raíz está ignorado por git (no se publica). La API lo carga al
+> arrancar (`npm run dev`/`npm start`) y `docker compose up -d` también lo lee para
+> interpolar las variables; en producción usa variables de entorno reales o un `.env` propio.
 
 Comandos raíz:
 

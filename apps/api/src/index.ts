@@ -3,7 +3,9 @@ import { createDb } from "./db/client.js";
 import { applyMigrations, migrationsFolderPath } from "./db/migrate.js";
 import { createApp } from "./app.js";
 import { createContext } from "./factory.js";
+import { loadDotEnv } from "./lib/envfile.js";
 
+loadDotEnv();
 const config = loadConfig();
 const { db, sqlite } = createDb(config.databasePath);
 applyMigrations(db, migrationsFolderPath());
