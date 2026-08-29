@@ -134,6 +134,12 @@ npm run release:major  # major (0.1.0 -> 1.0.0)
 git push && git push --tags
 ```
 
+**A prueba de `openspec update`**: el trigger se ancla en el `AGENTS.md` de la raíz (que openspec
+no regenera), por si `openspec update` sobreescribe el skill `openspec-archive-change` con su
+template original. Tras ejecutar `openspec update`, revisa `git status` sobre
+`.opencode/skills/`; si el paso de release desapareció, la regla del `AGENTS.md` sigue siendo
+obligatoria (puedes re-añadir el paso 7 al skill manualmente si quieres).
+
 ## Uso de la API
 
 La especificación OpenAPI está publicada por el propio servidor:
