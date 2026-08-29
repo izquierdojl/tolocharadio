@@ -36,7 +36,7 @@ La exploración de emisoras en rejilla SHALL estar disponible únicamente para u
 - **THEN** no ve la lista de emisoras ni la búsqueda y es redirigido a la portada o al inicio de sesión
 
 ### Requirement: Búsqueda y filtros
-La barra de búsqueda por nombre y los filtros de país, idioma y género SHALL estar disponibles únicamente para usuarios autenticados, SIN permitir tampoco que un invitado busque ni filtre. La rejilla se actualiza con los resultados obtenidos de la API.
+El sistema SHALL ofrecer en la interfaz una barra de búsqueda por nombre y filtros de país, idioma y género (tipo de emisora) mediante controles combobox con búsqueda directa, que muestran las opciones disponibles del catálogo y permiten escribir para filtrarlas y seleccionarlas, actualizando la rejilla con los resultados obtenidos de la API. La búsqueda y los filtros SHALL estar disponibles únicamente para usuarios autenticados, SIN permitir tampoco que un invitado busque ni filtre.
 
 #### Scenario: Búsqueda por texto
 - **WHEN** un usuario autenticado escribe un término en la barra de búsqueda
@@ -49,6 +49,18 @@ La barra de búsqueda por nombre y los filtros de país, idioma y género SHALL 
 #### Scenario: Sin resultados
 - **WHEN** una búsqueda o filtro no devuelve emisoras
 - **THEN** la interfaz muestra un estado vacío comprensible con acción para reintentar o quitar filtros
+
+#### Scenario: Selección de opción en el combobox
+- **WHEN** un usuario abre el combobox de país, idioma o género y escribe para buscar una opción
+- **THEN** la lista desplegable filtra las opciones disponibles del catálogo y el usuario puede seleccionar una
+
+#### Scenario: Filtrado por género
+- **WHEN** un usuario selecciona un género en el filtro
+- **THEN** la rejilla muestra únicamente emisoras de ese género
+
+#### Scenario: Opciones del catálogo no disponibles
+- **WHEN** no es posible cargar los países, idiomas o géneros disponibles del catálogo
+- **THEN** el filtro correspondiente permanece utilizable (permite indicar un valor) y la interfaz comunica el problema sin romper la búsqueda
 
 #### Scenario: Invitado sin búsqueda
 - **WHEN** un usuario sin sesión está en la aplicación
