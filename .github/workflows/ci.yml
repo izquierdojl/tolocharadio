@@ -49,8 +49,8 @@ jobs:
       - name: Smoke test en contenedor
         run: |
           docker run -d --name tolocharadio-smoke \
-            -e JWT_ACCESS_SECRET="smoke-access-secret-0123456789" \
-            -e JWT_REFRESH_SECRET="smoke-refresh-secret-9876543210" \
+            -e JWT_ACCESS_SECRET="smoke-access-secret-0123456789abcd" \
+            -e JWT_REFRESH_SECRET="smoke-refresh-secret-9876543210wxyz" \
             -p 127.0.0.1:3100:3000 tolocharadio:test
           sleep 3
           docker ps -a
