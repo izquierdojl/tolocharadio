@@ -52,6 +52,11 @@ jobs:
             -e JWT_ACCESS_SECRET="smoke-access-secret-0123456789" \
             -e JWT_REFRESH_SECRET="smoke-refresh-secret-9876543210" \
             -p 127.0.0.1:3100:3000 tolocharadio:test
+          sleep 3
+          docker ps -a
+          echo "--- logs del arranque ---"
+          docker logs tolocharadio-smoke
+          echo "--- probando health ---"
           for i in $(seq 1 30); do
             curl -fsS http://127.0.0.1:3100/api/v1/health && break || sleep 1
           done
