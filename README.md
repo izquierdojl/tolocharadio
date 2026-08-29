@@ -113,6 +113,27 @@ docker run -d --name tolocharadio -p 127.0.0.1:3000:3000 \
 - **`ci`**: en `push`/`pull_request` ejecuta `npm ci`, typecheck, lint, tests y build, y además compila la imagen Docker y hace un smoke test en contenedor (`/api/v1/health` y servido de la web).
 - **`release`**: al crear un tag `v*` (`git tag v0.1.0 && git push --tags`) construye la imagen y la publica en GitHub Container Registry (GHCR) con tags semVer y `latest`.
 
+## Versionado automático
+
+La versión sube **sola al archivar una especificación** (flujo OpenSpec): al finalizar el archivo de un change, se ejecuta automáticamente `node scripts/bump.js minor`, que sincroniza la versión en la raíz y en todos los workspaces, crea el commit `chore: release vX.Y.Z` y el tag `vX.Y.Z`, y lo empuja a GitHub. El tag dispara de forma automática el workflow `release` → GHCR.
+
+Regla semver mientras la versión principal sea `0`:
+
+| Situación | Bump | Ejemplo |
+| --- | --- | --- |
+| Nueva especificación archivada (feature, infraestructura, etc.) | `minor` (automático) | `0.1.0 → 0.2.0` |
+| Bugfix / hotfix | `patch` | `0.2.0 → 0.2.1` |
+| Primera versión estable (decisión tuya) | `major` | `0.2.0 → 1.0.0` |
+
+Comandos manuales equivalentes (por si quieres lanzar un release sin archivar nada):
+
+```bash
+npm run release:spec   # minor (0.1.0 -> 0.2.0)
+npm run release:fix    # patch (0.1.0 -> 0.1.1)
+npm run release:major  # major (0.1.0 -> 1.0.0)
+git push && git push --tags
+```
+
 ## Uso de la API
 
 La especificación OpenAPI está publicada por el propio servidor:

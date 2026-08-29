@@ -17,7 +17,10 @@
     "start": "npm run start --workspace @tolocharadio/api",
     "test": "npm run test --workspace @tolocharadio/api",
     "lint": "npm run lint --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "release:spec": "node scripts/bump.js minor",
+    "release:fix": "node scripts/bump.js patch",
+    "release:major": "node scripts/bump.js major"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
