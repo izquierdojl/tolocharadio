@@ -1,7 +1,7 @@
 import type { Config } from "../config/env.js";
 import { AppError, notFound, serviceUnavailable } from "../errors.js";
 import { Cache } from "./cache.js";
-import { normalizeStationList, type Station } from "./normalize.js";
+import { normalizeOptions, normalizeStationList, type OptionsSort, type Station } from "./normalize.js";
 import { RadioBrowserClient } from "./radiobrowser.js";
 
 export interface StationPage {
@@ -99,5 +99,39 @@ export class StationsService {
         "El catalogo de emisoras no esta disponible temporalmente",
       );
     }
+  }
+
+  private async listOptions(
+    key: string,
+    fetchOptions: () => Promise<unknown[]>,
+    sort: OptionsSort = "alphabetical",
+  ): Promise<string[]> {
+    const fresh = this.cache.get(key) as string[] | undefined;
+    if (fresh) return fresh;
+
+    try {
+      const options = normalizeOptions(await fetchOptions(), sort);
+      this.cache.set(key, options);
+      return options;
+    } catch {
+      const stale = this.cache.getStale(key) as string[] | undefined;
+      if (stale) return stale;
+      throw serviceUnavailable(
+        "CATALOG_UNAVAILABLE",
+        "El catalogo de emisoras no esta disponible temporalmente",
+      );
+    }
+  }
+
+  async listCountries(): Promise<string[]> {
+    return this.listOptions("countries", () => this.client.countries());
+  }
+
+  async listLanguages(): Promise<string[]> {
+    return this.listOptions("languages", () => this.client.languages());
+  }
+
+  async listTags(): Promise<string[]> {
+    return this.listOptions("tags", () => this.client.tags(), "stationcount");
   }
 }

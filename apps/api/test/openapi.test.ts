@@ -28,6 +28,9 @@ describe("OpenAPI spec", () => {
       "/users/me/password",
       "/stations",
       "/stations/{id}",
+      "/stations/countries",
+      "/stations/languages",
+      "/stations/tags",
       "/favorites",
       "/favorites/{stationId}",
       "/history",
@@ -53,5 +56,11 @@ describe("OpenAPI spec", () => {
     expect(favoritesGet.security).toBeDefined();
     const stationsGet = spec.paths["/stations"]!.get! as { security?: unknown };
     expect(Array.isArray(stationsGet.security) && stationsGet.security.length === 0).toBe(true);
+    const countriesGet = spec.paths["/stations/countries"]!.get! as { security?: unknown };
+    expect(Array.isArray(countriesGet.security) && countriesGet.security.length === 0).toBe(true);
+    const languagesGet = spec.paths["/stations/languages"]!.get! as { security?: unknown };
+    expect(Array.isArray(languagesGet.security) && languagesGet.security.length === 0).toBe(true);
+    const tagsGet = spec.paths["/stations/tags"]!.get! as { security?: unknown };
+    expect(Array.isArray(tagsGet.security) && tagsGet.security.length === 0).toBe(true);
   });
 });

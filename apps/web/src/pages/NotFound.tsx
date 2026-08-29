@@ -15,7 +15,7 @@ export function NotFound() {
         to="/"
         className="rounded-lg bg-ochre-500 px-4 py-2 text-sm font-medium text-pine-950 hover:bg-ochre-400"
       >
-        Volver a explorar
+        Volver al inicio
       </Link>
     </div>
   );

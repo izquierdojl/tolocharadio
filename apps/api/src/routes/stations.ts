@@ -54,6 +54,30 @@ export function stationsRouter(ctx: AppContext): Router {
     }
   });
 
+  router.get("/stations/countries", async (_req, res, next) => {
+    try {
+      res.json({ items: await ctx.stations.listCountries() });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get("/stations/languages", async (_req, res, next) => {
+    try {
+      res.json({ items: await ctx.stations.listLanguages() });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get("/stations/tags", async (_req, res, next) => {
+    try {
+      res.json({ items: await ctx.stations.listTags() });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   router.get("/stations/:id", async (req, res, next) => {
     try {
       const station = await ctx.stations.getStation(req.params.id);

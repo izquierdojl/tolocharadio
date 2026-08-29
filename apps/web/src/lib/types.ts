@@ -34,6 +34,10 @@ export interface Page<T> {
   pagination: { offset: number; limit: number; hasMore: boolean };
 }
 
+export interface StringListPage {
+  items: string[];
+}
+
 export interface FavoriteEntry {
   addedAt: number;
   station: Station;

@@ -352,6 +352,72 @@ export function buildOpenApi(): Record<string, unknown> {
           },
         },
       },
+      "/stations/countries": {
+        get: {
+          tags: ["Emisoras"],
+          summary: "Paises disponibles en el catalogo",
+          security: [],
+          responses: {
+            "200": {
+              description: "Paises ordenados alfabeticamente",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["items"],
+                    properties: { items: { type: "array", items: { type: "string" } } },
+                  },
+                },
+              },
+            },
+            "503": errorResponses["503"],
+          },
+        },
+      },
+      "/stations/languages": {
+        get: {
+          tags: ["Emisoras"],
+          summary: "Idiomas disponibles en el catalogo",
+          security: [],
+          responses: {
+            "200": {
+              description: "Idiomas ordenados alfabeticamente",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["items"],
+                    properties: { items: { type: "array", items: { type: "string" } } },
+                  },
+                },
+              },
+            },
+            "503": errorResponses["503"],
+          },
+        },
+      },
+      "/stations/tags": {
+        get: {
+          tags: ["Emisoras"],
+          summary: "Generos (tags) disponibles en el catalogo",
+          security: [],
+          responses: {
+            "200": {
+              description: "Generos ordenados alfabeticamente",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["items"],
+                    properties: { items: { type: "array", items: { type: "string" } } },
+                  },
+                },
+              },
+            },
+            "503": errorResponses["503"],
+          },
+        },
+      },
       "/stations": {
         get: {
           tags: ["Emisoras"],
@@ -361,7 +427,7 @@ export function buildOpenApi(): Record<string, unknown> {
             { name: "name", in: "query", required: false, schema: { type: "string" }, description: "Texto a buscar en el nombre" },
             { name: "country", in: "query", required: false, schema: { type: "string" }, description: "Pais" },
             { name: "language", in: "query", required: false, schema: { type: "string" }, description: "Idioma" },
-            { name: "tag", in: "query", required: false, schema: { type: "string" }, description: "Etiqueta" },
+            { name: "tag", in: "query", required: false, schema: { type: "string" }, description: "Etiqueta o genero de la emisora" },
             { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 100, default: 24 } },
             { name: "offset", in: "query", required: false, schema: { type: "integer", minimum: 0, default: 0 } },
             { name: "unique", in: "query", required: false, schema: { type: "boolean", default: false }, description: "Excluir emisoras duplicadas por nombre" },

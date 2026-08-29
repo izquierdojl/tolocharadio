@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell.js";
 import { useAuthStore } from "./stores/auth.js";
+import { Home } from "./pages/Home.js";
 import { Explore } from "./pages/Explore.js";
 import { Favorites } from "./pages/Favorites.js";
 import { History } from "./pages/History.js";
@@ -15,7 +16,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
     return <div className="flex h-64 items-center justify-center text-pine-500">Cargando sesión…</div>;
   }
   if (status !== "authenticated") {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
   return children;
 }
@@ -25,7 +26,15 @@ export function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<AppShell />}>
-          <Route path="/" element={<Explore />} />
+          <Route path="/" element={<Home />} />
+          <Route
+            path="/explorar"
+            element={
+              <RequireAuth>
+                <Explore />
+              </RequireAuth>
+            }
+          />
           <Route
             path="/favoritos"
             element={

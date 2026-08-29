@@ -60,4 +60,19 @@ export class RadioBrowserClient {
     const body: unknown = await this.request(`stations/byuuid/${encodeURIComponent(uuid)}`, {});
     return Array.isArray(body) ? (body as unknown[]) : [];
   }
+
+  async countries(): Promise<unknown[]> {
+    const body: unknown = await this.request("countries", {});
+    return Array.isArray(body) ? (body as unknown[]) : [];
+  }
+
+  async languages(): Promise<unknown[]> {
+    const body: unknown = await this.request("languages", {});
+    return Array.isArray(body) ? (body as unknown[]) : [];
+  }
+
+  async tags(): Promise<unknown[]> {
+    const body: unknown = await this.request("tags", { limit: "100000" });
+    return Array.isArray(body) ? (body as unknown[]) : [];
+  }
 }

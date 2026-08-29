@@ -1,10 +1,11 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { History, Heart, Home, LogOut, Radio } from "lucide-react";
+import { Heart, History, Home, LogOut } from "lucide-react";
 import { useAuthStore } from "../stores/auth.js";
+import { SierraEmblem } from "./SierraEmblem.js";
 import { PlayerBar } from "./PlayerBar.js";
 
 const NAV_ITEMS = [
-  { to: "/", label: "Explorar", icon: Home },
+  { to: "/explorar", label: "Explorar", icon: Home, auth: true },
   { to: "/favoritos", label: "Favoritos", icon: Heart, auth: true },
   { to: "/historial", label: "Historial", icon: History, auth: true },
 ];
@@ -12,9 +13,7 @@ const NAV_ITEMS = [
 function Logo() {
   return (
     <NavLink to="/" className="flex items-center gap-2 text-pine-100">
-      <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-pine-500 to-pine-800 ring-1 ring-pine-600">
-        <Radio className="size-5 text-pine-100" />
-      </span>
+      <SierraEmblem className="size-9 shrink-0" />
       <span className="text-lg font-semibold tracking-tight">
         Tolocha<span className="text-ochre-400">Radio</span>
       </span>

@@ -161,3 +161,187 @@ describe("station detail", () => {
     expect(res.body.error.code).toBe("STATION_NOT_FOUND");
   });
 });
+
+describe("stations service listados", () => {
+  function stubListados(body: unknown) {
+    fetchMock = vi.fn(async (input: unknown) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/json/countries")) return Response.json(body);
+      if (url.pathname.endsWith("/json/languages")) return Response.json(body);
+      if (url.pathname.endsWith("/json/tags")) return Response.json(body);
+      throw new Error(`fetch inesperado: ${String(url)}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+  }
+
+  it("listCountries devuelve opciones normalizadas y cachea", async () => {
+    stubListados([
+      { name: "Spain", stationcount: 10 },
+      { name: "Argentina", stationcount: 0 },
+      { name: "Brazil", stationcount: 5 },
+    ]);
+    const first = await server.ctx.stations.listCountries();
+    expect(first).toEqual(["Brazil", "Spain"]);
+    await server.ctx.stations.listCountries();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("listLanguages devuelve opciones normalizadas y usan claves de cache distintas", async () => {
+    stubListados([{ name: "english", stationcount: 5 }]);
+    await server.ctx.stations.listCountries();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const langs = await server.ctx.stations.listLanguages();
+    expect(langs).toEqual(["english"]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("listTags devuelve opciones por popularidad y cachea con su propia clave", async () => {
+    stubListados([
+      { name: "jazz", stationcount: 5 },
+      { name: "Pop", stationcount: 900 },
+      { name: "rock", stationcount: 3000 },
+      { name: "dead", stationcount: 0 },
+    ]);
+    const tags = await server.ctx.stations.listTags();
+    expect(tags).toEqual(["rock", "Pop", "jazz"]);
+    await server.ctx.stations.listTags();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("sirve caché si el origen se cae tras cachear", async () => {
+    stubListados([{ name: "Spain", stationcount: 10 }]);
+    await server.ctx.stations.listCountries();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("caido");
+      }),
+    );
+    await expect(server.ctx.stations.listCountries()).resolves.toEqual(["Spain"]);
+  });
+
+  it("lanza 503 si el origen se cae sin caché", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("caido");
+      }),
+    );
+    await expect(server.ctx.stations.listCountries()).rejects.toMatchObject({
+      status: 503,
+      code: "CATALOG_UNAVAILABLE",
+    });
+    await expect(server.ctx.stations.listLanguages()).rejects.toMatchObject({
+      status: 503,
+      code: "CATALOG_UNAVAILABLE",
+    });
+  });
+});
+
+describe("endpoints de listados", () => {
+  it("GET /stations/countries no es capturado por :id y devuelve { items }", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: unknown) => {
+        const url = new URL(String(input));
+        if (url.pathname.endsWith("/json/countries")) {
+          return Response.json([
+            { name: "Spain", stationcount: 10 },
+            { name: "Brazil", stationcount: 5 },
+          ]);
+        }
+        throw new Error(`fetch inesperado: ${String(url)}`);
+      }),
+    );
+    const res = await request(server.app).get("/api/v1/stations/countries").expect(200);
+    expect(res.body).toEqual({ items: ["Brazil", "Spain"] });
+  });
+
+  it("GET /stations/languages devuelve { items }", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: unknown) => {
+        const url = new URL(String(input));
+        if (url.pathname.endsWith("/json/languages")) {
+          return Response.json([
+            { name: "spanish", stationcount: 1 },
+            { name: "english", stationcount: 2 },
+          ]);
+        }
+        throw new Error(`fetch inesperado: ${String(url)}`);
+      }),
+    );
+    const res = await request(server.app).get("/api/v1/stations/languages").expect(200);
+    expect(res.body).toEqual({ items: ["english", "spanish"] });
+  });
+
+  it("GET /stations/tags no es capturado por :id y devuelve { items }", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: unknown) => {
+        const url = new URL(String(input));
+        if (url.pathname.endsWith("/json/tags")) {
+          return Response.json([
+            { name: "jazz", stationcount: 5 },
+            { name: "rock", stationcount: 3 },
+            { name: "Pop", stationcount: 0 },
+          ]);
+        }
+        throw new Error(`fetch inesperado: ${String(url)}`);
+      }),
+    );
+    const res = await request(server.app).get("/api/v1/stations/tags").expect(200);
+    expect(res.body).toEqual({ items: ["jazz", "rock"] });
+  });
+
+  it("GET /stations?tag propaga el genero a radio-browser", async () => {
+    let capturedTag: string | null = null;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: unknown) => {
+        const url = new URL(String(input));
+        if (url.pathname.endsWith("/stations/search")) {
+          capturedTag = url.searchParams.get("tag");
+          return Response.json([RAW_STATION]);
+        }
+        throw new Error(`fetch inesperado: ${String(url)}`);
+      }),
+    );
+    const res = await request(server.app).get("/api/v1/stations").query({ tag: "jazz" }).expect(200);
+    expect(capturedTag).toBe("jazz");
+    expect(res.body.items).toHaveLength(1);
+  });
+
+  it("GET /stations/:id sigue devolviendo 404 para UUID inexistente", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: unknown) => {
+        const url = new URL(String(input));
+        if (url.pathname.includes("/stations/byuuid/")) return Response.json([]);
+        throw new Error(`fetch inesperado: ${String(url)}`);
+      }),
+    );
+    const res = await request(server.app).get("/api/v1/stations/unknown-uuid").expect(404);
+    expect(res.body.error.code).toBe("STATION_NOT_FOUND");
+  });
+
+  it("devuelve 503 con formato de error si el listado no puede cargarse", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("caido");
+      }),
+    );
+    const res = await request(server.app).get("/api/v1/stations/languages").expect(503);
+    expect(res.body.error).toMatchObject({ code: "CATALOG_UNAVAILABLE", status: 503 });
+  });
+
+  it("openapi.json expone los nuevos endpoints de listados", async () => {
+    const res = await request(server.app).get("/api/v1/openapi.json").expect(200);
+    expect(res.body.paths).toHaveProperty("/stations/countries");
+    expect(res.body.paths).toHaveProperty("/stations/languages");
+    const countries = res.body.paths["/stations/countries"].get;
+    expect(countries.security).toEqual([]);
+    expect(countries.responses).toHaveProperty("503");
+  });
+});

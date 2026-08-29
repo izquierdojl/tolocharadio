@@ -2,18 +2,20 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Loader2, Search as SearchIcon, SearchX } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import type { Page, Station } from "../lib/types.js";
-import { api } from "../lib/api.js";
+import { api, fetchCatalogCountries, fetchCatalogLanguages, fetchCatalogTags } from "../lib/api.js";
+import { Combobox } from "../components/Combobox.js";
 import { StationCard } from "../components/StationCard.js";
 import { EmptyState } from "../components/EmptyState.js";
 
 const PAGE_SIZE = 24;
 const EXAMPLES = ["clásica", "jazz", "folk"];
 
-function buildQuery(params: { name: string; country: string; language: string; offset: number }): string {
+function buildQuery(params: { name: string; country: string; language: string; tag: string; offset: number }): string {
   const q = new URLSearchParams();
   if (params.name) q.set("name", params.name);
   if (params.country) q.set("country", params.country);
   if (params.language) q.set("language", params.language);
+  if (params.tag) q.set("tag", params.tag);
   q.set("limit", String(PAGE_SIZE));
   q.set("offset", String(params.offset));
   return `/stations?${q.toString()}`;
@@ -23,18 +25,83 @@ interface Filters {
   name: string;
   country: string;
   language: string;
+  tag: string;
 }
 
 function submitForm(e: FormEvent<HTMLFormElement>): void {
   e.preventDefault();
 }
 
+interface FilterControlProps {
+  id: string;
+  value: string;
+  options: string[] | undefined;
+  degraded: boolean;
+  placeholder: string;
+  onChange: (value: string) => void;
+  onEnter: () => void;
+}
+
+function FilterControl({ id, value, options, degraded, placeholder, onChange, onEnter }: FilterControlProps) {
+  if (!options || degraded) {
+    return (
+      <>
+        <input
+          id={id}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onEnter();
+          }}
+          placeholder={placeholder}
+          aria-describedby={degraded ? `${id}-warn` : undefined}
+          className="w-full rounded-lg border border-pine-700 bg-pine-950 px-3 py-2.5 text-sm text-pine-100 placeholder:text-pine-500 focus:border-pine-500 focus:outline-none"
+        />
+        {degraded ? (
+          <p id={`${id}-warn`} className="text-[10px] leading-tight text-ochre-400">
+            No se pudo cargar la lista; escribe el valor manualmente
+          </p>
+        ) : null}
+      </>
+    );
+  }
+  return (
+    <Combobox
+      id={id}
+      value={value}
+      options={options}
+      placeholder={placeholder}
+      onChange={onChange}
+      onEnter={onEnter}
+    />
+  );
+}
+
 export function Explore() {
   const [name, setName] = useState("");
   const [country, setCountry] = useState("");
   const [language, setLanguage] = useState("");
-  const [filters, setFilters] = useState<Filters>({ name: "", country: "", language: "" });
+  const [tag, setTag] = useState("");
+  const [filters, setFilters] = useState<Filters>({ name: "", country: "", language: "", tag: "" });
   const [offset, setOffset] = useState(0);
+
+  const current = { name, country, language, tag };
+
+  const countriesQuery = useQuery({
+    queryKey: ["catalog-countries"],
+    queryFn: fetchCatalogCountries,
+    staleTime: 5 * 60_000,
+  });
+  const languagesQuery = useQuery({
+    queryKey: ["catalog-languages"],
+    queryFn: fetchCatalogLanguages,
+    staleTime: 5 * 60_000,
+  });
+  const tagsQuery = useQuery({
+    queryKey: ["catalog-tags"],
+    queryFn: fetchCatalogTags,
+    staleTime: 5 * 60_000,
+  });
 
   const { data, isFetching, isError, refetch } = useQuery({
     queryKey: ["stations", filters, offset],
@@ -48,7 +115,7 @@ export function Explore() {
     setOffset(nextOffset);
   };
 
-  const hasActiveFilters = Boolean(filters.name || filters.country || filters.language);
+  const hasActiveFilters = Boolean(filters.name || filters.country || filters.language || filters.tag);
 
   return (
     <section className="flex flex-col gap-5">
@@ -67,35 +134,50 @@ export function Explore() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") applyFilters({ name, country, language });
+              if (e.key === "Enter") applyFilters(current);
             }}
             placeholder="Buscar por nombre de emisora…"
             className="w-full rounded-lg border border-pine-700 bg-pine-950 py-2.5 pl-9 pr-3 text-sm text-pine-100 placeholder:text-pine-500 focus:border-pine-500 focus:outline-none"
           />
         </label>
         <div className="flex flex-col gap-3 sm:flex-row">
-          <input
-            value={country}
-            onChange={(e) => setCountry(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") applyFilters({ name, country, language });
-            }}
-            placeholder="País (ej. España)"
-            className="rounded-lg border border-pine-700 bg-pine-950 px-3 py-2.5 text-sm text-pine-100 placeholder:text-pine-500 focus:border-pine-500 focus:outline-none sm:w-40"
-          />
-          <input
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") applyFilters({ name, country, language });
-            }}
-            placeholder="Idioma (ej. español)"
-            className="rounded-lg border border-pine-700 bg-pine-950 px-3 py-2.5 text-sm text-pine-100 placeholder:text-pine-500 focus:border-pine-500 focus:outline-none sm:w-44"
-          />
+          <div className="flex flex-col gap-1 sm:w-40">
+            <FilterControl
+              id="filter-country"
+              value={country}
+              options={countriesQuery.data?.items}
+              degraded={countriesQuery.isError}
+              placeholder="País (ej. España)"
+              onChange={setCountry}
+              onEnter={() => applyFilters(current)}
+            />
+          </div>
+          <div className="flex flex-col gap-1 sm:w-44">
+            <FilterControl
+              id="filter-language"
+              value={language}
+              options={languagesQuery.data?.items}
+              degraded={languagesQuery.isError}
+              placeholder="Idioma (ej. español)"
+              onChange={setLanguage}
+              onEnter={() => applyFilters(current)}
+            />
+          </div>
+          <div className="flex flex-col gap-1 sm:w-44">
+            <FilterControl
+              id="filter-genre"
+              value={tag}
+              options={tagsQuery.data?.items}
+              degraded={tagsQuery.isError}
+              placeholder="Género (ej. jazz)"
+              onChange={setTag}
+              onEnter={() => applyFilters(current)}
+            />
+          </div>
         </div>
         <button
           type="button"
-          onClick={() => applyFilters({ name, country, language })}
+          onClick={() => applyFilters(current)}
           className="rounded-lg bg-pine-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-pine-500"
         >
           Buscar
@@ -111,7 +193,7 @@ export function Explore() {
               type="button"
               onClick={() => {
                 setName(ex);
-                applyFilters({ name: ex, country: "", language: "" });
+                applyFilters({ name: ex, country: "", language: "", tag: "" });
               }}
               className="rounded-full border border-pine-700 px-3 py-1 text-pine-300 transition hover:border-ochre-500 hover:text-ochre-300"
             >
@@ -153,7 +235,8 @@ export function Explore() {
                 setName("");
                 setCountry("");
                 setLanguage("");
-                applyFilters({ name: "", country: "", language: "" });
+                setTag("");
+                applyFilters({ name: "", country: "", language: "", tag: "" });
               }}
               className="rounded-lg bg-pine-700 px-4 py-2 text-sm font-medium text-pine-100 hover:bg-pine-600"
             >

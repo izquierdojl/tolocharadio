@@ -118,3 +118,53 @@ export function normalizeStationList(raw: unknown): Station[] {
   }
   return out;
 }
+
+export type OptionsSort = "alphabetical" | "stationcount";
+
+export function normalizeOptions(raw: unknown, sort: OptionsSort = "alphabetical"): string[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const counts = new Map<string, number>();
+  const out: string[] = [];
+  for (const item of raw) {
+    let name: string;
+    let count: number | null = null;
+    if (typeof item === "string") {
+      name = item;
+    } else if (typeof item === "object" && item !== null) {
+      const entry = item as Record<string, unknown>;
+      let reported: number;
+      if (typeof entry.stationcount === "number") {
+        reported = entry.stationcount;
+      } else if (typeof entry.stationcount === "string" && entry.stationcount.trim() !== "") {
+        reported = Number(entry.stationcount);
+      } else {
+        reported = NaN;
+      }
+      if (Number.isFinite(reported)) {
+        count = reported > 0 ? reported : 0;
+        if (count <= 0) continue;
+      }
+      name = typeof entry.name === "string" ? entry.name : "";
+    } else {
+      continue;
+    }
+    const value = sanitizeText(name, 120);
+    if (!value) continue;
+    const key = value.toLocaleLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    counts.set(value, count ?? 0);
+    out.push(value);
+  }
+  if (sort === "stationcount") {
+    out.sort((a, b) => {
+      const diff = (counts.get(b) ?? 0) - (counts.get(a) ?? 0);
+      if (diff !== 0) return diff;
+      return a.toLocaleLowerCase().localeCompare(b.toLocaleLowerCase());
+    });
+  } else {
+    out.sort((a, b) => a.toLocaleLowerCase().localeCompare(b.toLocaleLowerCase()));
+  }
+  return out;
+}

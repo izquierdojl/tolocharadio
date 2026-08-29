@@ -1,4 +1,4 @@
-import type { ApiErrorBody, AuthResponse, PublicConfig } from "./types.js";
+import type { ApiErrorBody, AuthResponse, PublicConfig, StringListPage } from "./types.js";
 
 const API_PREFIX = "/api/v1";
 
@@ -102,4 +102,16 @@ export function fetchPublicConfig(): Promise<PublicConfig> {
 
 export function playbackUrl(stationId: string): string {
   return `${API_PREFIX}/playback/${encodeURIComponent(stationId)}`;
+}
+
+export function fetchCatalogCountries(): Promise<StringListPage> {
+  return api.get<StringListPage>("/stations/countries");
+}
+
+export function fetchCatalogLanguages(): Promise<StringListPage> {
+  return api.get<StringListPage>("/stations/languages");
+}
+
+export function fetchCatalogTags(): Promise<StringListPage> {
+  return api.get<StringListPage>("/stations/tags");
 }
