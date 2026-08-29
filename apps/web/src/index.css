@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@theme {
+  --color-pine-950: #08100b;
+  --color-pine-900: #0f1a12;
+  --color-pine-850: #122016;
+  --color-pine-800: #17291c;
+  --color-pine-700: #203a28;
+  --color-pine-600: #2c4f38;
+  --color-pine-500: #3c6a4d;
+  --color-pine-400: #5f8f73;
+  --color-pine-300: #8cb29a;
+  --color-pine-200: #bcd2c4;
+  --color-pine-100: #deeae2;
+  --color-pine-50: #f0f5f1;
+
+  --color-ochre-950: #2b1d0c;
+  --color-ochre-900: #4a3314;
+  --color-ochre-800: #6b4a1d;
+  --color-ochre-700: #8a5f26;
+  --color-ochre-600: #a67430;
+  --color-ochre-500: #c0883e;
+  --color-ochre-400: #d3a568;
+  --color-ochre-300: #e2c091;
+  --color-ochre-200: #efdabb;
+  --color-ochre-100: #f7ecdb;
+
+  --color-moss-500: #9aae63;
+  --color-moss-400: #b4c47e;
+  --color-moss-300: #cfdaa2;
+
+  --font-sans: "Inter", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-pine-950);
+  background-image:
+    radial-gradient(ellipse 90% 60% at 15% -10%, rgb(60 106 77 / 0.18), transparent 60%),
+    radial-gradient(ellipse 80% 50% at 90% 110%, rgb(74 51 20 / 0.28), transparent 60%),
+    linear-gradient(180deg, var(--color-pine-950) 0%, var(--color-pine-900) 100%);
+  color: var(--color-pine-100);
+  background-attachment: fixed;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-pine-600) transparent;
+}

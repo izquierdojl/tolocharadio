@@ -1,0 +1,25 @@
+{
+  "name": "tolocharadio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reproductor de radio web personal con API interna",
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,web -c green,cyan \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm run dev --workspace @tolocharadio/api",
+    "dev:web": "npm run dev --workspace @tolocharadio/web",
+    "build": "npm run build --workspace @tolocharadio/api && npm run build --workspace @tolocharadio/web",
+    "start": "npm run start --workspace @tolocharadio/api",
+    "test": "npm run test --workspace @tolocharadio/api",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
