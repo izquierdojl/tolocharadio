@@ -4,15 +4,66 @@ import { ChevronDown, ChevronUp, GripVertical, Heart, Trash2 } from "lucide-reac
 import { toast } from "sonner";
 import type { FavoriteEntry } from "../lib/types.js";
 import { api, reorderFavorites } from "../lib/api.js";
+import { StationCard } from "../components/StationCard.js";
 import { StationListItem } from "../components/StationListItem.js";
 import { EmptyState } from "../components/EmptyState.js";
 import { useAuthStore } from "../stores/auth.js";
+import { useViewModeStore } from "../stores/viewMode.js";
 
 const FAVORITES_KEY = ["favorites"] as const;
+
+interface ReorderControlsProps {
+  index: number;
+  total: number;
+  name: string;
+  onMove: (from: number, to: number) => void;
+  onDragStart: (index: number) => void;
+}
+
+function ReorderControls({ index, total, name, onMove, onDragStart }: ReorderControlsProps) {
+  return (
+    <div className="flex items-center gap-0.5">
+      <button
+        type="button"
+        title="Subir"
+        aria-label={`Subir ${name}`}
+        disabled={index === 0}
+        onClick={() => onMove(index, index - 1)}
+        className="rounded p-0.5 text-soft transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+      >
+        <ChevronUp className="size-4" />
+      </button>
+      <button
+        type="button"
+        title="Bajar"
+        aria-label={`Bajar ${name}`}
+        disabled={index === total - 1}
+        onClick={() => onMove(index, index + 1)}
+        className="rounded p-0.5 text-soft transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+      >
+        <ChevronDown className="size-4" />
+      </button>
+      <button
+        type="button"
+        draggable
+        title="Arrastrar para reordenar"
+        aria-label={`Arrastrar ${name} para reordenar`}
+        onDragStart={(e) => {
+          onDragStart(index);
+          e.dataTransfer.effectAllowed = "move";
+        }}
+        className="cursor-grab p-0.5 text-faint transition hover:text-foreground active:cursor-grabbing"
+      >
+        <GripVertical className="size-4" />
+      </button>
+    </div>
+  );
+}
 
 export function Favorites() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
+  const viewMode = useViewModeStore((s) => s.viewMode);
   const dragIndex = useRef<number | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -64,6 +115,23 @@ export function Favorites() {
     move(from, to);
   };
 
+  const dragProps = (index: number) => ({
+    onDragOver: (e: React.DragEvent) => e.preventDefault(),
+    onDrop: () => handleDrop(index),
+  });
+
+  const controls = (index: number) => (
+    <ReorderControls
+      index={index}
+      total={total}
+      name={items[index]?.station.name ?? ""}
+      onMove={move}
+      onDragStart={(i) => {
+        dragIndex.current = i;
+      }}
+    />
+  );
+
   return (
     <section className="flex flex-col gap-5">
       <div className="flex items-center justify-between gap-4">
@@ -106,59 +174,38 @@ export function Favorites() {
           title="Aún no tienes favoritos"
           description="Explora el catálogo y marca las emisoras que más te gusten para encontrarlas aquí."
         />
+      ) : viewMode === "card" ? (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {items.map((favorite, index) => (
+            <div key={favorite.station.id} {...dragProps(index)}>
+                <div className="relative">
+                  <div className="absolute left-2 top-2 z-10">
+                    <div className="rounded-lg bg-black/50 p-0.5 backdrop-blur">{controls(index)}</div>
+                  </div>
+                  <StationCard station={favorite.station} />
+                </div>
+            </div>
+          ))}
+        </div>
       ) : (
-        <>
-          <ul className="flex flex-col gap-2">
-            {items.map((favorite, index) => (
-              <li
-                key={favorite.station.id}
-                draggable
-                onDragStart={(e) => {
-                  dragIndex.current = index;
-                  e.dataTransfer.effectAllowed = "move";
-                }}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={() => handleDrop(index)}
-                className="flex items-center gap-2"
-              >
-                <div className="flex flex-col gap-1 text-soft opacity-70">
-                  <button
-                    type="button"
-                    title="Subir"
-                    aria-label={`Subir ${favorite.station.name}`}
-                    disabled={index === 0}
-                    onClick={() => move(index, index - 1)}
-                    className="rounded p-0.5 transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
-                  >
-                    <ChevronUp className="size-4" />
-                  </button>
-                  <button
-                    type="button"
-                    title="Bajar"
-                    aria-label={`Bajar ${favorite.station.name}`}
-                    disabled={index === total - 1}
-                    onClick={() => move(index, index + 1)}
-                    className="rounded p-0.5 transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
-                  >
-                    <ChevronDown className="size-4" />
-                  </button>
-                </div>
-                <GripVertical
-                  className="size-5 shrink-0 cursor-grab text-faint active:cursor-grabbing"
-                  aria-hidden
-                />
-                <div className="min-w-0 flex-1">
-                  <StationListItem station={favorite.station} />
-                </div>
-              </li>
-            ))}
-          </ul>
-          <p className="text-center text-xs text-faint">
-            Arrastra o usa las flechas para reordenar tus favoritos. Pulsa el corazón en cualquier emisora para
-            quitarla de favoritos.
-          </p>
-        </>
+        <ul className="flex flex-col gap-2">
+          {items.map((favorite, index) => (
+            <li key={favorite.station.id} {...dragProps(index)} className="flex items-center gap-2">
+              {controls(index)}
+              <div className="min-w-0 flex-1">
+                <StationListItem station={favorite.station} />
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
+
+      {!isLoading && !isError && total ? (
+        <p className="text-center text-xs text-faint">
+          Arrastra o usa las flechas para reordenar tus favoritos. Pulsa el corazón en cualquier emisora para
+          quitarla de favoritos.
+        </p>
+      ) : null}
     </section>
   );
 }
