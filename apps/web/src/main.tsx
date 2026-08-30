@@ -5,6 +5,9 @@ import { Toaster } from "sonner";
 import { App } from "./App.js";
 import "./index.css";
 import { useAuthStore } from "./stores/auth.js";
+import { getInitialTheme, useThemeStore } from "./stores/theme.js";
+
+document.documentElement.dataset.theme = getInitialTheme();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,6 +23,15 @@ const queryClient = new QueryClient({
 });
 
 void useAuthStore.getState().restore();
+
+useAuthStore.subscribe((state, prev) => {
+  if (state.user && state.user !== prev.user) {
+    useThemeStore.getState().applyFromProfile(state.user.theme);
+  }
+  if (!state.user && state.user !== prev.user) {
+    useThemeStore.getState().applyFromProfile(getInitialTheme());
+  }
+});
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

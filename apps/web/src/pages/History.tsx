@@ -54,14 +54,14 @@ export function History() {
     <section className="flex flex-col gap-5">
       <div className="flex items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold tracking-tight text-pine-100">Tu historial</h1>
-          <p className="text-sm text-pine-400">Lo último que has escuchado en la sierra.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Tu historial</h1>
+          <p className="text-sm text-muted">Lo último que has escuchado en la sierra.</p>
         </div>
         {stations.length ? (
           <button
             type="button"
             onClick={() => void clearAll()}
-            className="flex items-center gap-1.5 rounded-lg border border-pine-700 px-3 py-1.5 text-sm text-pine-300 transition hover:border-pine-500 hover:text-pine-100"
+            className="flex items-center gap-1.5 rounded-lg border border-line-strong px-3 py-1.5 text-sm text-soft transition hover:border-pine-500 hover:text-foreground"
           >
             <Trash2 className="size-4" />
             Limpiar
@@ -70,7 +70,7 @@ export function History() {
       </div>
 
       {isLoading ? (
-        <p className="py-16 text-center text-sm text-pine-500">Cargando historial…</p>
+        <p className="py-16 text-center text-sm text-faint">Cargando historial…</p>
       ) : isError ? (
         <EmptyState
           icon={<HistoryIcon className="size-6" />}
@@ -94,11 +94,11 @@ export function History() {
         />
       ) : latest ? (
         <>
-          <div className="flex flex-col gap-2 rounded-2xl border border-pine-800 bg-pine-900/50 p-4">
-            <span className="text-xs uppercase tracking-wide text-pine-500">Última escucha</span>
+          <div className="flex flex-col gap-2 rounded-2xl border border-line bg-surface-raised p-4">
+            <span className="text-xs uppercase tracking-wide text-faint">Última escucha</span>
             <div className="flex items-center gap-3">
-              <span className="text-lg font-semibold text-pine-100">{latest.station.name}</span>
-              <span className="text-sm text-pine-400">{formatDate(latest.playedAt)}</span>
+              <span className="text-lg font-semibold text-foreground">{latest.station.name}</span>
+              <span className="text-sm text-muted">{formatDate(latest.playedAt)}</span>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">

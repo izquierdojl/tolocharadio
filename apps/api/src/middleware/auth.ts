@@ -5,7 +5,7 @@ export const ACCESS_COOKIE = "tolocha-access";
 
 export function requireAuth(ctx: {
   jwt: { verifyAccessToken(token: string): Promise<{ userId: number }> };
-  auth: { publicUser(userId: number): Promise<{ id: number; email: string; name: string | null; createdAt: number } | null> };
+  auth: { publicUser(userId: number): Promise<{ id: number; email: string; name: string | null; theme: "light" | "dark"; createdAt: number } | null> };
 }) {
   return async (req: Request, res: Response, next: (err?: unknown) => void) => {
     try {

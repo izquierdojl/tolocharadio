@@ -16,11 +16,19 @@ export interface Station {
   clickCount: number | null;
 }
 
+export type UserTheme = "light" | "dark";
+
 export interface User {
   id: number;
   email: string;
   name: string | null;
+  theme: UserTheme;
   createdAt: number;
+}
+
+export interface UpdateProfileBody {
+  name?: string;
+  theme?: UserTheme;
 }
 
 export interface AuthResponse {

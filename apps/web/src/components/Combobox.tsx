@@ -94,19 +94,19 @@ export function Combobox({ id, value, onChange, options, placeholder, className,
         }}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-pine-700 bg-pine-950 py-2.5 pl-3 pr-9 text-sm text-pine-100 placeholder:text-pine-500 focus:border-pine-500 focus:outline-none"
+        className="w-full rounded-lg border border-line-strong bg-surface py-2.5 pl-3 pr-9 text-sm text-foreground placeholder:text-faint focus:border-pine-500 focus:outline-none"
       />
       <ChevronDown
-        className={`pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-pine-500 transition-transform ${open ? "rotate-180" : ""}`}
+        className={`pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-faint transition-transform ${open ? "rotate-180" : ""}`}
       />
       {open ? (
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-pine-700 bg-pine-950 py-1 shadow-xl shadow-black/40"
+          className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-line-strong bg-surface-raised py-1 shadow-xl shadow-black/40"
         >
           {visible.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-pine-500">Sin resultados</li>
+            <li className="px-3 py-2 text-sm text-faint">Sin resultados</li>
           ) : (
             <>
               {visible.map((option, index) => {
@@ -121,7 +121,7 @@ export function Combobox({ id, value, onChange, options, placeholder, className,
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => select(option)}
                     className={`cursor-pointer px-3 py-2 text-sm ${
-                      index === highlight ? "bg-pine-800 text-pine-100" : "text-pine-300"
+                      index === highlight ? "bg-pine-800 text-pine-100" : "text-soft"
                     } ${selected ? "font-medium" : ""}`}
                   >
                     {option}
@@ -129,7 +129,7 @@ export function Combobox({ id, value, onChange, options, placeholder, className,
                 );
               })}
               {hiddenCount > 0 ? (
-                <li className="px-3 py-2 text-xs text-pine-500">
+                <li className="px-3 py-2 text-xs text-faint">
                   … y {hiddenCount} más (sigue escribiendo para filtrar)
                 </li>
               ) : null}

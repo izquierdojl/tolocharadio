@@ -5,7 +5,10 @@ import { unauthorized } from "../errors.js";
 import { parseBody } from "../lib/validation.js";
 import { requireAuth } from "../middleware/auth.js";
 
-const updateNameSchema = z.object({ name: z.string() });
+const updateProfileSchema = z.object({
+  name: z.string().optional(),
+  theme: z.enum(["light", "dark"]).optional(),
+});
 const updatePasswordSchema = z.object({ currentPassword: z.string(), newPassword: z.string() });
 
 export function usersRouter(ctx: AppContext): Router {
@@ -26,8 +29,8 @@ export function usersRouter(ctx: AppContext): Router {
     try {
       const user = req.authUser;
       if (!user) throw unauthorized();
-      const body = parseBody(updateNameSchema, req.body);
-      const updated = await ctx.auth.changeName(user.id, body);
+      const body = parseBody(updateProfileSchema, req.body);
+      const updated = await ctx.auth.updateProfile(user.id, body);
       res.json({ user: updated });
     } catch (err) {
       next(err);

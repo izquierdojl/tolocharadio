@@ -46,9 +46,10 @@ const userSchema = {
     id: { type: "integer" },
     email: { type: "string", format: "email" },
     name: { type: ["string", "null"] },
+    theme: { type: "string", enum: ["light", "dark"], description: "Preferencia de tema de la interfaz" },
     createdAt: { type: "integer", description: "Marca de tiempo en milisegundos" },
   },
-  required: ["id", "email", "name", "createdAt"],
+  required: ["id", "email", "name", "theme", "createdAt"],
 } as const;
 
 const authResponseSchema = {
@@ -317,11 +318,11 @@ export function buildOpenApi(): Record<string, unknown> {
         },
         patch: {
           tags: ["Usuarios"],
-          summary: "Cambiar nombre",
+          summary: "Actualizar perfil (nombre y/o tema)",
           ...requireAuth,
           requestBody: {
             required: true,
-            content: { "application/json": { schema: { type: "object", required: ["name"], properties: { name: { type: "string", maxLength: 80 } } } } },
+            content: { "application/json": { schema: { type: "object", properties: { name: { type: "string", maxLength: 80 }, theme: { type: "string", enum: ["light", "dark"] } } } } },
           },
           responses: {
             "200": { description: "Perfil actualizado", content: { "application/json": { schema: { type: "object", properties: { user: { $ref: "#/components/schemas/User" } }, required: ["user"] } } } },

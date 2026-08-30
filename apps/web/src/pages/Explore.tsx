@@ -55,7 +55,7 @@ function FilterControl({ id, value, options, degraded, placeholder, onChange, on
           }}
           placeholder={placeholder}
           aria-describedby={degraded ? `${id}-warn` : undefined}
-          className="w-full rounded-lg border border-pine-700 bg-pine-950 px-3 py-2.5 text-sm text-pine-100 placeholder:text-pine-500 focus:border-pine-500 focus:outline-none"
+          className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2.5 text-sm text-foreground placeholder:text-faint focus:border-pine-500 focus:outline-none"
         />
         {degraded ? (
           <p id={`${id}-warn`} className="text-[10px] leading-tight text-ochre-400">
@@ -120,16 +120,16 @@ export function Explore() {
   return (
     <section className="flex flex-col gap-5">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight text-pine-100">Explorar emisoras</h1>
-        <p className="text-sm text-pine-400">Busca entre miles de emisoras de todo el mundo.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Explorar emisoras</h1>
+        <p className="text-sm text-muted">Busca entre miles de emisoras de todo el mundo.</p>
       </div>
 
       <form
         onSubmit={submitForm}
-        className="flex flex-col gap-3 rounded-2xl border border-pine-800 bg-pine-900/50 p-4 lg:flex-row lg:items-center"
+        className="flex flex-col gap-3 rounded-2xl border border-line bg-surface-raised p-4 lg:flex-row lg:items-center"
       >
         <label className="relative flex-1">
-          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-pine-500" />
+          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -137,7 +137,7 @@ export function Explore() {
               if (e.key === "Enter") applyFilters(current);
             }}
             placeholder="Buscar por nombre de emisora…"
-            className="w-full rounded-lg border border-pine-700 bg-pine-950 py-2.5 pl-9 pr-3 text-sm text-pine-100 placeholder:text-pine-500 focus:border-pine-500 focus:outline-none"
+            className="w-full rounded-lg border border-line-strong bg-surface py-2.5 pl-9 pr-3 text-sm text-foreground placeholder:text-faint focus:border-pine-500 focus:outline-none"
           />
         </label>
         <div className="flex flex-col gap-3 sm:flex-row">
@@ -186,7 +186,7 @@ export function Explore() {
 
       {!hasActiveFilters && (
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-pine-500">Sugerencias:</span>
+          <span className="text-faint">Sugerencias:</span>
           {EXAMPLES.map((ex) => (
             <button
               key={ex}
@@ -195,7 +195,7 @@ export function Explore() {
                 setName(ex);
                 applyFilters({ name: ex, country: "", language: "", tag: "" });
               }}
-              className="rounded-full border border-pine-700 px-3 py-1 text-pine-300 transition hover:border-ochre-500 hover:text-ochre-300"
+              className="rounded-full border border-line-strong px-3 py-1 text-soft transition hover:border-ochre-500 hover:text-ochre-300"
             >
               {ex}
             </button>
@@ -219,7 +219,7 @@ export function Explore() {
           }
         />
       ) : !data ? (
-        <div className="flex items-center justify-center gap-2 py-16 text-pine-500">
+        <div className="flex items-center justify-center gap-2 py-16 text-faint">
           <Loader2 className="size-5 animate-spin" />
           <span className="text-sm">Buscando en la sierra…</span>
         </div>
@@ -257,18 +257,18 @@ export function Explore() {
               type="button"
               disabled={offset === 0}
               onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
-              className="rounded-lg border border-pine-700 px-4 py-2 text-sm text-pine-200 transition hover:bg-pine-800 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-lg border border-line-strong px-4 py-2 text-sm text-foreground transition hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-40"
             >
               Anterior
             </button>
-            <span className="text-sm text-pine-500">
+            <span className="text-sm text-faint">
               {offset + 1}–{offset + data.items.length} de más resultados
             </span>
             <button
               type="button"
               disabled={!data.pagination.hasMore}
               onClick={() => setOffset(offset + PAGE_SIZE)}
-              className="rounded-lg border border-pine-700 px-4 py-2 text-sm text-pine-200 transition hover:bg-pine-800 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-lg border border-line-strong px-4 py-2 text-sm text-foreground transition hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-40"
             >
               Siguiente
             </button>

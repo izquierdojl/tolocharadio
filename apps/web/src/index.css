@@ -30,10 +30,89 @@
   --color-moss-300: #cfdaa2;
 
   --font-sans: "Inter", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-soft: var(--surface-soft);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-soft: var(--soft);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-brand: var(--brand);
+  --color-mountain: var(--mountain);
 }
 
-:root {
+:root,
+:root[data-theme="dark"] {
   color-scheme: dark;
+
+  --surface: var(--color-pine-950);
+  --surface-raised: var(--color-pine-900);
+  --surface-soft: rgb(15 26 18 / 0.5);
+  --foreground: var(--color-pine-100);
+  --muted: var(--color-pine-400);
+  --soft: var(--color-pine-300);
+  --faint: var(--color-pine-500);
+  --line: var(--color-pine-800);
+  --line-strong: var(--color-pine-700);
+
+  --brand: var(--color-ochre-400);
+  --mountain: rgb(32 58 40 / 0.45);
+
+  --emblem-badge-a: #08100b;
+  --emblem-badge-b: #203a28;
+  --emblem-sun: var(--color-ochre-300);
+  --emblem-line: var(--color-pine-200);
+
+  --art-sky-a: var(--color-pine-900);
+  --art-sky-b: var(--color-pine-950);
+  --art-ridge-a: var(--color-pine-600);
+  --art-ridge-b: var(--color-pine-800);
+  --art-mine-a: var(--color-ochre-600);
+  --art-mine-b: var(--color-ochre-800);
+  --art-mine-face: var(--color-ochre-400);
+  --art-snow: var(--color-pine-200);
+  --art-sun: var(--color-ochre-300);
+  --art-pine-a: var(--color-pine-500);
+  --art-pine-b: var(--color-pine-600);
+  --art-pine-c: var(--color-pine-700);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --surface: #eef3ef;
+  --surface-raised: #ffffff;
+  --surface-soft: #f5f9f6;
+  --foreground: #123424;
+  --muted: #4c6b58;
+  --soft: #263f30;
+  --faint: #2c4f38;
+  --line: #d9e4dc;
+  --line-strong: #c4d4c9;
+
+  --brand: var(--color-ochre-600);
+  --mountain: #b4c9b9;
+
+  --emblem-badge-a: #e3ece5;
+  --emblem-badge-b: #c8dbce;
+  --emblem-sun: var(--color-ochre-600);
+  --emblem-line: var(--color-pine-500);
+
+  --art-sky-a: #eaf2ec;
+  --art-sky-b: #d5e2d8;
+  --art-ridge-a: #8faf9a;
+  --art-ridge-b: #6d9479;
+  --art-mine-a: var(--color-ochre-600);
+  --art-mine-b: var(--color-ochre-800);
+  --art-mine-face: var(--color-ochre-500);
+  --art-snow: #ffffff;
+  --art-sun: var(--color-ochre-500);
+  --art-pine-a: var(--color-pine-600);
+  --art-pine-b: var(--color-pine-700);
+  --art-pine-c: var(--color-pine-800);
 }
 
 html,
@@ -44,12 +123,12 @@ body,
 
 body {
   margin: 0;
-  background-color: var(--color-pine-950);
+  background-color: var(--surface);
   background-image:
-    radial-gradient(ellipse 90% 60% at 15% -10%, rgb(60 106 77 / 0.18), transparent 60%),
-    radial-gradient(ellipse 80% 50% at 90% 110%, rgb(74 51 20 / 0.28), transparent 60%),
-    linear-gradient(180deg, var(--color-pine-950) 0%, var(--color-pine-900) 100%);
-  color: var(--color-pine-100);
+    radial-gradient(ellipse 90% 60% at 15% -10%, rgb(60 106 77 / 0.16), transparent 60%),
+    radial-gradient(ellipse 80% 50% at 90% 110%, rgb(74 51 20 / 0.22), transparent 60%),
+    linear-gradient(180deg, var(--surface) 0%, var(--surface-raised) 100%);
+  color: var(--foreground);
   background-attachment: fixed;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -57,5 +136,5 @@ body {
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-pine-600) transparent;
+  scrollbar-color: var(--line-strong) transparent;
 }

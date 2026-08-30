@@ -62,7 +62,7 @@ export function StationCard({ station }: { station: Station }) {
   const isPlaying = usePlayerStore((s) => s.isPlaying && s.station?.id === station.id);
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-pine-800 bg-pine-900/50 transition hover:border-pine-600 hover:shadow-xl hover:shadow-black/30">
+    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-surface-raised transition hover:border-pine-600 hover:shadow-xl hover:shadow-black/30">
       <div className="relative aspect-video w-full overflow-hidden bg-pine-800">
         {station.favicon ? (
           <img
@@ -100,10 +100,10 @@ export function StationCard({ station }: { station: Station }) {
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-1 p-3">
-        <h3 className="truncate font-semibold text-pine-100" title={station.name}>
+        <h3 className="truncate font-semibold text-foreground" title={station.name}>
           {station.name}
         </h3>
-        <p className="truncate text-xs text-pine-400">
+        <p className="truncate text-xs text-muted">
           {[station.country, station.language].filter(Boolean).join(" · ") || "Emisora"}
         </p>
         <div className="mt-1 flex flex-wrap items-center gap-1">
@@ -116,7 +116,7 @@ export function StationCard({ station }: { station: Station }) {
             </span>
           ))}
           {station.bitrate ? (
-            <span className="ml-auto text-xs text-pine-500">{station.bitrate} kbps</span>
+            <span className="ml-auto text-xs text-faint">{station.bitrate} kbps</span>
           ) : null}
         </div>
       </div>

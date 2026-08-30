@@ -160,6 +160,41 @@ describe("auth users/me", () => {
       .send({ name: "   " })
       .expect(422);
   });
+
+  it("devuelve theme por defecto dark en un usuario nuevo", async () => {
+    const res = await register().expect(201);
+    expect(res.body.user.theme).toBe("dark");
+  });
+
+  it("actualiza la preferencia de tema", async () => {
+    const { accessToken } = (await register().expect(201)).body;
+    const res = await request(server.app)
+      .patch("/api/v1/users/me")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ theme: "light" })
+      .expect(200);
+    expect(res.body.user.theme).toBe("light");
+  });
+
+  it("rechaza un tema invalido", async () => {
+    const { accessToken } = (await register().expect(201)).body;
+    const res = await request(server.app)
+      .patch("/api/v1/users/me")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ theme: "blue" })
+      .expect(422);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("rechaza un patch sin campos", async () => {
+    const { accessToken } = (await register().expect(201)).body;
+    const res = await request(server.app)
+      .patch("/api/v1/users/me")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({})
+      .expect(422);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
 });
 
 describe("auth password", () => {

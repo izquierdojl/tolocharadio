@@ -7,7 +7,7 @@ import { fetchPublicConfig } from "../lib/api.js";
 import { useAuthStore } from "../stores/auth.js";
 
 const inputClass =
-  "w-full rounded-lg border border-pine-700 bg-pine-950 px-3 py-2.5 text-sm text-pine-100 placeholder:text-pine-500 focus:border-pine-500 focus:outline-none";
+  "w-full rounded-lg border border-line-strong bg-surface px-3 py-2.5 text-sm text-foreground placeholder:text-faint focus:border-pine-500 focus:outline-none";
 
 export function Register() {
   const register = useAuthStore((s) => s.register);
@@ -46,9 +46,9 @@ export function Register() {
 
   return (
     <div className="mx-auto max-w-md py-10">
-      <div className="rounded-2xl border border-pine-800 bg-pine-900/50 p-6">
-        <h1 className="text-xl font-bold text-pine-100">Crear tu cuenta</h1>
-        <p className="mt-1 text-sm text-pine-400">
+      <div className="rounded-2xl border border-line bg-surface-raised p-6">
+        <h1 className="text-xl font-bold text-foreground">Crear tu cuenta</h1>
+        <p className="mt-1 text-sm text-muted">
           Guárdate las emisoras de la sierra que más te gusten.
         </p>
 
@@ -63,7 +63,7 @@ export function Register() {
         )}
 
         <form onSubmit={(e) => void onSubmit(e)} className="mt-5 flex flex-col gap-4">
-          <label className="flex flex-col gap-1.5 text-sm text-pine-200">
+          <label className="flex flex-col gap-1.5 text-sm text-foreground">
             Nombre (opcional)
             <input
               value={name}
@@ -73,7 +73,7 @@ export function Register() {
               autoComplete="name"
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-sm text-pine-200">
+          <label className="flex flex-col gap-1.5 text-sm text-foreground">
             Correo electrónico
             <input
               value={email}
@@ -85,7 +85,7 @@ export function Register() {
               placeholder="tuyo@correo.com"
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-sm text-pine-200">
+          <label className="flex flex-col gap-1.5 text-sm text-foreground">
             Contraseña
             <input
               value={password}
@@ -108,7 +108,7 @@ export function Register() {
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-pine-400">
+        <p className="mt-4 text-center text-sm text-muted">
           ¿Ya tienes cuenta?{" "}
           <Link to="/login" className="font-medium text-ochre-300 hover:underline">
             Inicia sesión

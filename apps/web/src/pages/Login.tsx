@@ -42,7 +42,7 @@ function useRegistrationEnabled(): boolean {
 }
 
 const inputClass =
-  "w-full rounded-lg border border-pine-700 bg-pine-950 px-3 py-2.5 text-sm text-pine-100 placeholder:text-pine-500 focus:border-pine-500 focus:outline-none";
+  "w-full rounded-lg border border-line-strong bg-surface px-3 py-2.5 text-sm text-foreground placeholder:text-faint focus:border-pine-500 focus:outline-none";
 
 export function Login() {
   const login = useAuthStore((s) => s.login);
@@ -69,17 +69,17 @@ export function Login() {
 
   return (
     <div className="mx-auto max-w-md py-10">
-      <div className="rounded-2xl border border-pine-800 bg-pine-900/50 p-6">
-        <h1 className="text-xl font-bold text-pine-100">Iniciar sesión</h1>
-        <p className="mt-1 text-sm text-pine-400">
+      <div className="rounded-2xl border border-line bg-surface-raised p-6">
+        <h1 className="text-xl font-bold text-foreground">Iniciar sesión</h1>
+        <p className="mt-1 text-sm text-muted">
           Accede a tus favoritos e historial mientras exploras la sierra.
         </p>
         <form onSubmit={(e) => void onSubmit(e)} className="mt-5 flex flex-col gap-4">
-          <label className="flex flex-col gap-1.5 text-sm text-pine-200">
+          <label className="flex flex-col gap-1.5 text-sm text-foreground">
             Correo electrónico
             <input name="email" type="email" required autoComplete="email" className={inputClass} placeholder="tuyo@correo.com" />
           </label>
-          <label className="flex flex-col gap-1.5 text-sm text-pine-200">
+          <label className="flex flex-col gap-1.5 text-sm text-foreground">
             Contraseña
             <input name="password" type="password" required autoComplete="current-password" className={inputClass} placeholder="••••••••" />
           </label>
@@ -101,7 +101,7 @@ export function Login() {
 function RegisterHint() {
   const registrationEnabled = useRegistrationEnabled();
   return (
-    <p className="mt-4 text-center text-sm text-pine-400">
+    <p className="mt-4 text-center text-sm text-muted">
       {registrationEnabled ? (
         <>
           ¿No tienes cuenta?{" "}

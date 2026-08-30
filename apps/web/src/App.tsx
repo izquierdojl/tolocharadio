@@ -13,7 +13,7 @@ import { NotFound } from "./pages/NotFound.js";
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const status = useAuthStore((s) => s.status);
   if (status === "loading") {
-    return <div className="flex h-64 items-center justify-center text-pine-500">Cargando sesión…</div>;
+    return <div className="flex h-64 items-center justify-center text-faint">Cargando sesión…</div>;
   }
   if (status !== "authenticated") {
     return <Navigate to="/" replace />;

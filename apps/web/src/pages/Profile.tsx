@@ -7,7 +7,7 @@ import type { User } from "../lib/types.js";
 import { useAuthStore } from "../stores/auth.js";
 
 const inputClass =
-  "w-full rounded-lg border border-pine-700 bg-pine-950 px-3 py-2.5 text-sm text-pine-100 placeholder:text-pine-500 focus:border-pine-500 focus:outline-none";
+  "w-full rounded-lg border border-line-strong bg-surface px-3 py-2.5 text-sm text-foreground placeholder:text-faint focus:border-pine-500 focus:outline-none";
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString("es-ES", {
@@ -71,17 +71,17 @@ export function Profile() {
   return (
     <section className="mx-auto flex max-w-2xl flex-col gap-5">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight text-pine-100">Tu perfil</h1>
-        <p className="text-sm text-pine-400">
-          Miembro desde {formatDate(user.createdAt)} · <span className="text-pine-300">{user.email}</span>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Tu perfil</h1>
+        <p className="text-sm text-muted">
+          Miembro desde {formatDate(user.createdAt)} · <span className="text-soft">{user.email}</span>
         </p>
       </div>
 
       <form
         onSubmit={onSubmitName}
-        className="flex flex-col gap-4 rounded-2xl border border-pine-800 bg-pine-900/50 p-5"
+        className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-5"
       >
-        <h2 className="font-semibold text-pine-100">Nombre visible</h2>
+        <h2 className="font-semibold text-foreground">Nombre visible</h2>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -99,12 +99,12 @@ export function Profile() {
 
       <form
         onSubmit={onSubmitPassword}
-        className="flex flex-col gap-4 rounded-2xl border border-pine-800 bg-pine-900/50 p-5"
+        className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-5"
       >
-        <h2 className="font-semibold text-pine-100">Contraseña</h2>
+        <h2 className="font-semibold text-foreground">Contraseña</h2>
         {passwordStep ? (
           <>
-            <label className="flex flex-col gap-1.5 text-sm text-pine-200">
+            <label className="flex flex-col gap-1.5 text-sm text-foreground">
               Contraseña actual
               <input
                 value={current}
@@ -115,7 +115,7 @@ export function Profile() {
                 autoComplete="current-password"
               />
             </label>
-            <label className="flex flex-col gap-1.5 text-sm text-pine-200">
+            <label className="flex flex-col gap-1.5 text-sm text-foreground">
               Nueva contraseña
               <input
                 value={next}
@@ -138,7 +138,7 @@ export function Profile() {
               <button
                 type="button"
                 onClick={() => setPasswordStep(false)}
-                className="rounded-lg border border-pine-700 px-4 py-2 text-sm text-pine-300 hover:bg-pine-800"
+                className="rounded-lg border border-line-strong px-4 py-2 text-sm text-soft hover:bg-surface-soft"
               >
                 Cancelar
               </button>
@@ -148,20 +148,20 @@ export function Profile() {
           <button
             type="button"
             onClick={() => setPasswordStep(true)}
-            className="self-start rounded-lg border border-pine-700 px-4 py-2 text-sm text-pine-200 hover:border-pine-500"
+            className="self-start rounded-lg border border-line-strong px-4 py-2 text-sm text-foreground hover:border-pine-500"
           >
             Cambiar contraseña
           </button>
         )}
       </form>
 
-      <p className="text-center text-xs text-pine-500">
+      <p className="text-center text-xs text-faint">
         ¿Prefieres revisar tus emisoras? Visita tus{" "}
-        <Link to="/favoritos" className="text-pine-300 hover:underline">
+        <Link to="/favoritos" className="text-soft hover:underline">
           favoritos
         </Link>{" "}
         o tu{" "}
-        <Link to="/historial" className="text-pine-300 hover:underline">
+        <Link to="/historial" className="text-soft hover:underline">
           historial
         </Link>
         .

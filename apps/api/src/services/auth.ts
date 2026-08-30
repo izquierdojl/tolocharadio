@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import type { Config, PublicUser } from "../config/env.js";
+import type { Config, PublicUser, UserTheme } from "../config/env.js";
 import type { DB } from "../db/client.js";
 import { passwordResetTokens, refreshTokens, users } from "../db/schema.js";
 import { badRequest, conflict, forbidden, unauthorized, validationError } from "../errors.js";
@@ -40,6 +40,7 @@ function toPublicUser(user: UserRow): PublicUser {
     id: user.id,
     email: user.email,
     name: user.name,
+    theme: user.theme as UserTheme,
     createdAt: user.createdAt,
   };
 }
@@ -172,6 +173,40 @@ export class AuthService {
     const [user] = await db
       .update(users)
       .set({ name: input.name.trim() })
+      .where(eq(users.id, userId))
+      .returning();
+    if (!user) throw unauthorized();
+    return toPublicUser(user);
+  }
+
+  async updateProfile(
+    userId: number,
+    input: { name?: string; theme?: UserTheme },
+  ): Promise<PublicUser> {
+    const { db } = this.deps;
+
+    const patch: Partial<typeof users.$inferInsert> = {};
+
+    if (input.name !== undefined) {
+      const nameIssue = validateName(input.name);
+      if (nameIssue) throw validationError([nameIssue]);
+      patch.name = input.name.trim();
+    }
+
+    if (input.theme !== undefined) {
+      if (input.theme !== "light" && input.theme !== "dark") {
+        throw validationError([{ field: "theme", message: "El tema debe ser 'light' o 'dark'" }]);
+      }
+      patch.theme = input.theme;
+    }
+
+    if (Object.keys(patch).length === 0) {
+      throw validationError([{ field: "update", message: "No se proporciono ningun campo a actualizar" }]);
+    }
+
+    const [user] = await db
+      .update(users)
+      .set(patch)
       .where(eq(users.id, userId))
       .returning();
     if (!user) throw unauthorized();

@@ -33,14 +33,14 @@ export function Favorites() {
     <section className="flex flex-col gap-5">
       <div className="flex items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold tracking-tight text-pine-100">Tus favoritos</h1>
-          <p className="text-sm text-pine-400">Las emisoras que has marcado para escucharlas cuando quieras.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Tus favoritos</h1>
+          <p className="text-sm text-muted">Las emisoras que has marcado para escucharlas cuando quieras.</p>
         </div>
         {data?.items.length ? (
           <button
             type="button"
             onClick={() => void clearAll()}
-            className="flex items-center gap-1.5 rounded-lg border border-pine-700 px-3 py-1.5 text-sm text-pine-300 transition hover:border-pine-500 hover:text-pine-100"
+            className="flex items-center gap-1.5 rounded-lg border border-line-strong px-3 py-1.5 text-sm text-soft transition hover:border-pine-500 hover:text-foreground"
           >
             <Trash2 className="size-4" />
             Vaciar
@@ -49,7 +49,7 @@ export function Favorites() {
       </div>
 
       {isLoading ? (
-        <p className="py-16 text-center text-sm text-pine-500">Cargando favoritos…</p>
+        <p className="py-16 text-center text-sm text-faint">Cargando favoritos…</p>
       ) : isError ? (
         <EmptyState
           icon={<Heart className="size-6" />}
@@ -78,7 +78,7 @@ export function Favorites() {
               <StationCard key={f.station.id} station={f.station} />
             ))}
           </div>
-          <p className="text-center text-xs text-pine-500">
+          <p className="text-center text-xs text-faint">
             Pulsa el corazón en cualquier tarjeta para quitarla de favoritos.
           </p>
         </>

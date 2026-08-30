@@ -101,9 +101,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   };
 }
 
+export type UserTheme = "light" | "dark";
+
 export interface PublicUser {
   id: number;
   email: string;
   name: string | null;
+  theme: UserTheme;
   createdAt: number;
 }

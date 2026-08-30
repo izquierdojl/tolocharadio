@@ -7,8 +7,8 @@ export function NotFound() {
       <span className="flex size-16 items-center justify-center rounded-2xl bg-pine-800 text-pine-300">
         <Mountain className="size-8" />
       </span>
-      <h1 className="text-3xl font-bold text-pine-100">Página no encontrada</h1>
-      <p className="max-w-sm text-sm text-pine-400">
+      <h1 className="text-3xl font-bold text-foreground">Página no encontrada</h1>
+      <p className="max-w-sm text-sm text-muted">
         Esta ruta no existe o el enlace es incorrecto. Vuelve a la cima del catálogo.
       </p>
       <Link
