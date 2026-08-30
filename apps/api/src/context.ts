@@ -2,6 +2,7 @@ import type { Config, PublicUser, UserTheme } from "./config/env.js";
 import type { DB } from "./db/client.js";
 import type { JwtService } from "./lib/jwt.js";
 import type { AuthService } from "./services/auth.js";
+import type { CustomStationsService } from "./services/customStations.js";
 import type { FavoritesService } from "./services/favorites.js";
 import type { HistoryService } from "./services/history.js";
 import type { StationsService } from "./services/stations.js";
@@ -20,6 +21,7 @@ export interface AppContext {
   jwt: JwtService;
   auth: AuthService;
   stations: StationsService;
+  customStations: CustomStationsService;
   favorites: FavoritesService;
   history: HistoryService;
 }

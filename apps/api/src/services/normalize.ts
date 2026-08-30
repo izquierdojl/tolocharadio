@@ -14,11 +14,12 @@ export interface Station {
   lastCheckOk: boolean | null;
   votes: number | null;
   clickCount: number | null;
+  isCustom: boolean;
 }
 
 type RawStation = Record<string, unknown>;
 
-function sanitizeText(value: unknown, maxLength: number): string {
+export function sanitizeText(value: unknown, maxLength: number): string {
   if (typeof value !== "string") return "";
   return (
     value
@@ -35,7 +36,7 @@ function sanitizeText(value: unknown, maxLength: number): string {
   );
 }
 
-function sanitizeUrl(value: unknown): string | null {
+export function sanitizeUrl(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
@@ -100,6 +101,7 @@ export function normalizeStation(raw: RawStation): Station | null {
     lastCheckOk: typeof raw.lastcheckok === "boolean" ? raw.lastcheckok : null,
     votes: toNullableNumber(raw.votes),
     clickCount: toNullableNumber(raw.clickcount),
+    isCustom: false,
   };
 }
 

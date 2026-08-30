@@ -36,8 +36,9 @@ const stationSchema = {
     lastCheckOk: { type: ["boolean", "null"] },
     votes: { type: ["integer", "null"] },
     clickCount: { type: ["integer", "null"] },
+    isCustom: { type: "boolean", description: "true si es una emisora personalizada del usuario (sin imagen propia)" },
   },
-  required: ["id", "name", "url"],
+  required: ["id", "name", "url", "isCustom"],
 } as const;
 
 const userSchema = {
@@ -547,6 +548,67 @@ export function buildOpenApi(): Record<string, unknown> {
           ...requireAuth,
           responses: {
             "200": { description: "Historial limpio", content: { "application/json": { schema: { type: "object", properties: { ok: { type: "boolean" } } } } } },
+            "401": errorResponses["401"],
+          },
+        },
+      },
+      "/custom-stations": {
+        get: {
+          tags: ["Emisoras personalizadas"],
+          summary: "Listar mis emisoras personalizadas",
+          ...requireAuth,
+          responses: {
+            "200": {
+              description: "Mis emisoras personalizadas",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["items"],
+                    properties: { items: { type: "array", items: { $ref: "#/components/schemas/Station" } } },
+                  },
+                },
+              },
+            },
+            "401": errorResponses["401"],
+          },
+        },
+        post: {
+          tags: ["Emisoras personalizadas"],
+          summary: "Crear una emisora personalizada (nombre + URL)",
+          ...requireAuth,
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["name", "url"],
+                  properties: {
+                    name: { type: "string", minLength: 1, maxLength: 256 },
+                    url: { type: "string", description: "URL de stream HTTP(S) valida" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "201": {
+              description: "Emisora creada",
+              content: { "application/json": { schema: { type: "object", properties: { station: { $ref: "#/components/schemas/Station" } }, required: ["station"] } } },
+            },
+            ...pick(errorResponses, ["401", "422"]),
+          },
+        },
+      },
+      "/custom-stations/{id}": {
+        delete: {
+          tags: ["Emisoras personalizadas"],
+          summary: "Eliminar una emisora personalizada (limpiando favoritos/historial; exito si no existia)",
+          ...requireAuth,
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+          responses: {
+            "200": { description: "Eliminado", content: { "application/json": { schema: { type: "object", properties: { ok: { type: "boolean" } } } } } },
             "401": errorResponses["401"],
           },
         },

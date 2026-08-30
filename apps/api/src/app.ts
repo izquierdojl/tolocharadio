@@ -9,6 +9,7 @@ import { AppError } from "./errors.js";
 import { swaggerUiDistPath, swaggerUiHtml } from "./lib/swagger.js";
 import { buildOpenApi } from "./openapi.js";
 import { authRouter } from "./routes/auth.js";
+import { customStationsRouter } from "./routes/customStations.js";
 import { favoritesRouter } from "./routes/favorites.js";
 import { historyRouter } from "./routes/history.js";
 import { playbackRouter } from "./routes/playback.js";
@@ -83,6 +84,7 @@ export function createApp(ctx: AppContext): express.Express {
   app.use("/api/v1", stationsRouter(ctx));
   app.use("/api/v1", favoritesRouter(ctx));
   app.use("/api/v1", historyRouter(ctx));
+  app.use("/api/v1", customStationsRouter(ctx));
   app.use("/api/v1", playbackRouter(ctx));
 
   app.get("/api/v1/openapi.json", (req, res) => {
