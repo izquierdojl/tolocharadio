@@ -18,7 +18,7 @@ export class HistoryService {
   ) {}
 
   async record(userId: number, stationId: string): Promise<void> {
-    const station = await this.stations.getStation(stationId);
+    const station = await this.stations.getStation(stationId, userId);
     const now = Date.now();
     const snapshot = JSON.stringify(station);
 

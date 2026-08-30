@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import type { Station } from "../lib/types.js";
 import { usePlayerStore } from "../stores/player.js";
 import { FavoriteButton } from "./FavoriteButton.js";
+import { SierraEmblem } from "./SierraEmblem.js";
 
 export function StationListItem({ station }: { station: Station }) {
   const play = usePlayerStore((s) => s.play);
@@ -11,7 +12,9 @@ export function StationListItem({ station }: { station: Station }) {
   return (
     <article className="group flex items-center gap-3 rounded-xl border border-line bg-surface-raised p-2.5 transition hover:border-pine-600 hover:bg-surface-soft">
       <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-pine-800">
-        {station.favicon ? (
+        {station.isCustom ? (
+          <SierraEmblem className="size-9 rounded-md" />
+        ) : station.favicon ? (
           <img
             src={station.favicon}
             alt=""

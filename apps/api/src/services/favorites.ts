@@ -27,7 +27,7 @@ export class FavoritesService {
   }
 
   async add(userId: number, stationId: string): Promise<FavoriteEntry> {
-    const station = await this.stations.getStation(stationId);
+    const station = await this.stations.getStation(stationId, userId);
 
     const existing = await this.db
       .select({ id: favorites.id })

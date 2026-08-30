@@ -97,7 +97,7 @@ export function playbackRouter(ctx: AppContext): Router {
       req.on("close", abort);
       res.on("close", abort);
 
-      const station: Station = await ctx.stations.getStation(routeParam(req, "stationId"));
+      const station: Station = await ctx.stations.getStation(routeParam(req, "stationId"), user.id);
 
       let origin: Response;
       try {
@@ -158,7 +158,9 @@ export function playbackRouter(ctx: AppContext): Router {
 
   router.get("/playback/:stationId/status", auth, async (req, res, next) => {
     try {
-      const station = await ctx.stations.getStation(routeParam(req, "stationId"));
+      const user = req.authUser;
+      if (!user) throw unauthorized();
+      const station = await ctx.stations.getStation(routeParam(req, "stationId"), user.id);
       const playable = await isPlayable(station.url, ctx.config.radioBrowserAppName);
       res.json({
         id: station.id,

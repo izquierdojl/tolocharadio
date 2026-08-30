@@ -1,4 +1,4 @@
-import type { ApiErrorBody, AuthResponse, PublicConfig, StringListPage } from "./types.js";
+import type { ApiErrorBody, AuthResponse, PublicConfig, Station, StringListPage } from "./types.js";
 
 const API_PREFIX = "/api/v1";
 
@@ -120,4 +120,16 @@ export function fetchCatalogLanguages(): Promise<StringListPage> {
 
 export function fetchCatalogTags(): Promise<StringListPage> {
   return api.get<StringListPage>("/stations/tags");
+}
+
+export function fetchCustomStations(): Promise<{ items: Station[] }> {
+  return api.get<{ items: Station[] }>("/custom-stations");
+}
+
+export function createCustomStation(name: string, url: string): Promise<{ station: Station }> {
+  return api.post<{ station: Station }>("/custom-stations", { name, url });
+}
+
+export function deleteCustomStation(id: string): Promise<{ ok: true }> {
+  return api.delete<{ ok: true }>(`/custom-stations/${encodeURIComponent(id)}`);
 }

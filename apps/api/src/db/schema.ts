@@ -48,6 +48,25 @@ export const favorites = sqliteTable(
   ],
 );
 
+export const customStations = sqliteTable(
+  "custom_stations",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    stationId: text("station_id").notNull(),
+    name: text("name").notNull(),
+    url: text("url").notNull(),
+    snapshot: text("snapshot").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("custom_stations_user_station").on(t.userId, t.stationId),
+    index("custom_stations_user").on(t.userId),
+  ],
+);
+
 export const history = sqliteTable(
   "history",
   {

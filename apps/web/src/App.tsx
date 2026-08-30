@@ -5,6 +5,7 @@ import { Home } from "./pages/Home.js";
 import { Explore } from "./pages/Explore.js";
 import { Favorites } from "./pages/Favorites.js";
 import { History } from "./pages/History.js";
+import { CustomStations } from "./pages/CustomStations.js";
 import { Login } from "./pages/Login.js";
 import { Register } from "./pages/Register.js";
 import { Profile } from "./pages/Profile.js";
@@ -48,6 +49,14 @@ export function App() {
             element={
               <RequireAuth>
                 <History />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/mis-emisoras"
+            element={
+              <RequireAuth>
+                <CustomStations />
               </RequireAuth>
             }
           />

@@ -1,6 +1,7 @@
 import type { Config } from "../config/env.js";
 import { AppError, notFound, serviceUnavailable } from "../errors.js";
 import { Cache } from "./cache.js";
+import { isCustomId, type CustomStationsService } from "./customStations.js";
 import { normalizeOptions, normalizeStationList, type OptionsSort, type Station } from "./normalize.js";
 import { RadioBrowserClient } from "./radiobrowser.js";
 
@@ -38,7 +39,10 @@ export class StationsService {
   private readonly cache: Cache<unknown>;
   private readonly maxLimit = 100;
 
-  constructor(config: Config) {
+  constructor(
+    config: Config,
+    private readonly customStations?: CustomStationsService,
+  ) {
     this.client = new RadioBrowserClient(config);
     this.cache = new Cache(config.cacheMaxEntries, config.cacheTtlMs);
   }
@@ -76,15 +80,22 @@ export class StationsService {
     }
   }
 
-  async getStation(uuid: string): Promise<Station> {
-    const key = `byId:${uuid}`;
+  async getStation(stationId: string, userId?: number): Promise<Station> {
+    if (isCustomId(stationId)) {
+      if (!this.customStations || userId === undefined) {
+        throw notFound("STATION_NOT_FOUND", "La emisora no existe");
+      }
+      return this.customStations.get(userId, stationId);
+    }
+
+    const key = `byId:${stationId}`;
     const fresh = this.cache.get(key) as { station: Station } | undefined;
     if (fresh) return fresh.station;
 
     try {
-      const raw = await this.client.byUuid(uuid);
+      const raw = await this.client.byUuid(stationId);
       const list = normalizeStationList(raw);
-      const station = list.find((s) => s.id === uuid) ?? list[0];
+      const station = list.find((s) => s.id === stationId) ?? list[0];
       if (!station) {
         throw notFound("STATION_NOT_FOUND", "La emisora no existe");
       }

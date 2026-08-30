@@ -14,6 +14,7 @@ export interface Station {
   lastCheckOk: boolean | null;
   votes: number | null;
   clickCount: number | null;
+  isCustom: boolean;
 }
 
 export type UserTheme = "light" | "dark";

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { ChevronDown, Heart, History, Home, LogOut, UserRound } from "lucide-react";
+import { ChevronDown, Heart, History, Home, LogOut, Radio, UserRound } from "lucide-react";
 import { useAuthStore } from "../stores/auth.js";
 import { SierraEmblem } from "./SierraEmblem.js";
 import { PlayerBar } from "./PlayerBar.js";
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { to: "/explorar", label: "Explorar", icon: Home, auth: true },
   { to: "/favoritos", label: "Favoritos", icon: Heart, auth: true },
   { to: "/historial", label: "Historial", icon: History, auth: true },
+  { to: "/mis-emisoras", label: "Mis emisoras", icon: Radio, auth: true },
 ];
 
 function Logo() {
