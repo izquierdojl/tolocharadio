@@ -7,26 +7,7 @@
 <p align="center"><em>Exploración radiofónica libre y autoalojada.</em></p>
 
 ```
-                       ~ ~ ~ ~ ~ ~ ~ ~ ~
-                    ~ ~               ~ ~
-                 ~ ~                     ~ ~
-              ~ ~                           ~ ~
-        /\                /\         /\__/\
-       /  \              /  \       /      \
-      / /\ \            / /\ \     /  /\    \
-     / /  \ \          / /  \ \   /  /  \    \
-    / /    \ \        / /    \ \ /  /    \    \
-   /_/      \_\      /_/      / /  /      \    \
-  /  \       \      /  \     /  /        \    /
- / /\ \       \    / /\ \   /  / /\       \  /
-/ /  \ \       \__/_/  \ \_/  / /  \_______\/
-
-
-   ^          ^            ^          ^
-  /^\        /^\          /^\        /^\
-```
-
-TolochaRadio es un cliente web para la exploración y reproducción de emisoras de radio en línea. Se apoya en la base de datos pública de [RadioBrowser](https://www.radio-browser.info), lo que le otorga acceso a un catálogo extenso y actualizado de emisoras de todo el mundo. Reproducción continua con reproductor flotante, favoritos, historial y cuentas propias. Todo en español, con una estética inspirada en la Sierra de Tolocha (bosque de pinares, verdes y ocres).
+TolochaRadio es un cliente web para la exploración y reproducción de emisoras de radio en línea. Se apoya en la base de datos pública de [RadioBrowser](https://www.radio-browser.info), lo que le otorga acceso a un catálogo extenso y actualizado de emisoras de todo el mundo. Reproducción continua con reproductor flotante, favoritos, historial y cuentas propias.
 
 ## Características
 
@@ -38,6 +19,8 @@ TolochaRadio es un cliente web para la exploración y reproducción de emisoras 
 - API REST documentada con OpenAPI 3.1 y Swagger UI.
 
 TolochaRadio es completamente autoalojable y de código abierto: control total sobre tus datos. Sin seguimiento, sin intermediarios. **Radio libre, datos tuyos, control total.**
+
+El proyecto ha sido realizado utilizando enteramente la metodología SDD, utilizando [OpenSpec][https://github.com/Fission-AI/OpenSpec/] por motivos de aprendizaje y buenas prácticas de desarrollo.
 
 ## Documentación
 
