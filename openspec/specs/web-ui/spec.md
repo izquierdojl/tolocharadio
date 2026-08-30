@@ -75,7 +75,7 @@ El sistema SHALL ofrecer en la interfaz una barra de búsqueda por nombre y filt
 - **THEN** no se le muestra la barra de búsqueda ni los filtros de emisoras
 
 ### Requirement: Reproductor flotante persistente
-La interfaz SHALL mostrar un reproductor fijo en la parte inferior, visible en todas las vistas mientras haya una sesión abierta, que muestre la emisora en reproducción (o la última seleccionada) con controles de reproducir/pausar, siguiente, volumen y eliminar/cambiar emisora. La reproducción SHALL continuar al cambiar de vista.
+La interfaz SHALL mostrar un reproductor fijo en la parte inferior, visible en todas las vistas mientras haya una sesión abierta, que muestre la emisora en reproducción (o la última seleccionada) con controles de reproducir/pausar, siguiente, volumen y eliminar/cambiar emisora. Cuando haya una emisora seleccionada, el reproductor SHALL mostrar la información técnica de la emisora (bitrate y formato/códec de audio, cuando estén disponibles) y SHALL ofrecer un botón para copiar el enlace de emisión al portapapeles. La reproducción SHALL continuar al cambiar de vista.
 
 #### Scenario: Reproductor siempre disponible
 - **WHEN** un usuario navega entre secciones con el reproductor activo
@@ -87,7 +87,19 @@ La interfaz SHALL mostrar un reproductor fijo en la parte inferior, visible en t
 
 #### Scenario: Sin nada que reproducir
 - **WHEN** el usuario no ha seleccionado ninguna emisora en la sesión
-- **THEN** el reproductor aparece en estado vacío o minimizado sin reproducir nada
+- **THEN** el reproductor aparece en estado vacío o minimizado sin reproducir nada, sin mostrar información técnica
+
+#### Scenario: Información técnica disponible
+- **WHEN** una emisora seleccionada en el reproductor tiene bitrate y formato/códec de audio
+- **THEN** el reproductor muestra tanto el bitrate (p. ej. "128 kbps") como el formato de audio (p. ej. "MP3", "AAC")
+
+#### Scenario: Información técnica ausente
+- **WHEN** la emisora seleccionada en el reproductor no dispone de bitrate o de formato/códec
+- **THEN** el reproductor omite el dato faltante y sigue mostrando el resto de la información sin romper el diseño
+
+#### Scenario: Copiar enlace de emisión
+- **WHEN** un usuario pulsa el botón de copiar enlace de emisión en el reproductor
+- **THEN** la aplicación copia al portapapeles el enlace de emisión de la emisora (la URL de su stream vía el proxy de playback) y confirma visualmente que se ha copiado
 
 ### Requirement: Autenticación desde la interfaz
 La interfaz SHALL ofrecer pantallas de registro e inicio de sesión, gestionar la persistencia de la sesión con tokens (acceso y refresco) y permitir cerrar sesión y ver el perfil. Cuando el registro esté deshabilitado en el servidor, la interfaz SHALL ocultar o indicar la indisponibilidad del registro.
