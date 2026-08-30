@@ -1,5 +1,7 @@
-import { Loader2, Pause, Play, SkipForward, Volume2, VolumeX, X } from "lucide-react";
+import { useRef, useState } from "react";
+import { Check, Copy, Loader2, Pause, Play, SkipForward, Volume2, VolumeX, X } from "lucide-react";
 import { usePlayerStore } from "../stores/player.js";
+import { playbackUrl } from "../lib/api.js";
 import type { Station } from "../lib/types.js";
 
 interface PlayerBarProps {
@@ -9,6 +11,25 @@ interface PlayerBarProps {
 export function PlayerBar({ fallbackStations = [] }: PlayerBarProps) {
   const { station, isPlaying, isBuffering, volume, toggle, stop, next, setVolume } =
     usePlayerStore();
+  const [copied, setCopied] = useState(false);
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const technicalBits = [
+    station?.bitrate != null ? `${station.bitrate} kbps` : null,
+    station?.codec ?? null,
+  ].filter(Boolean) as string[];
+
+  async function copyLink() {
+    if (!station) return;
+    try {
+      await navigator.clipboard.writeText(playbackUrl(station.id));
+      setCopied(true);
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopied(false), 2500);
+    } catch {
+      setCopied(false);
+    }
+  }
 
   if (!station) {
     return (
@@ -36,7 +57,24 @@ export function PlayerBar({ fallbackStations = [] }: PlayerBarProps) {
           <span className="truncate text-xs text-pine-400">
             {[station.country, station.language].filter(Boolean).join(" · ") || "Emisora de radio"}
           </span>
+          {technicalBits.length > 0 && (
+            <span className="truncate text-xs text-pine-500">{technicalBits.join(" · ")}</span>
+          )}
         </div>
+
+        <button
+          type="button"
+          onClick={copyLink}
+          title={copied ? "Enlace copiado" : "Copiar enlace de emisión"}
+          className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+            copied
+              ? "bg-pine-700 text-pine-200"
+              : "bg-pine-800 text-pine-300 hover:bg-pine-700 hover:text-pine-100"
+          }`}
+        >
+          {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+          {copied ? "Enlace copiado" : "Copiar enlace"}
+        </button>
 
         <button
           type="button"
