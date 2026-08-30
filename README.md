@@ -6,7 +6,6 @@
 
 <p align="center"><em>Exploración radiofónica libre y autoalojada.</em></p>
 
-```
 TolochaRadio es un cliente web para la exploración y reproducción de emisoras de radio en línea. Se apoya en la base de datos pública de [RadioBrowser](https://www.radio-browser.info), lo que le otorga acceso a un catálogo extenso y actualizado de emisoras de todo el mundo. Reproducción continua con reproductor flotante, favoritos, historial y cuentas propias.
 
 ## Características
