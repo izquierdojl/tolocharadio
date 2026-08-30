@@ -506,6 +506,31 @@ export function buildOpenApi(): Record<string, unknown> {
           },
         },
       },
+      "/favorites/order": {
+        put: {
+          tags: ["Favoritos"],
+          summary: "Establecer el orden personalizado de los favoritos",
+          ...requireAuth,
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["stationIds"],
+                  properties: {
+                    stationIds: { type: "array", minItems: 1, items: { type: "string" }, description: "Permutacion exacta de los stationId favoritos de la cuenta, en el orden deseado" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": { description: "Orden guardado", content: { "application/json": { schema: { type: "object", properties: { ok: { type: "boolean" } } } } } },
+            ...pick(errorResponses, ["401", "409", "422"]),
+          },
+        },
+      },
       "/history": {
         get: {
           tags: ["Historial"],

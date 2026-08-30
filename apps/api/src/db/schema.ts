@@ -40,6 +40,7 @@ export const favorites = sqliteTable(
     stationId: text("station_id").notNull(),
     snapshot: text("snapshot").notNull(),
     createdAt: integer("created_at").notNull(),
+    position: integer("position"),
   },
   (t) => [
     uniqueIndex("favorites_user_station").on(t.userId, t.stationId),
