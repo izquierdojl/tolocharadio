@@ -36,6 +36,7 @@ describe("favorites", () => {
   it("requiere autenticacion", async () => {
     await request(server.app).get("/api/v1/favorites").expect(401);
     await request(server.app).post("/api/v1/favorites").send({ stationId: "x" }).expect(401);
+    await request(server.app).put("/api/v1/favorites/order").send({ stationIds: ["x"] }).expect(401);
   });
 
   it("anade, lista y elimina favoritos", async () => {
@@ -97,5 +98,61 @@ describe("favorites", () => {
       .expect(201);
     const listB = await request(server.app).get("/api/v1/favorites").set("Authorization", `Bearer ${tokenB}`).expect(200);
     expect(listB.body.items).toHaveLength(0);
+  });
+
+  it("reordena favoritos y persiste el nuevo orden en el listado", async () => {
+    const token = await registerUser();
+    for (const id of [RAW_STATION.stationuuid, RAW_STATION_TWO.stationuuid]) {
+      await request(server.app)
+        .post("/api/v1/favorites")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ stationId: id })
+        .expect(201);
+    }
+
+    const reorder = await request(server.app)
+      .put("/api/v1/favorites/order")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ stationIds: [RAW_STATION_TWO.stationuuid, RAW_STATION.stationuuid] })
+      .expect(200);
+    expect(reorder.body).toEqual({ ok: true });
+
+    const list = await request(server.app).get("/api/v1/favorites").set("Authorization", `Bearer ${token}`).expect(200);
+    expect(list.body.items.map((f: { station: { id: string } }) => f.station.id)).toEqual([
+      RAW_STATION_TWO.stationuuid,
+      RAW_STATION.stationuuid,
+    ]);
+  });
+
+  it("rechaza reordenar con lista incompleta (409)", async () => {
+    const token = await registerUser();
+    for (const id of [RAW_STATION.stationuuid, RAW_STATION_TWO.stationuuid]) {
+      await request(server.app)
+        .post("/api/v1/favorites")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ stationId: id })
+        .expect(201);
+    }
+    const res = await request(server.app)
+      .put("/api/v1/favorites/order")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ stationIds: [RAW_STATION.stationuuid] })
+      .expect(409);
+    expect(res.body.error.code).toBe("FAVORITE_INVALID_ORDER");
+  });
+
+  it("rechaza reordenar con emisora no favorita (409)", async () => {
+    const token = await registerUser();
+    await request(server.app)
+      .post("/api/v1/favorites")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ stationId: RAW_STATION.stationuuid })
+      .expect(201);
+    const res = await request(server.app)
+      .put("/api/v1/favorites/order")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ stationIds: [RAW_STATION.stationuuid, "no-favorita"] })
+      .expect(409);
+    expect(res.body.error.code).toBe("FAVORITE_INVALID_ORDER");
   });
 });

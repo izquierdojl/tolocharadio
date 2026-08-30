@@ -7,6 +7,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { routeParam } from "../lib/params.js";
 
 const addFavoriteSchema = z.object({ stationId: z.string().min(1).max(64) });
+const reorderSchema = z.object({ stationIds: z.array(z.string().min(1).max(64)).min(1) });
 
 export function favoritesRouter(ctx: AppContext): Router {
   const router = Router();
@@ -40,6 +41,18 @@ export function favoritesRouter(ctx: AppContext): Router {
       const user = req.authUser;
       if (!user) throw unauthorized();
       const result = await ctx.favorites.remove(user.id, routeParam(req, "stationId"));
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.put("/favorites/order", auth, async (req, res, next) => {
+    try {
+      const user = req.authUser;
+      if (!user) throw unauthorized();
+      const body = parseBody(reorderSchema, req.body);
+      const result = await ctx.favorites.reorder(user.id, body.stationIds);
       res.json(result);
     } catch (err) {
       next(err);

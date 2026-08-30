@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import type { PublicUser } from "../config/env.js";
 import type { DB } from "../db/client.js";
 import { favorites } from "../db/schema.js";
@@ -22,7 +22,7 @@ export class FavoritesService {
       .select()
       .from(favorites)
       .where(eq(favorites.userId, userId))
-      .orderBy(desc(favorites.createdAt));
+      .orderBy(asc(favorites.position), desc(favorites.createdAt));
     return rows.map((row) => ({ addedAt: row.createdAt, station: JSON.parse(row.snapshot) as Station }));
   }
 
@@ -52,6 +52,37 @@ export class FavoritesService {
     await this.db
       .delete(favorites)
       .where(and(eq(favorites.userId, userId), eq(favorites.stationId, stationId)));
+    return { ok: true };
+  }
+
+  async reorder(userId: number, stationIds: string[]): Promise<{ ok: true }> {
+    const rows = await this.db
+      .select({ id: favorites.id, stationId: favorites.stationId, position: favorites.position })
+      .from(favorites)
+      .where(eq(favorites.userId, userId));
+    const current = rows.map((r) => r.stationId);
+
+    const isPermutation =
+      current.length === stationIds.length &&
+      new Set(stationIds).size === stationIds.length &&
+      stationIds.every((id) => current.includes(id));
+
+    if (!isPermutation) {
+      throw conflict(
+        "FAVORITE_INVALID_ORDER",
+        "El orden debe contener exactamente tus favoritos actuales, sin repetir ni omitir ninguno",
+      );
+    }
+
+    const byStation = new Map(rows.map((r) => [r.stationId, r]));
+    this.db.transaction((tx) => {
+      for (let i = 0; i < stationIds.length; i++) {
+        const row = byStation.get(stationIds[i]!);
+        if (row && row.position !== i) {
+          tx.update(favorites).set({ position: i }).where(eq(favorites.id, row.id)).run();
+        }
+      }
+    });
     return { ok: true };
   }
 
