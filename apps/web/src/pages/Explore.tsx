@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import type { Page, Station } from "../lib/types.js";
 import { api, fetchCatalogCountries, fetchCatalogLanguages, fetchCatalogTags } from "../lib/api.js";
 import { Combobox } from "../components/Combobox.js";
-import { StationCard } from "../components/StationCard.js";
+import { StationList } from "../components/StationList.js";
 import { EmptyState } from "../components/EmptyState.js";
 
 const PAGE_SIZE = 24;
@@ -247,11 +247,7 @@ export function Explore() {
       ) : (
         <>
           {isFetching && offset !== 0 ? null : null}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {data.items.map((station) => (
-              <StationCard key={station.id} station={station} />
-            ))}
-          </div>
+          <StationList stations={data.items} />
           <div className="flex items-center justify-center gap-3 pt-2">
             <button
               type="button"

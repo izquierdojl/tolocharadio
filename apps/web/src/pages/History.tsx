@@ -3,7 +3,7 @@ import { History as HistoryIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { HistoryEntry, Station } from "../lib/types.js";
 import { api } from "../lib/api.js";
-import { StationCard } from "../components/StationCard.js";
+import { StationList } from "../components/StationList.js";
 import { EmptyState } from "../components/EmptyState.js";
 import { useAuthStore } from "../stores/auth.js";
 
@@ -101,11 +101,7 @@ export function History() {
               <span className="text-sm text-muted">{formatDate(latest.playedAt)}</span>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {stations.map((station) => (
-              <StationCard key={station.id} station={station} />
-            ))}
-          </div>
+          <StationList stations={stations} />
         </>
       ) : null}
     </section>

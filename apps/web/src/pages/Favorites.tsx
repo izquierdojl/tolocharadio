@@ -3,7 +3,7 @@ import { Heart, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { FavoriteEntry } from "../lib/types.js";
 import { api } from "../lib/api.js";
-import { StationCard } from "../components/StationCard.js";
+import { StationList } from "../components/StationList.js";
 import { EmptyState } from "../components/EmptyState.js";
 import { useAuthStore } from "../stores/auth.js";
 import { useQueryClient } from "@tanstack/react-query";
@@ -73,13 +73,9 @@ export function Favorites() {
         />
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {data.items.map((f) => (
-              <StationCard key={f.station.id} station={f.station} />
-            ))}
-          </div>
+          <StationList stations={data.items.map((f) => f.station)} />
           <p className="text-center text-xs text-faint">
-            Pulsa el corazón en cualquier tarjeta para quitarla de favoritos.
+            Pulsa el corazón en cualquier emisora para quitarla de favoritos.
           </p>
         </>
       )}

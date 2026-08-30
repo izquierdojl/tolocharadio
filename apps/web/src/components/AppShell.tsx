@@ -5,6 +5,7 @@ import { useAuthStore } from "../stores/auth.js";
 import { SierraEmblem } from "./SierraEmblem.js";
 import { PlayerBar } from "./PlayerBar.js";
 import { ThemeToggle } from "./ThemeToggle.js";
+import { ViewModeToggle } from "./ViewModeToggle.js";
 
 const NAV_ITEMS = [
   { to: "/explorar", label: "Explorar", icon: Home, auth: true },
@@ -135,7 +136,10 @@ function Header() {
           })}
         </nav>
         {status === "loading" ? null : status === "authenticated" ? (
-          <UserMenu />
+          <div className="flex items-center gap-1">
+            <ViewModeToggle />
+            <UserMenu />
+          </div>
         ) : (
           <div className="flex items-center gap-1">
             <ThemeToggle />

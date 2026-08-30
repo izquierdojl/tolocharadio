@@ -4,13 +4,13 @@ import type { Station } from "../lib/types.js";
 import { usePlayerStore } from "../stores/player.js";
 import { FavoriteButton } from "./FavoriteButton.js";
 
-export function StationCard({ station }: { station: Station }) {
+export function StationListItem({ station }: { station: Station }) {
   const play = usePlayerStore((s) => s.play);
   const isPlaying = usePlayerStore((s) => s.isPlaying && s.station?.id === station.id);
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-surface-raised transition hover:border-pine-600 hover:shadow-xl hover:shadow-black/30">
-      <div className="relative aspect-video w-full overflow-hidden bg-pine-800">
+    <article className="group flex items-center gap-3 rounded-xl border border-line bg-surface-raised p-2.5 transition hover:border-pine-600 hover:bg-surface-soft">
+      <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-pine-800">
         {station.favicon ? (
           <img
             src={station.favicon}
@@ -22,11 +22,8 @@ export function StationCard({ station }: { station: Station }) {
             className="size-full object-cover"
           />
         ) : (
-          <div className="flex size-full items-center justify-center bg-gradient-to-br from-pine-700 to-pine-900">
-            <Radio className="size-8 text-pine-400" />
-          </div>
+          <Radio className="size-5 text-pine-400" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-pine-950/80 via-transparent to-transparent" />
         <button
           type="button"
           onClick={() => {
@@ -34,26 +31,25 @@ export function StationCard({ station }: { station: Station }) {
             toast.dismiss();
           }}
           title={isPlaying ? "Reproduciendo" : "Reproducir"}
-          className={`absolute bottom-2 left-2 flex size-10 items-center justify-center rounded-full shadow-lg transition ${
+          aria-label={isPlaying ? "Reproduciendo" : "Reproducir"}
+          className={`absolute inset-0 flex items-center justify-center transition ${
             isPlaying
-              ? "bg-ochre-500 text-pine-950 opacity-100"
-              : "bg-black/50 text-pine-100 opacity-0 group-hover:opacity-100"
+              ? "bg-pine-950/50 text-ochre-500"
+              : "bg-black/0 text-transparent group-hover:bg-black/40 group-hover:text-pine-100"
           }`}
         >
-          <Play className="ml-0.5 size-4" />
+          <Play className="size-5" />
         </button>
-        <div className="absolute right-2 top-2">
-          <FavoriteButton station={station} />
-        </div>
       </div>
-      <div className="flex flex-1 flex-col gap-1 p-3">
+
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <h3 className="truncate font-semibold text-foreground" title={station.name}>
           {station.name}
         </h3>
         <p className="truncate text-xs text-muted">
           {[station.country, station.language].filter(Boolean).join(" · ") || "Emisora"}
         </p>
-        <div className="mt-1 flex flex-wrap items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           {station.tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
@@ -62,11 +58,13 @@ export function StationCard({ station }: { station: Station }) {
               {tag}
             </span>
           ))}
-          {station.bitrate ? (
-            <span className="ml-auto text-xs text-faint">{station.bitrate} kbps</span>
-          ) : null}
         </div>
       </div>
+
+      {station.bitrate ? (
+        <span className="hidden text-xs text-faint sm:inline">{station.bitrate} kbps</span>
+      ) : null}
+      <FavoriteButton station={station} />
     </article>
   );
 }
