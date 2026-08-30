@@ -147,7 +147,7 @@ export function Explore() {
               value={country}
               options={countriesQuery.data?.items}
               degraded={countriesQuery.isError}
-              placeholder="País (ej. España)"
+              placeholder="País (ej. Spain)"
               onChange={setCountry}
               onEnter={() => applyFilters(current)}
             />
