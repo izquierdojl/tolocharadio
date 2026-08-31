@@ -2,27 +2,32 @@
 
 > [← Volver al README](../README.md)
 
-## Build local
+## Imagen publicada en GHCR (recomendado)
+
+La imagen se publica automáticamente en GitHub Container Registry al crear un tag `v*` (ver [docs/desarrollo.md](desarrollo.md)). El `docker-compose.yml` del repo ya apunta a ella:
 
 ```bash
-# build local
-docker build -t tolocharadio .
-
-# o con docker compose (volumen nombrado, persiste el SQLite)
-JWT_ACCESS_SECRET=... JWT_REFRESH_SECRET=... docker compose up -d
+docker compose pull
+docker compose up -d
 ```
 
-El contenedor expone la API y la web en el puerto `3000`, guarda la base en el volumen `/data` y arranca como usuario no privilegiado con `HEALTHCHECK`.
+El contenedor expone la API y la web en el puerto `3000`, guarda la base en el volumen nombrado `/data` y arranca con `HEALTHCHECK`. El entrypoint de la imagen ajusta automáticamente los permisos del volumen (lo crea y lo deja propiedad del usuario `node`), por lo que no hay pasos manuales de `chown` ni configuración extra.
 
-## Imagen publicada en GHCR
-
-Con la imagen publicada en GitHub Container Registry (ver [docs/desarrollo.md](desarrollo.md)):
+Sin Compose:
 
 ```bash
 docker run -d --name tolocharadio -p 127.0.0.1:3000:3000 \
   -e JWT_ACCESS_SECRET='...' -e JWT_REFRESH_SECRET='...' \
   -v tolocharadio_data:/data \
   ghcr.io/izquierdojl/tolocharadio:latest
+```
+
+Para actualizar a una versión nueva: `docker compose pull && docker compose up -d`.
+
+## Build local (desarrollo)
+
+```bash
+docker build -t tolocharadio .
 ```
 
 ## Recordatorio de variables críticas

@@ -29,8 +29,14 @@ COPY --from=build /app/apps/api/package.json ./apps/api/package.json
 COPY --from=build /app/apps/api/drizzle ./apps/api/drizzle
 COPY --from=build /app/apps/web/dist ./apps/web/dist
 COPY --from=build /app/node_modules ./node_modules
-RUN mkdir -p /data && chown -R node:node /app /data
-USER node
+RUN apk add --no-cache su-exec \
+  && mkdir -p /data \
+  && chown -R node:node /app /data
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# El entrypoint arranca como root para fijar permisos en el volumen /data y
+# despues baja privilegios a node antes de lanzar la aplicacion.
+ENTRYPOINT ["docker-entrypoint.sh"]
 EXPOSE 3000
 VOLUME ["/data"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

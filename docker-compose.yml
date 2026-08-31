@@ -1,9 +1,6 @@
 services:
   tolocharadio:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: tolocharadio:latest
+    image: ghcr.io/izquierdojl/tolocharadio:latest
     container_name: tolocharadio
     restart: unless-stopped
     ports:
