@@ -44,7 +44,7 @@ La exploración de emisoras en rejilla SHALL estar disponible únicamente para u
 - **THEN** no ve la lista de emisoras ni la búsqueda y es redirigido a la portada o al inicio de sesión
 
 ### Requirement: Búsqueda y filtros
-El sistema SHALL ofrecer en la interfaz una barra de búsqueda por nombre y filtros de país, idioma y género (tipo de emisora) mediante controles combobox con búsqueda directa, que muestran las opciones disponibles del catálogo y permiten escribir para filtrarlas y seleccionarlas, actualizando la rejilla con los resultados obtenidos de la API. La búsqueda y los filtros SHALL estar disponibles únicamente para usuarios autenticados, SIN permitir tampoco que un invitado busque ni filtre.
+El sistema SHALL ofrecer en la interfaz una barra de búsqueda por nombre y filtros de país, idioma y género (tipo de emisora) mediante controles combobox con búsqueda directa, que muestran las opciones disponibles del catálogo y permiten escribir para filtrarlas y seleccionarlas, actualizando la rejilla con los resultados obtenidos de la API. La búsqueda y los filtros SHALL estar disponibles únicamente para usuarios autenticados, SIN permitir tampoco que un invitado busque ni filtre. La interfaz SHALL mostrar, junto a la búsqueda, una fila de sugerencias de género personalizadas del usuario: cada sugerencia es una chip con un género que al pulsarla aplica el filtro de género y actualiza la rejilla. El usuario autenticado SHALL poder añadir una sugerencia eligiendo un género del catálogo y eliminar cualquiera de sus sugerencias desde la propia fila. Si el usuario aún no tiene sugerencias, la fila SHALL mostrarse en un estado que invite a añadir la primera.
 
 #### Scenario: Búsqueda por texto
 - **WHEN** un usuario autenticado escribe un término en la barra de búsqueda
@@ -66,13 +66,29 @@ El sistema SHALL ofrecer en la interfaz una barra de búsqueda por nombre y filt
 - **WHEN** un usuario selecciona un género en el filtro
 - **THEN** la rejilla muestra únicamente emisoras de ese género
 
+#### Scenario: Sugerencia que aplica el filtro de género
+- **WHEN** un usuario autenticado pulsa una chip de sugerencia de género
+- **THEN** la rejilla se actualiza mostrando únicamente las emisoras de ese género
+
+#### Scenario: Añadir una sugerencia de género
+- **WHEN** un usuario autenticado añade una sugerencia eligiendo un género del catálogo
+- **THEN** la sugerencia aparece en la fila de sugerencias y queda guardada en su cuenta
+
+#### Scenario: Eliminar una sugerencia
+- **WHEN** un usuario autenticado elimina una de sus sugerencias de género
+- **THEN** la sugerencia desaparece de la fila y queda eliminada de su cuenta
+
+#### Scenario: Sin sugerencias guardadas
+- **WHEN** un usuario autenticado sin sugerencias guardadas ve la exploración
+- **THEN** la fila de sugerencias muestra un estado que invita a añadir su primera sugerencia
+
 #### Scenario: Opciones del catálogo no disponibles
 - **WHEN** no es posible cargar los países, idiomas o géneros disponibles del catálogo
 - **THEN** el filtro correspondiente permanece utilizable (permite indicar un valor) y la interfaz comunica el problema sin romper la búsqueda
 
 #### Scenario: Invitado sin búsqueda
 - **WHEN** un usuario sin sesión está en la aplicación
-- **THEN** no se le muestra la barra de búsqueda ni los filtros de emisoras
+- **THEN** no se le muestra la barra de búsqueda, los filtros de emisoras ni la fila de sugerencias
 
 ### Requirement: Reproductor flotante persistente
 La interfaz SHALL mostrar un reproductor fijo en la parte inferior, visible en todas las vistas mientras haya una sesión abierta, que muestre la emisora en reproducción (o la última seleccionada) con controles de reproducir/pausar, siguiente, volumen y eliminar/cambiar emisora. Cuando haya una emisora seleccionada, el reproductor SHALL mostrar la información técnica de la emisora (bitrate y formato/códec de audio, cuando estén disponibles) y SHALL ofrecer un botón para copiar el enlace de emisión al portapapeles. La reproducción SHALL continuar al cambiar de vista.
