@@ -1,14 +1,22 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { Loader2, Search as SearchIcon, SearchX } from "lucide-react";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Loader2, Plus, Search as SearchIcon, SearchX, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import type { Page, Station } from "../lib/types.js";
-import { api, fetchCatalogCountries, fetchCatalogLanguages, fetchCatalogTags } from "../lib/api.js";
+import { toast } from "sonner";
+import type { Page, Station, Suggestion } from "../lib/types.js";
+import {
+  api,
+  createSuggestion,
+  deleteSuggestion,
+  fetchCatalogCountries,
+  fetchCatalogLanguages,
+  fetchCatalogTags,
+  fetchSuggestions,
+} from "../lib/api.js";
 import { Combobox } from "../components/Combobox.js";
 import { StationList } from "../components/StationList.js";
 import { EmptyState } from "../components/EmptyState.js";
 
 const PAGE_SIZE = 24;
-const EXAMPLES = ["clásica", "jazz", "folk"];
 
 function buildQuery(params: { name: string; country: string; language: string; tag: string; offset: number }): string {
   const q = new URLSearchParams();
@@ -78,12 +86,15 @@ function FilterControl({ id, value, options, degraded, placeholder, onChange, on
 }
 
 export function Explore() {
+  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [country, setCountry] = useState("");
   const [language, setLanguage] = useState("");
   const [tag, setTag] = useState("");
   const [filters, setFilters] = useState<Filters>({ name: "", country: "", language: "", tag: "" });
   const [offset, setOffset] = useState(0);
+  const [suggesting, setSuggesting] = useState(false);
+  const [newGenre, setNewGenre] = useState("");
 
   const current = { name, country, language, tag };
 
@@ -102,6 +113,49 @@ export function Explore() {
     queryFn: fetchCatalogTags,
     staleTime: 5 * 60_000,
   });
+  const suggestionsQuery = useQuery({
+    queryKey: ["suggestions"],
+    queryFn: fetchSuggestions,
+  });
+
+  const createSuggestionMutation = useMutation({
+    mutationFn: (genre: string) => createSuggestion(genre),
+    onSuccess: () => {
+      toast.success("Sugerencia añadida");
+      setNewGenre("");
+      setSuggesting(false);
+      void queryClient.invalidateQueries({ queryKey: ["suggestions"] });
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "No se pudo añadir la sugerencia");
+    },
+  });
+
+  const deleteSuggestionMutation = useMutation({
+    mutationFn: (id: number) => deleteSuggestion(id),
+    onSuccess: () => {
+      toast.success("Sugerencia eliminada");
+      void queryClient.invalidateQueries({ queryKey: ["suggestions"] });
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "No se pudo eliminar la sugerencia");
+    },
+  });
+
+  const applyGenre = (genre: string): void => {
+    const next = { ...current, tag: genre };
+    setName(next.name);
+    setCountry(next.country);
+    setLanguage(next.language);
+    setTag(genre);
+    applyFilters(next);
+  };
+
+  const confirmSuggestion = (): void => {
+    const genre = newGenre.trim();
+    if (!genre) return;
+    createSuggestionMutation.mutate(genre);
+  };
 
   const { data, isFetching, isError, refetch } = useQuery({
     queryKey: ["stations", filters, offset],
@@ -114,8 +168,6 @@ export function Explore() {
     setFilters(next);
     setOffset(nextOffset);
   };
-
-  const hasActiveFilters = Boolean(filters.name || filters.country || filters.language || filters.tag);
 
   return (
     <section className="flex flex-col gap-5">
@@ -184,24 +236,74 @@ export function Explore() {
         </button>
       </form>
 
-      {!hasActiveFilters && (
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-faint">Sugerencias:</span>
-          {EXAMPLES.map((ex) => (
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="text-faint">Sugerencias:</span>
+        {suggestionsQuery.data?.items.map((suggestion: Suggestion) => (
+          <span key={suggestion.id} className="inline-flex items-center gap-1 rounded-full border border-line-strong py-1 pl-3 pr-1 text-soft">
             <button
-              key={ex}
+              type="button"
+              onClick={() => applyGenre(suggestion.genre)}
+              className="transition hover:text-ochre-300"
+            >
+              {suggestion.genre}
+            </button>
+            <button
+              type="button"
+              onClick={() => deleteSuggestionMutation.mutate(suggestion.id)}
+              disabled={deleteSuggestionMutation.isPending}
+              aria-label={`Eliminar sugerencia ${suggestion.genre}`}
+              title="Eliminar sugerencia"
+              className="rounded-full p-0.5 text-faint transition hover:text-red-400"
+            >
+              <X className="size-3" />
+            </button>
+          </span>
+        ))}
+        {suggesting ? (
+          <span className="inline-flex items-center gap-2">
+            <span className="w-40">
+              <Combobox
+                id="suggestion-genre"
+                value={newGenre}
+                options={tagsQuery.data?.items ?? []}
+                placeholder="Género (ej. jazz)"
+                onChange={setNewGenre}
+              />
+            </span>
+            <button
+              type="button"
+              onClick={confirmSuggestion}
+              disabled={createSuggestionMutation.isPending || !newGenre.trim()}
+              className="rounded-full border border-line-strong px-3 py-1 text-soft transition hover:border-pine-500 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Añadir
+            </button>
+            <button
               type="button"
               onClick={() => {
-                setName(ex);
-                applyFilters({ name: ex, country: "", language: "", tag: "" });
+                setSuggesting(false);
+                setNewGenre("");
               }}
-              className="rounded-full border border-line-strong px-3 py-1 text-soft transition hover:border-ochre-500 hover:text-ochre-300"
+              className="rounded-full p-1 text-faint transition hover:text-foreground"
+              aria-label="Cancelar añadir sugerencia"
             >
-              {ex}
+              <X className="size-3" />
             </button>
-          ))}
-        </div>
-      )}
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setSuggesting(true)}
+            className="inline-flex items-center gap-1 rounded-full border border-dashed border-line-strong px-3 py-1 text-soft transition hover:border-ochre-500 hover:text-ochre-300"
+          >
+            <Plus className="size-3" />
+            Añadir sugerencia
+          </button>
+        )}
+        {!suggestionsQuery.isLoading && !suggestionsQuery.isError && suggestionsQuery.data?.items.length === 0 ? (
+          <span className="text-faint">Añade tu primera sugerencia para acceder rápido a tus géneros.</span>
+        ) : null}
+      </div>
 
       {isError ? (
         <EmptyState

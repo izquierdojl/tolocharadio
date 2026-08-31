@@ -7,6 +7,7 @@ import { CustomStationsService } from "./services/customStations.js";
 import { FavoritesService } from "./services/favorites.js";
 import { HistoryService } from "./services/history.js";
 import { StationsService } from "./services/stations.js";
+import { SuggestionsService } from "./services/suggestions.js";
 
 export function createContext(config: Config, db: DB): AppContext {
   const jwt = new JwtService(config);
@@ -15,5 +16,6 @@ export function createContext(config: Config, db: DB): AppContext {
   const auth = new AuthService({ config, db, jwt });
   const favorites = new FavoritesService(db, stations);
   const history = new HistoryService(db, config, stations);
-  return { config, db, jwt, auth, stations, customStations, favorites, history };
+  const suggestions = new SuggestionsService(db);
+  return { config, db, jwt, auth, stations, customStations, favorites, history, suggestions };
 }

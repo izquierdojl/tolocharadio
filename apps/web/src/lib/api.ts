@@ -1,4 +1,4 @@
-import type { ApiErrorBody, AuthResponse, PublicConfig, Station, StringListPage } from "./types.js";
+import type { ApiErrorBody, AuthResponse, PublicConfig, Station, StringListPage, Suggestion } from "./types.js";
 
 const API_PREFIX = "/api/v1";
 
@@ -132,4 +132,16 @@ export function createCustomStation(name: string, url: string): Promise<{ statio
 
 export function deleteCustomStation(id: string): Promise<{ ok: true }> {
   return api.delete<{ ok: true }>(`/custom-stations/${encodeURIComponent(id)}`);
+}
+
+export function fetchSuggestions(): Promise<{ items: Suggestion[] }> {
+  return api.get<{ items: Suggestion[] }>("/suggestions");
+}
+
+export function createSuggestion(genre: string): Promise<{ suggestion: Suggestion }> {
+  return api.post<{ suggestion: Suggestion }>("/suggestions", { genre });
+}
+
+export function deleteSuggestion(id: number): Promise<{ ok: true }> {
+  return api.delete<{ ok: true }>(`/suggestions/${id}`);
 }
