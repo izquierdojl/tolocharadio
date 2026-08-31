@@ -5,12 +5,12 @@ import { usePlayerStore } from "../stores/player.js";
 import { FavoriteButton } from "./FavoriteButton.js";
 import { SierraEmblem } from "./SierraEmblem.js";
 
-export function StationCard({ station }: { station: Station }) {
+export function StationCard({ station, isEditing = false }: { station: Station; isEditing?: boolean }) {
   const play = usePlayerStore((s) => s.play);
   const isPlaying = usePlayerStore((s) => s.isPlaying && s.station?.id === station.id);
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-surface-raised transition hover:border-pine-600 hover:shadow-xl hover:shadow-black/30">
+    <article className={`group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-surface-raised transition hover:border-pine-600 hover:shadow-xl hover:shadow-black/30 ${isEditing ? "editing-border" : ""}`}>
       <div className="relative aspect-video w-full overflow-hidden bg-pine-800">
         {station.isCustom ? (
           <div className="flex size-full items-center justify-center bg-gradient-to-br from-pine-600 to-pine-800">
@@ -32,24 +32,28 @@ export function StationCard({ station }: { station: Station }) {
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-pine-950/80 via-transparent to-transparent" />
-        <button
-          type="button"
-          onClick={() => {
-            play(station);
-            toast.dismiss();
-          }}
-          title={isPlaying ? "Reproduciendo" : "Reproducir"}
-          className={`absolute bottom-2 left-2 flex size-10 items-center justify-center rounded-full shadow-lg transition ${
-            isPlaying
-              ? "bg-ochre-500 text-pine-950"
-              : "bg-black/50 text-pine-100"
-          }`}
-        >
-          <Play className="ml-0.5 size-4" />
-        </button>
-        <div className="absolute right-2 top-2">
-          <FavoriteButton station={station} />
-        </div>
+        {!isEditing && (
+          <button
+            type="button"
+            onClick={() => {
+              play(station);
+              toast.dismiss();
+            }}
+            title={isPlaying ? "Reproduciendo" : "Reproducir"}
+            className={`absolute bottom-2 left-2 flex size-10 items-center justify-center rounded-full shadow-lg transition ${
+              isPlaying
+                ? "bg-ochre-500 text-pine-950"
+                : "bg-black/50 text-pine-100"
+            }`}
+          >
+            <Play className="ml-0.5 size-4" />
+          </button>
+        )}
+        {!isEditing && (
+          <div className="absolute right-2 top-2">
+            <FavoriteButton station={station} />
+          </div>
+        )}
       </div>
       <div className="flex flex-1 flex-col gap-1 p-3">
         <h3 className="truncate font-semibold text-foreground" title={station.name}>

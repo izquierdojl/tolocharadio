@@ -19,7 +19,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Heart, Trash2 } from "lucide-react";
+import { Heart, Trash2, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import type { FavoriteEntry } from "../lib/types.js";
 import { api, reorderFavorites } from "../lib/api.js";
@@ -34,9 +34,10 @@ const FAVORITES_KEY = ["favorites"] as const;
 interface SortableCardProps {
   id: string;
   station: FavoriteEntry["station"];
+  isEditing: boolean;
 }
 
-function SortableCard({ id, station }: SortableCardProps) {
+function SortableCard({ id, station, isEditing }: SortableCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
   const style = {
@@ -47,8 +48,13 @@ function SortableCard({ id, station }: SortableCardProps) {
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <StationCard station={station} />
+    <div ref={setNodeRef} style={style} className="relative">
+      <StationCard station={station} isEditing={isEditing} />
+      {isEditing && (
+        <div className="drag-handle absolute bottom-0 left-0 right-0 rounded-b-2xl bg-surface-raised/80 fade-enter" {...attributes} {...listeners}>
+          <GripVertical className="size-5 text-muted" />
+        </div>
+      )}
     </div>
   );
 }
@@ -56,9 +62,10 @@ function SortableCard({ id, station }: SortableCardProps) {
 interface SortableListItemProps {
   id: string;
   station: FavoriteEntry["station"];
+  isEditing: boolean;
 }
 
-function SortableListItem({ id, station }: SortableListItemProps) {
+function SortableListItem({ id, station, isEditing }: SortableListItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
   const style = {
@@ -69,10 +76,15 @@ function SortableListItem({ id, station }: SortableListItemProps) {
   };
 
   return (
-    <li ref={setNodeRef} style={style} className="flex items-center gap-2" {...attributes} {...listeners}>
+    <li ref={setNodeRef} style={style} className="flex items-center gap-2">
       <div className="min-w-0 flex-1">
-        <StationListItem station={station} />
+        <StationListItem station={station} isEditing={isEditing} />
       </div>
+      {isEditing && (
+        <div className="drag-handle shrink-0 fade-enter" {...attributes} {...listeners}>
+          <GripVertical className="size-5 text-muted" />
+        </div>
+      )}
     </li>
   );
 }
@@ -82,6 +94,7 @@ export function Favorites() {
   const queryClient = useQueryClient();
   const viewMode = useViewModeStore((s) => s.viewMode);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -154,14 +167,23 @@ export function Favorites() {
           <p className="text-sm text-muted">Las emisoras que has marcado para escucharlas cuando quieras.</p>
         </div>
         {total ? (
-          <button
-            type="button"
-            onClick={() => void clearAll()}
-            className="flex items-center gap-1.5 rounded-lg border border-line-strong px-3 py-1.5 text-sm text-soft transition hover:border-pine-500 hover:text-foreground"
-          >
-            <Trash2 className="size-4" />
-            Vaciar
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsEditing(!isEditing)}
+              className="flex items-center gap-1.5 rounded-lg border border-line-strong px-3 py-1.5 text-sm text-soft transition hover:border-pine-500 hover:text-foreground"
+            >
+              {isEditing ? "Listo" : "Editar"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void clearAll()}
+              className="flex items-center gap-1.5 rounded-lg border border-line-strong px-3 py-1.5 text-sm text-soft transition hover:border-pine-500 hover:text-foreground"
+            >
+              <Trash2 className="size-4" />
+              Vaciar
+            </button>
+          </div>
         ) : null}
       </div>
 
@@ -203,6 +225,7 @@ export function Favorites() {
                     key={favorite.station.id}
                     id={favorite.station.id}
                     station={favorite.station}
+                    isEditing={isEditing}
                   />
                 ))}
               </div>
@@ -213,6 +236,7 @@ export function Favorites() {
                     key={favorite.station.id}
                     id={favorite.station.id}
                     station={favorite.station}
+                    isEditing={isEditing}
                   />
                 ))}
               </ul>
@@ -236,8 +260,10 @@ export function Favorites() {
 
       {!isLoading && !isError && total ? (
         <p className="text-center text-xs text-faint">
-          Arrastra una emisora para reordenar tus favoritos. Pulsa el corazón en cualquier emisora para
-          quitarla de favoritos.
+          {isEditing
+            ? "Arrastra el icono de agarre para reordenar tus favoritos. Pulsa Listo cuando termines."
+            : "Arrastra una emisora para reordenar tus favoritos. Pulsa el corazón en cualquier emisora para quitarla de favoritos."
+          }
         </p>
       ) : null}
     </section>

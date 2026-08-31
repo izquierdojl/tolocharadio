@@ -5,12 +5,12 @@ import { usePlayerStore } from "../stores/player.js";
 import { FavoriteButton } from "./FavoriteButton.js";
 import { SierraEmblem } from "./SierraEmblem.js";
 
-export function StationListItem({ station }: { station: Station }) {
+export function StationListItem({ station, isEditing = false }: { station: Station; isEditing?: boolean }) {
   const play = usePlayerStore((s) => s.play);
   const isPlaying = usePlayerStore((s) => s.isPlaying && s.station?.id === station.id);
 
   return (
-    <article className="group flex items-center gap-3 rounded-xl border border-line bg-surface-raised p-2.5 transition hover:border-pine-600 hover:bg-surface-soft">
+    <article className={`group flex items-center gap-3 rounded-xl border border-line bg-surface-raised p-2.5 transition hover:border-pine-600 hover:bg-surface-soft ${isEditing ? "editing-border" : ""}`}>
       <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-pine-800">
         {station.isCustom ? (
           <SierraEmblem className="size-9 rounded-md" />
@@ -27,22 +27,24 @@ export function StationListItem({ station }: { station: Station }) {
         ) : (
           <Radio className="size-5 text-pine-400" />
         )}
-        <button
-          type="button"
-          onClick={() => {
-            play(station);
-            toast.dismiss();
-          }}
-          title={isPlaying ? "Reproduciendo" : "Reproducir"}
-          aria-label={isPlaying ? "Reproduciendo" : "Reproducir"}
-          className={`absolute inset-0 flex items-center justify-center transition ${
-            isPlaying
-              ? "bg-pine-950/50 text-ochre-500"
-              : "bg-black/40 text-pine-100"
-          }`}
-        >
-          <Play className="size-5" />
-        </button>
+        {!isEditing && (
+          <button
+            type="button"
+            onClick={() => {
+              play(station);
+              toast.dismiss();
+            }}
+            title={isPlaying ? "Reproduciendo" : "Reproducir"}
+            aria-label={isPlaying ? "Reproduciendo" : "Reproducir"}
+            className={`absolute inset-0 flex items-center justify-center transition ${
+              isPlaying
+                ? "bg-pine-950/50 text-ochre-500"
+                : "bg-black/40 text-pine-100"
+            }`}
+          >
+            <Play className="size-5" />
+          </button>
+        )}
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -67,7 +69,7 @@ export function StationListItem({ station }: { station: Station }) {
       {station.bitrate ? (
         <span className="hidden text-xs text-faint sm:inline">{station.bitrate} kbps</span>
       ) : null}
-      <FavoriteButton station={station} />
+      {!isEditing && <FavoriteButton station={station} />}
     </article>
   );
 }
