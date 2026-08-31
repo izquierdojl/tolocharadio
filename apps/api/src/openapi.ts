@@ -81,6 +81,15 @@ const historyEntrySchema = {
   required: ["station", "playedAt"],
 } as const;
 
+const suggestionSchema = {
+  type: "object",
+  properties: {
+    id: { type: "integer" },
+    genre: { type: "string" },
+  },
+  required: ["id", "genre"],
+} as const;
+
 const playableSchema = {
   type: "object",
   required: ["id", "playable"],
@@ -613,6 +622,64 @@ export function buildOpenApi(): Record<string, unknown> {
           },
         },
       },
+      "/suggestions": {
+        get: {
+          tags: ["Sugerencias"],
+          summary: "Listar mis sugerencias de genero",
+          ...requireAuth,
+          responses: {
+            "200": {
+              description: "Mis sugerencias de genero",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["items"],
+                    properties: { items: { type: "array", items: { $ref: "#/components/schemas/Suggestion" } } },
+                  },
+                },
+              },
+            },
+            "401": errorResponses["401"],
+          },
+        },
+        post: {
+          tags: ["Sugerencias"],
+          summary: "Anadir una sugerencia de genero",
+          ...requireAuth,
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["genre"],
+                  properties: { genre: { type: "string", minLength: 1, maxLength: 256 } },
+                },
+              },
+            },
+          },
+          responses: {
+            "201": {
+              description: "Sugerencia creada",
+              content: { "application/json": { schema: { type: "object", properties: { suggestion: { $ref: "#/components/schemas/Suggestion" } }, required: ["suggestion"] } } },
+            },
+            ...pick(errorResponses, ["401", "409", "422"]),
+          },
+        },
+      },
+      "/suggestions/{id}": {
+        delete: {
+          tags: ["Sugerencias"],
+          summary: "Eliminar una sugerencia de genero (exito si no existia)",
+          ...requireAuth,
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+          responses: {
+            "200": { description: "Eliminado", content: { "application/json": { schema: { type: "object", properties: { ok: { type: "boolean" } } } } } },
+            ...pick(errorResponses, ["401", "400"]),
+          },
+        },
+      },
       "/playback/{stationId}": {
         get: {
           tags: ["Reproduccion"],
@@ -658,6 +725,7 @@ export function buildOpenApi(): Record<string, unknown> {
         AuthResponse: authResponseSchema,
         Favorite: favoriteSchema,
         HistoryEntry: historyEntrySchema,
+        Suggestion: suggestionSchema,
       },
     },
   };

@@ -83,3 +83,19 @@ export const history = sqliteTable(
     uniqueIndex("history_user_station").on(t.userId, t.stationId),
   ],
 );
+
+export const suggestions = sqliteTable(
+  "suggestions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    genre: text("genre").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("suggestions_user_genre").on(t.userId, t.genre),
+    index("suggestions_user").on(t.userId),
+  ],
+);

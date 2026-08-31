@@ -52,6 +52,11 @@ export interface FavoriteEntry {
   station: Station;
 }
 
+export interface Suggestion {
+  id: number;
+  genre: string;
+}
+
 export interface HistoryEntry {
   playedAt: number;
   station: Station;
