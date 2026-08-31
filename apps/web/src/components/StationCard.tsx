@@ -41,8 +41,8 @@ export function StationCard({ station }: { station: Station }) {
           title={isPlaying ? "Reproduciendo" : "Reproducir"}
           className={`absolute bottom-2 left-2 flex size-10 items-center justify-center rounded-full shadow-lg transition ${
             isPlaying
-              ? "bg-ochre-500 text-pine-950 opacity-100"
-              : "bg-black/50 text-pine-100 opacity-0 group-hover:opacity-100"
+              ? "bg-ochre-500 text-pine-950"
+              : "bg-black/50 text-pine-100"
           }`}
         >
           <Play className="ml-0.5 size-4" />

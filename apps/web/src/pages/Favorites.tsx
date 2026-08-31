@@ -1,6 +1,25 @@
-import { useRef } from "react";
+import { useState } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  rectSortingStrategy,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronUp, GripVertical, Heart, Trash2 } from "lucide-react";
+import { Heart, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { FavoriteEntry } from "../lib/types.js";
 import { api, reorderFavorites } from "../lib/api.js";
@@ -12,51 +31,49 @@ import { useViewModeStore } from "../stores/viewMode.js";
 
 const FAVORITES_KEY = ["favorites"] as const;
 
-interface ReorderControlsProps {
-  index: number;
-  total: number;
-  name: string;
-  onMove: (from: number, to: number) => void;
-  onDragStart: (index: number) => void;
+interface SortableCardProps {
+  id: string;
+  station: FavoriteEntry["station"];
 }
 
-function ReorderControls({ index, total, name, onMove, onDragStart }: ReorderControlsProps) {
+function SortableCard({ id, station }: SortableCardProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
+
   return (
-    <div className="flex items-center gap-0.5">
-      <button
-        type="button"
-        title="Subir"
-        aria-label={`Subir ${name}`}
-        disabled={index === 0}
-        onClick={() => onMove(index, index - 1)}
-        className="rounded p-0.5 text-soft transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
-      >
-        <ChevronUp className="size-4" />
-      </button>
-      <button
-        type="button"
-        title="Bajar"
-        aria-label={`Bajar ${name}`}
-        disabled={index === total - 1}
-        onClick={() => onMove(index, index + 1)}
-        className="rounded p-0.5 text-soft transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
-      >
-        <ChevronDown className="size-4" />
-      </button>
-      <button
-        type="button"
-        draggable
-        title="Arrastrar para reordenar"
-        aria-label={`Arrastrar ${name} para reordenar`}
-        onDragStart={(e) => {
-          onDragStart(index);
-          e.dataTransfer.effectAllowed = "move";
-        }}
-        className="cursor-grab p-0.5 text-faint transition hover:text-foreground active:cursor-grabbing"
-      >
-        <GripVertical className="size-4" />
-      </button>
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <StationCard station={station} />
     </div>
+  );
+}
+
+interface SortableListItemProps {
+  id: string;
+  station: FavoriteEntry["station"];
+}
+
+function SortableListItem({ id, station }: SortableListItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
+
+  return (
+    <li ref={setNodeRef} style={style} className="flex items-center gap-2" {...attributes} {...listeners}>
+      <div className="min-w-0 flex-1">
+        <StationListItem station={station} />
+      </div>
+    </li>
   );
 }
 
@@ -64,7 +81,16 @@ export function Favorites() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const viewMode = useViewModeStore((s) => s.viewMode);
-  const dragIndex = useRef<number | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 150, tolerance: 5 },
+    }),
+  );
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["favorites"],
@@ -100,37 +126,25 @@ export function Favorites() {
       });
   };
 
-  const move = (from: number, to: number): void => {
-    if (to < 0 || to >= total || from === to) return;
-    const next = [...items];
-    const [moved] = next.splice(from, 1);
-    next.splice(to, 0, moved!);
+  const handleDragStart = (event: DragStartEvent): void => {
+    setActiveId(String(event.active.id));
+  };
+
+  const handleDragEnd = (event: DragEndEvent): void => {
+    setActiveId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = items.findIndex((f) => f.station.id === active.id);
+    const newIndex = items.findIndex((f) => f.station.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const next = arrayMove(items, oldIndex, newIndex);
     commitOrder(next);
   };
 
-  const handleDrop = (to: number): void => {
-    const from = dragIndex.current;
-    dragIndex.current = null;
-    if (from == null || from === to) return;
-    move(from, to);
-  };
-
-  const dragProps = (index: number) => ({
-    onDragOver: (e: React.DragEvent) => e.preventDefault(),
-    onDrop: () => handleDrop(index),
-  });
-
-  const controls = (index: number) => (
-    <ReorderControls
-      index={index}
-      total={total}
-      name={items[index]?.station.name ?? ""}
-      onMove={move}
-      onDragStart={(i) => {
-        dragIndex.current = i;
-      }}
-    />
-  );
+  const activeItem = activeId ? items.find((f) => f.station.id === activeId) : null;
+  const ids = items.map((f) => f.station.id);
 
   return (
     <section className="flex flex-col gap-5">
@@ -174,35 +188,55 @@ export function Favorites() {
           title="Aún no tienes favoritos"
           description="Explora el catálogo y marca las emisoras que más te gusten para encontrarlas aquí."
         />
-      ) : viewMode === "card" ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {items.map((favorite, index) => (
-            <div key={favorite.station.id} {...dragProps(index)}>
-                <div className="relative">
-                  <div className="absolute left-2 top-2 z-10">
-                    <div className="rounded-lg bg-black/50 p-0.5 backdrop-blur">{controls(index)}</div>
-                  </div>
-                  <StationCard station={favorite.station} />
-                </div>
-            </div>
-          ))}
-        </div>
       ) : (
-        <ul className="flex flex-col gap-2">
-          {items.map((favorite, index) => (
-            <li key={favorite.station.id} {...dragProps(index)} className="flex items-center gap-2">
-              {controls(index)}
-              <div className="min-w-0 flex-1">
-                <StationListItem station={favorite.station} />
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={ids} strategy={viewMode === "card" ? rectSortingStrategy : verticalListSortingStrategy}>
+            {viewMode === "card" ? (
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {items.map((favorite) => (
+                  <SortableCard
+                    key={favorite.station.id}
+                    id={favorite.station.id}
+                    station={favorite.station}
+                  />
+                ))}
               </div>
-            </li>
-          ))}
-        </ul>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {items.map((favorite) => (
+                  <SortableListItem
+                    key={favorite.station.id}
+                    id={favorite.station.id}
+                    station={favorite.station}
+                  />
+                ))}
+              </ul>
+            )}
+          </SortableContext>
+          <DragOverlay>
+            {activeItem ? (
+              viewMode === "card" ? (
+                <div className="opacity-90">
+                  <StationCard station={activeItem.station} />
+                </div>
+              ) : (
+                <div className="opacity-90">
+                  <StationListItem station={activeItem.station} />
+                </div>
+              )
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       )}
 
       {!isLoading && !isError && total ? (
         <p className="text-center text-xs text-faint">
-          Arrastra o usa las flechas para reordenar tus favoritos. Pulsa el corazón en cualquier emisora para
+          Arrastra una emisora para reordenar tus favoritos. Pulsa el corazón en cualquier emisora para
           quitarla de favoritos.
         </p>
       ) : null}

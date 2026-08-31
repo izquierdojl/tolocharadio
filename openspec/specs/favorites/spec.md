@@ -41,11 +41,15 @@ Un usuario autenticado SHALL poder listar sus emisoras favoritas con los datos c
 - **THEN** ambos obtienen la misma lista en el mismo orden personalizado
 
 ### Requirement: Reordenar favoritos
-Un usuario autenticado SHALL poder establecer el orden de sus emisoras favoritas enviando la lista de `stationId` en el orden deseado. El sistema SHALL perseguir ese orden por cuenta y devolver la lista de favoritos en dicho orden en las consultas posteriores. Reordenar SHALL aceptar cualquier permutación de los favoritos actuales del usuario, y el orden así fijado SHALL ser privado de la cuenta.
+Un usuario autenticado SHALL poder establecer el orden de sus emisoras favoritas arrastrando la tarjeta completa de la emisora en modo tarjeta, o la fila completa en modo lista, a la posición deseada. El sistema SHALL perseguir ese orden por cuenta y devolver la lista de favoritos en dicho orden en las consultas posteriores. Reordenar SHALL aceptar cualquier permutación de los favoritos actuales del usuario, y el orden así fijado SHALL ser privado de la cuenta. El arrastre SHALL funcionar tanto con ratón (desktop) como con touch (móvil/tablet).
 
 #### Scenario: Reordenado de favoritos
-- **WHEN** un usuario autenticado envía la lista de sus favoritos en un nuevo orden
+- **WHEN** un usuario autenticado arrastra una tarjeta de emisora en favoritos a una nueva posición
 - **THEN** el sistema persiste ese orden y devuelve la confirmación
+
+#### Scenario: Reordenado en móvil por touch
+- **WHEN** un usuario autenticado en un dispositivo táctil arrastra una tarjeta o fila de favoritos a una nueva posición
+- **THEN** el sistema persiste ese orden igual que en desktop
 
 #### Scenario: Lista con emisoras no favoritas
 - **WHEN** un usuario envía un orden que incluye un `stationId` que no está entre sus favoritos

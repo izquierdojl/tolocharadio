@@ -38,7 +38,7 @@ export function StationListItem({ station }: { station: Station }) {
           className={`absolute inset-0 flex items-center justify-center transition ${
             isPlaying
               ? "bg-pine-950/50 text-ochre-500"
-              : "bg-black/0 text-transparent group-hover:bg-black/40 group-hover:text-pine-100"
+              : "bg-black/40 text-pine-100"
           }`}
         >
           <Play className="size-5" />

@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { History as HistoryIcon, Trash2, X } from "lucide-react";
+import { History as HistoryIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { HistoryEntry, Station } from "../lib/types.js";
 import { api } from "../lib/api.js";
 import { EmptyState } from "../components/EmptyState.js";
 import { useAuthStore } from "../stores/auth.js";
-import { StationList } from "../components/StationList.js";
+import { useViewModeStore } from "../stores/viewMode.js";
+import { StationCard } from "../components/StationCard.js";
+import { StationListItem } from "../components/StationListItem.js";
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleString("es-ES", {
@@ -30,6 +32,7 @@ function dedupeStations(entries: HistoryEntry[]): Station[] {
 export function History() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
+  const viewMode = useViewModeStore((s) => s.viewMode);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["history"],
@@ -112,24 +115,43 @@ export function History() {
               <span className="text-sm text-muted">{formatDate(latest.playedAt)}</span>
             </div>
           </div>
-          <div className="flex flex-col gap-2">
-            {stations.map((station) => (
-              <div key={station.id} className="flex items-center gap-2 rounded-lg border border-line bg-surface-raised p-3">
-                <div className="flex-1 min-w-0">
-                  <StationList stations={[station]} />
+          {viewMode === "card" ? (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {stations.map((station) => (
+                <div key={station.id} className="relative">
+                  <StationCard station={station} />
+                  <button
+                    type="button"
+                    onClick={() => removeStationMutation.mutate(station.id)}
+                    disabled={removeStationMutation.isPending}
+                    className="absolute right-14 top-2 z-10 flex size-9 items-center justify-center rounded-full bg-black/40 p-1 text-pine-100 backdrop-blur transition hover:bg-red-500/80 hover:text-white disabled:opacity-50"
+                    title="Eliminar del historial"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => removeStationMutation.mutate(station.id)}
-                  disabled={removeStationMutation.isPending}
-                  className="flex-shrink-0 rounded-lg p-2 text-soft transition hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50"
-                  title="Eliminar del historial"
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {stations.map((station) => (
+                <li key={station.id} className="flex items-center gap-2 rounded-lg border border-line bg-surface-raised p-2.5">
+                  <div className="min-w-0 flex-1">
+                    <StationListItem station={station} />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeStationMutation.mutate(station.id)}
+                    disabled={removeStationMutation.isPending}
+                    className="flex-shrink-0 rounded-lg p-2 text-soft transition hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50"
+                    title="Eliminar del historial"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </>
       ) : null}
     </section>
