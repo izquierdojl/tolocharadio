@@ -34,7 +34,8 @@ export function PlayerBar({ fallbackStations = [] }: PlayerBarProps) {
     return (
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-pine-800 bg-pine-900/90 px-4 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between text-sm text-pine-400">
-          <span>Elige una emisora para empezar a escuchar la sierra en directo</span>
+          <span className="hidden sm:inline">Elige una emisora para empezar a escuchar la sierra en directo</span>
+          <span className="sm:hidden">Elige una emisora para escuchar</span>
         </div>
       </div>
     );
@@ -57,7 +58,7 @@ export function PlayerBar({ fallbackStations = [] }: PlayerBarProps) {
             {[station.country, station.language].filter(Boolean).join(" · ") || "Emisora de radio"}
           </span>
           {technicalBits.length > 0 && (
-            <span className="truncate text-xs text-pine-500">{technicalBits.join(" · ")}</span>
+            <span className="hidden truncate text-xs text-pine-500 sm:block">{technicalBits.join(" · ")}</span>
           )}
         </div>
 
@@ -65,7 +66,7 @@ export function PlayerBar({ fallbackStations = [] }: PlayerBarProps) {
           type="button"
           onClick={copyLink}
           title={copied ? "Enlace copiado" : "Copiar enlace de emisión"}
-          className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+          className={`hidden shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition sm:flex ${
             copied
               ? "bg-pine-700 text-pine-200"
               : "bg-pine-800 text-pine-300 hover:bg-pine-700 hover:text-pine-100"
