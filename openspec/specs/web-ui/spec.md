@@ -115,7 +115,7 @@ La interfaz SHALL mostrar un reproductor fijo en la parte inferior, visible en t
 
 #### Scenario: Copiar enlace de emisión
 - **WHEN** un usuario pulsa el botón de copiar enlace de emisión en el reproductor
-- **THEN** la aplicación copia al portapapeles el enlace de emisión de la emisora (la URL de su stream vía el proxy de playback) y confirma visualmente que se ha copiado
+- **THEN** la aplicación copia al portapapeles la URL pública del stream de la emisora (`station.url`) y confirma visualmente que se ha copiado
 
 ### Requirement: Autenticación desde la interfaz
 La interfaz SHALL ofrecer pantallas de registro e inicio de sesión, gestionar la persistencia de la sesión con tokens (acceso y refresco) y permitir cerrar sesión y ver el perfil. Cuando el registro esté deshabilitado en el servidor, la interfaz SHALL ocultar o indicar la indisponibilidad del registro.

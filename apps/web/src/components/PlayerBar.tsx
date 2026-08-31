@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 import { Check, Copy, Loader2, Pause, Play, SkipForward, Volume2, VolumeX, X } from "lucide-react";
 import { usePlayerStore } from "../stores/player.js";
-import { playbackUrl } from "../lib/api.js";
 import type { Station } from "../lib/types.js";
 
 interface PlayerBarProps {
@@ -22,7 +21,7 @@ export function PlayerBar({ fallbackStations = [] }: PlayerBarProps) {
   async function copyLink() {
     if (!station) return;
     try {
-      await navigator.clipboard.writeText(playbackUrl(station.id));
+      await navigator.clipboard.writeText(station.url);
       setCopied(true);
       if (copyTimer.current) clearTimeout(copyTimer.current);
       copyTimer.current = setTimeout(() => setCopied(false), 2500);
