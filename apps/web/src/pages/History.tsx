@@ -1,11 +1,11 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { History as HistoryIcon, Trash2 } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { History as HistoryIcon, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import type { HistoryEntry, Station } from "../lib/types.js";
 import { api } from "../lib/api.js";
-import { StationList } from "../components/StationList.js";
 import { EmptyState } from "../components/EmptyState.js";
 import { useAuthStore } from "../stores/auth.js";
+import { StationList } from "../components/StationList.js";
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleString("es-ES", {
@@ -46,6 +46,17 @@ export function History() {
       toast.error(err instanceof Error ? err.message : "No se pudo limpiar el historial");
     }
   };
+
+  const removeStationMutation = useMutation({
+    mutationFn: (stationId: string) => api.delete<{ ok: true }>(`/history/${stationId}`),
+    onSuccess: () => {
+      toast.success("Emisora eliminada del historial");
+      void queryClient.invalidateQueries({ queryKey: ["history"] });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "No se pudo eliminar la emisora");
+    },
+  });
 
   const stations = dedupeStations(data?.items ?? []);
   const latest = data?.items[0];
@@ -101,7 +112,24 @@ export function History() {
               <span className="text-sm text-muted">{formatDate(latest.playedAt)}</span>
             </div>
           </div>
-          <StationList stations={stations} />
+          <div className="flex flex-col gap-2">
+            {stations.map((station) => (
+              <div key={station.id} className="flex items-center gap-2 rounded-lg border border-line bg-surface-raised p-3">
+                <div className="flex-1 min-w-0">
+                  <StationList stations={[station]} />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeStationMutation.mutate(station.id)}
+                  disabled={removeStationMutation.isPending}
+                  className="flex-shrink-0 rounded-lg p-2 text-soft transition hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50"
+                  title="Eliminar del historial"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+            ))}
+          </div>
         </>
       ) : null}
     </section>
