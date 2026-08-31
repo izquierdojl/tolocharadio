@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { AppContext } from "../context.js";
-import { unauthorized } from "../errors.js";
+import { badRequest, unauthorized } from "../errors.js";
 import { requireAuth } from "../middleware/auth.js";
 
 export function historyRouter(ctx: AppContext): Router {
@@ -23,6 +23,21 @@ export function historyRouter(ctx: AppContext): Router {
       const user = req.authUser;
       if (!user) throw unauthorized();
       const result = await ctx.history.clear(user.id);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.delete("/history/:stationId", auth, async (req, res, next) => {
+    try {
+      const user = req.authUser;
+      if (!user) throw unauthorized();
+      const stationId = req.params.stationId;
+      if (typeof stationId !== "string") {
+        throw badRequest("INVALID_PARAMS", " stationId invalido");
+      }
+      const result = await ctx.history.removeStation(user.id, stationId);
       res.json(result);
     } catch (err) {
       next(err);

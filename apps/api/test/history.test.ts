@@ -97,4 +97,25 @@ describe("history", () => {
     const res = await request(server.app).get("/api/v1/history").set("Authorization", `Bearer ${token}`).expect(200);
     expect(res.body.items).toHaveLength(0);
   });
+
+  it("elimina una emisora specifica del historial", async () => {
+    const pool = stubStations(["11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222"]);
+    const token = await registerUser();
+    for (const s of pool) {
+      await request(server.app).get(`/api/v1/playback/${s.stationuuid}`).set("Authorization", `Bearer ${token}`).expect(200);
+    }
+    await request(server.app).delete(`/api/v1/history/${pool[0]!.stationuuid}`).set("Authorization", `Bearer ${token}`).expect(200);
+    const res = await request(server.app).get("/api/v1/history").set("Authorization", `Bearer ${token}`).expect(200);
+    expect(res.body.items).toHaveLength(1);
+    expect(res.body.items[0].station.id).toBe(pool[1]!.stationuuid);
+  });
+
+  it("requiere autenticacion para eliminar emisora", async () => {
+    await request(server.app).delete("/api/v1/history/11111111-1111-1111-1111-111111111111").expect(401);
+  });
+
+  it("retorna 404 al eliminar emisora inexistente", async () => {
+    const token = await registerUser();
+    await request(server.app).delete("/api/v1/history/99999999-9999-9999-9999-999999999999").set("Authorization", `Bearer ${token}`).expect(404);
+  });
 });

@@ -552,6 +552,27 @@ export function buildOpenApi(): Record<string, unknown> {
           },
         },
       },
+      "/history/{stationId}": {
+        delete: {
+          tags: ["Historial"],
+          summary: "Eliminar una emisora del historial",
+          ...requireAuth,
+          parameters: [
+            {
+              name: "stationId",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description: "ID de la emisora a eliminar del historial",
+            },
+          ],
+          responses: {
+            "200": { description: "Emisora eliminada", content: { "application/json": { schema: { type: "object", properties: { ok: { type: "boolean" } } } } } },
+            "401": errorResponses["401"],
+            "404": { description: "Emisora no encontrada en el historial" },
+          },
+        },
+      },
       "/custom-stations": {
         get: {
           tags: ["Emisoras personalizadas"],

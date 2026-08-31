@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import type { Config } from "../config/env.js";
 import type { DB } from "../db/client.js";
 import { history } from "../db/schema.js";
+import { notFound } from "../errors.js";
 import type { Station } from "./normalize.js";
 import type { StationsService } from "./stations.js";
 
@@ -65,6 +66,18 @@ export class HistoryService {
 
   async clear(userId: number): Promise<{ ok: true }> {
     await this.db.delete(history).where(eq(history.userId, userId));
+    return { ok: true };
+  }
+
+  async removeStation(userId: number, stationId: string): Promise<{ ok: true }> {
+    const result = await this.db
+      .delete(history)
+      .where(and(eq(history.userId, userId), eq(history.stationId, stationId)));
+    
+    if (result.changes === 0) {
+      throw notFound("HISTORY_NOT_FOUND", "Estación no encontrada en el historial");
+    }
+    
     return { ok: true };
   }
 }
