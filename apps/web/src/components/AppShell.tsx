@@ -249,6 +249,9 @@ function Header() {
               </div>
               {status === "authenticated" ? (
                 <>
+                  <div role="menuitem">
+                    <ViewModeToggle menuItem onClose={() => setMenuOpen(false)} />
+                  </div>
                   <NavLink
                     to="/perfil"
                     role="menuitem"
