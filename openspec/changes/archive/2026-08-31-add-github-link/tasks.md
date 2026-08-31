@@ -1,0 +1,4 @@
+## 1. Enlace de GitHub en la cabecera
+
+- [x] 1.1 Añadir el icono `Github` de `lucide-react` como enlace en la cabecera de `apps/web/src/components/AppShell.tsx`, apuntando a `https://www.github.com/izquierdojl/tolocharadio` con `target="_blank"` y `rel="noopener noreferrer"`, visible tanto para usuarios autenticados como invitados y con el mismo estilo (`text-muted`, hover) que los demás controles de la cabecera. Verificar que el enlace se renderiza en la cabecera desde cualquier vista, con y sin sesión, y que abre el repositorio en una pestaña nueva.
+- [x] 1.2 Ejecutar `npm run typecheck`, `npm run lint` y `npm run test` en la raíz y confirmar que pasan sin errores.
