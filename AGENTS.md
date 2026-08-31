@@ -11,6 +11,7 @@ Monorepo TypeScript con `apps/api` (Express 5 + Drizzle/better-sqlite3) y `apps/
 - No empezar implementaciones nuevas sin que exista un change OpenSpec propuesto.
 - Calidad antes de terminar una tarea: `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build`.
 - Confirmar en Docker tras cambios del backend: `docker compose up --build -d` + smoke.
+- **Archivar = commitear TODO incluido codigo.** Al archivar un change, los cambios de codigo (componentes, CSS, etc.) DEBEN estar commiteados en la rama feature **antes** de mergeear a main. No commitear solo los openspec y el bump: verificar con `git status` que no quedan archivos modificados sin commitear.
 
 ## Versionado y release (IMPORTANTE — a prueba de `openspec update`)
 
