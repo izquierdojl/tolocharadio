@@ -72,6 +72,32 @@ export function refreshSession(): Promise<string | null> {
   return refreshPromise;
 }
 
+const REFRESH_MARGIN_MS = 30_000;
+
+function decodeExp(token: string): number | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const payload = parts[1]!;
+    const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+    return typeof json.exp === "number" ? json.exp : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function ensureValidToken(): Promise<boolean> {
+  if (!accessToken) return false;
+  const exp = decodeExp(accessToken);
+  if (exp === null) return true;
+  const expiresAtMs = exp * 1000;
+  if (expiresAtMs - Date.now() < REFRESH_MARGIN_MS) {
+    const newToken = await refreshSession();
+    return newToken !== null;
+  }
+  return true;
+}
+
 async function request<T>(path: string, init?: RequestInit, retried = false): Promise<T> {
   try {
     return await rawRequest<T>(path, init);

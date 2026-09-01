@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Station } from "../lib/types.js";
-import { playbackUrl } from "../lib/api.js";
+import { playbackUrl, ensureValidToken } from "../lib/api.js";
+import { toast } from "sonner";
 
 interface PlayerState {
   station: Station | null;
@@ -48,9 +49,21 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         }
         return;
       }
-      audio!.src = playbackUrl(station.id);
       set({ station, isPlaying: false, isBuffering: true });
-      void audio!.play().catch(() => set({ isBuffering: false }));
+      void ensureValidToken()
+        .then((valid) => {
+          if (!valid) {
+            toast.error("La sesión ha caducado. Inicia sesión de nuevo.");
+            set({ isBuffering: false });
+            return;
+          }
+          audio!.src = playbackUrl(station.id);
+          void audio!.play().catch(() => set({ isBuffering: false }));
+        })
+        .catch(() => {
+          toast.error("No se pudo verificar la sesión. Intenta de nuevo.");
+          set({ isBuffering: false });
+        });
     },
 
     toggle() {
