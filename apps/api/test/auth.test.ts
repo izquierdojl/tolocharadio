@@ -86,18 +86,56 @@ describe("auth register/login", () => {
 });
 
 describe("auth refresh/logout", () => {
-  it("muta el refresh token al renovar y deja invalido el anterior", async () => {
+  it("devuelve el mismo refresh token mientras tiene vida suficiente (deslizante)", async () => {
     const first = await register().expect(201);
     const rt1 = first.body.refreshToken as string;
 
     const refreshed = await refresh(rt1).expect(200);
-    const rt2 = refreshed.body.refreshToken as string;
+    expect(refreshed.body.refreshToken).toBe(rt1);
+
+    // la fila original sigue existiendo: el token sigue siendo usable
+    const again = await refresh(rt1).expect(200);
+    expect(again.body.refreshToken).toBe(rt1);
+  });
+
+  it("rota al final de la vida y permite reuso del token anterior dentro de la gracia", async () => {
+    server = setupServer({
+      JWT_REFRESH_TTL: "1h",
+      REFRESH_ROTATE_THRESHOLD: "24h",
+      REFRESH_GRACE_MS: "60000",
+    });
+    const first = await register().expect(201);
+    const rt1 = first.body.refreshToken as string;
+
+    const rotated = await refresh(rt1).expect(200);
+    const rt2 = rotated.body.refreshToken as string;
     expect(rt2).not.toBe(rt1);
 
-    const reuseOld = await refresh(rt1).expect(401);
-    expect(reuseOld.body.error.code).toBe("INVALID_REFRESH_TOKEN");
+    // el token anterior sigue vivo dentro de la gracia: el cliente se recupera
+    const recovered = await refresh(rt1).expect(200);
+    expect(recovered.body.refreshToken).not.toBe(rt1);
+    expect(recovered.body.accessToken).toBeDefined();
 
-    await refresh(rt2).expect(200);
+    // el token nuevo tambien es valido
+    const rt3 = (await refresh(rt2).expect(200)).body.refreshToken as string;
+    expect(rt3).not.toBe(rt2);
+  });
+
+  it("rechaza el token anterior fuera de la ventana de gracia", async () => {
+    server = setupServer({
+      JWT_REFRESH_TTL: "1h",
+      REFRESH_ROTATE_THRESHOLD: "24h",
+      REFRESH_GRACE_MS: "1",
+    });
+    const first = await register().expect(201);
+    const rt1 = first.body.refreshToken as string;
+
+    const rotated = await refresh(rt1).expect(200);
+    expect(rotated.body.refreshToken).not.toBe(rt1);
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    const res = await refresh(rt1).expect(401);
+    expect(res.body.error.code).toBe("INVALID_REFRESH_TOKEN");
   });
 
   it("renueva leyendo la cookie de refresco", async () => {

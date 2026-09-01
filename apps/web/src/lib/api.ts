@@ -87,7 +87,10 @@ function decodeExp(token: string): number | null {
 }
 
 export async function ensureValidToken(): Promise<boolean> {
-  if (!accessToken) return false;
+  if (!accessToken) {
+    const token = await refreshSession();
+    return token !== null;
+  }
   const exp = decodeExp(accessToken);
   if (exp === null) return true;
   const expiresAtMs = exp * 1000;

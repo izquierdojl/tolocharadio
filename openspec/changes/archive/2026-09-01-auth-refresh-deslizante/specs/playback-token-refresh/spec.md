@@ -1,10 +1,4 @@
-# Playback Token Refresh Specification
-
-## Purpose
-
-Capacidad del reproductor para mantener la sesión válida durante la reproducción, refrescando el token de acceso de forma proactiva antes de iniciar un nuevo stream cuando el token actual ha expirado o está próximo a expirar.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Refresco proactivo de token antes de reproducir
 El reproductor del frontend SHALL verificar la validez del token de acceso antes de iniciar la reproducción de una nueva emisora. Si el token ha expirado, está próximo a expirar o no existe un token en memoria (sesión restaurada por cookie tras recargar la página), el reproductor SHALL solicitar un nuevo par de tokens al endpoint de refresco antes de realizar la petición de streaming. SHALL NO mostrar un error de sesión caducada cuando la sesión es válida pero el token no está en memoria.
@@ -24,10 +18,3 @@ El reproductor del frontend SHALL verificar la validez del token de acceso antes
 #### Scenario: Fallo en el refresco del token
 - **WHEN** el reproductor intenta refrescar el token y el token de refresco es inválido o ha expirado
 - **THEN** el reproductor muestra un mensaje de error indicando que la sesión ha caducado y que el usuario debe iniciar sesión de nuevo
-
-### Requirement: Feedback visual durante el refresco
-El reproductor SHALL mantener el estado de carga (buffering) visible mientras se realiza el refresco del token, de forma que el usuario perciba que la acción está en curso.
-
-#### Scenario: Estado de carga durante refresco
-- **WHEN** el reproductor está refrescando el token antes de iniciar la reproducción
-- **THEN** el indicador de buffering permanece visible hasta que el stream comienza o falla
