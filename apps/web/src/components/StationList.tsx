@@ -17,7 +17,7 @@ export function StationList({ stations }: { stations: Station[] }) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+    <div className="grid auto-rows-fr grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
       {stations.map((station) => (
         <StationCard key={station.id} station={station} />
       ))}

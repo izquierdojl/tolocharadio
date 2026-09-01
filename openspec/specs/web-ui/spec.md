@@ -29,7 +29,7 @@ La pantalla de inicio de la aplicación (`/`) SHALL ser pública y mostrar la te
 - **THEN** puede ir directamente a explorar emisoras
 
 ### Requirement: Exploración de emisoras en rejilla
-La exploración de emisoras en rejilla SHALL estar disponible únicamente para usuarios con sesión abierta. La pantalla muestra las emisoras en tarjetas responsive (adaptable a móvil y escritorio), cada una con imagen, nombre y acciones rápidas (reproducir y añadir a favoritos). El botón de reproducción SHALL ser siempre visible sobre la imagen de la tarjeta con un fondo semi-transparente, sin depender del hover del ratón. Un usuario sin sesión que intente acceder a la exploración SHALL ser conducido a la portada o al inicio de sesión, sin ver la rejilla. En pantallas de smartphones (menores de 640px), la navegación principal SHALL ocultarse tras un menú hamburguesa para maximizar el espacio disponible para el contenido.
+La exploración de emisoras en rejilla SHALL estar disponible únicamente para usuarios con sesión abierta. La pantalla muestra las emisoras en tarjetas responsive (adaptable a móvil y escritorio), cada una con imagen, nombre y acciones rápidas (reproducir y añadir a favoritos). El botón de reproducción SHALL ser siempre visible sobre la imagen de la tarjeta con un fondo semi-transparente, sin depender del hover del ratón. Un usuario sin sesión que intente acceder a la exploración SHALL ser conducido a la portada o al inicio de sesión, sin ver la rejilla. En pantallas de smartphones (menores de 640px), la navegación principal SHALL ocultarse tras un menú hamburguesa para maximizar el espacio disponible para el contenido. Todas las tarjetas en la rejilla SHALL tener altura uniforme, autoajustándose al contenido más alto de la fila, para mantener un diseño visual consistente.
 
 #### Scenario: Rejilla de tarjetas
 - **WHEN** un usuario autenticado está en la pantalla de exploración
@@ -58,6 +58,10 @@ La exploración de emisoras en rejilla SHALL estar disponible únicamente para u
 #### Scenario: Cierre del menú hamburguesa
 - **WHEN** el usuario toca fuera del menú hamburguesa o selecciona una opción del menú
 - **THEN** el panel se cierra y se muestra la vista seleccionada
+
+#### Scenario: Tarjetas con altura uniforme
+- **WHEN** un usuario autenticado ve la rejilla de emisoras con tarjetas que tienen diferente cantidad de tags o texto descriptivo
+- **THEN** todas las tarjetas de la fila tienen la misma altura, autoajustándose al contenido más alto, sin que unas tarjetas sean más grandes que otras
 
 ### Requirement: Búsqueda y filtros
 El sistema SHALL ofrecer en la interfaz una barra de búsqueda por nombre y filtros de país, idioma y género (tipo de emisora) mediante controles combobox con búsqueda directa, que muestran las opciones disponibles del catálogo y permiten escribir para filtrarlas y seleccionarlas, actualizando la rejilla con los resultados obtenidos de la API. La búsqueda y los filtros SHALL estar disponibles únicamente para usuarios autenticados, SIN permitir tampoco que un invitado busque ni filtre. La interfaz SHALL mostrar, junto a la búsqueda, una fila de sugerencias de género personalizadas del usuario: cada sugerencia es una chip con un género que al pulsarla aplica el filtro de género y actualiza la rejilla. El usuario autenticado SHALL poder añadir una sugerencia eligiendo un género del catálogo y eliminar cualquiera de sus sugerencias desde la propia fila. Si el usuario aún no tiene sugerencias, la fila SHALL mostrarse en un estado que invite a añadir la primera.
