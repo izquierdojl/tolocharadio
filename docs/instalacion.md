@@ -53,6 +53,8 @@ npm run db:migrate    # aplica las migraciones pendientes
 | `JWT_REFRESH_SECRET` | *dev* | Secreto del refresh token (≥32 caracteres en producción) |
 | `JWT_ACCESS_TTL` | `15m` | Duración del access token |
 | `JWT_REFRESH_TTL` | `30d` | Duración del refresh token |
+| `REFRESH_ROTATE_THRESHOLD` | `24h` | Vida mínima del refresh token para no rotarlo al renovar (se desliza) |
+| `REFRESH_GRACE_MS` | `60000` | Gracia del token anterior tras la rotación final (ms) |
 | `REGISTRATION_ENABLED` | `true` | Permite usuarios nuevos |
 | `CORS_ORIGINS` | `-` | Orígenes permitidos (coma-separados; vacío desactiva CORS) |
 | `RADIOBROWSER_BASE_URL` | `https://all.api.radio-browser.info` | Origen del catálogo |

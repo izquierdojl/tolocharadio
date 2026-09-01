@@ -150,10 +150,30 @@ export class AuthService {
       throw unauthorized("INVALID_REFRESH_TOKEN", "Token de refresco invalido o expirado");
     }
 
-    await db.delete(refreshTokens).where(eq(refreshTokens.id, row.id));
+    const accessToken = await this.deps.jwt.signAccessToken(user.id);
+    const remainingMs = row.expiresAt - now;
+    if (remainingMs > this.config.refreshRotateThresholdMs) {
+      // Deslizante: se reutiliza el mismo refresh token renovando su caducidad
+      await db
+        .update(refreshTokens)
+        .set({ expiresAt: now + this.config.jwtRefreshTtlMs })
+        .where(eq(refreshTokens.id, row.id));
+      return { user: toPublicUser(user), accessToken, refreshToken };
+    }
 
-    const tokens = await this.issueTokens(user);
-    return { user: toPublicUser(user), ...tokens };
+    // Rotacion al final de la vida: el token anterior queda valido durante la gracia
+    await db
+      .update(refreshTokens)
+      .set({ expiresAt: now + this.config.refreshGraceMs })
+      .where(eq(refreshTokens.id, row.id));
+    const newRefreshToken = generateToken();
+    await db.insert(refreshTokens).values({
+      userId: user.id,
+      tokenHash: hashToken(newRefreshToken),
+      expiresAt: now + this.config.jwtRefreshTtlMs,
+      createdAt: now,
+    });
+    return { user: toPublicUser(user), accessToken, refreshToken: newRefreshToken };
   }
 
   async logout(refreshToken: string | undefined) {

@@ -15,6 +15,8 @@ const EnvSchema = z
     JWT_REFRESH_SECRET: z.string().min(1).optional(),
     JWT_ACCESS_TTL: z.string().min(1).default("15m"),
     JWT_REFRESH_TTL: z.string().min(1).default("14d"),
+    REFRESH_ROTATE_THRESHOLD: z.string().min(1).default("24h"),
+    REFRESH_GRACE_MS: z.coerce.number().int().positive().default(60_000),
     REGISTRATION_ENABLED: stringBoolean,
     CORS_ORIGINS: z.string().default("*"),
     RADIOBROWSER_BASE_URL: z.string().url().default("https://de1.api.radio-browser.info"),
@@ -55,6 +57,9 @@ export interface Config {
   jwtRefreshTtl: string;
   jwtAccessTtlMs: number;
   jwtRefreshTtlMs: number;
+  refreshRotateThreshold: string;
+  refreshRotateThresholdMs: number;
+  refreshGraceMs: number;
   registrationEnabled: boolean;
   corsOrigins: string[];
   radioBrowserBaseUrl: string;
@@ -87,6 +92,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     jwtRefreshTtl: parsed.JWT_REFRESH_TTL,
     jwtAccessTtlMs: parseDuration(parsed.JWT_ACCESS_TTL),
     jwtRefreshTtlMs: parseDuration(parsed.JWT_REFRESH_TTL),
+    refreshRotateThreshold: parsed.REFRESH_ROTATE_THRESHOLD,
+    refreshRotateThresholdMs: parseDuration(parsed.REFRESH_ROTATE_THRESHOLD),
+    refreshGraceMs: parsed.REFRESH_GRACE_MS,
     registrationEnabled: parsed.REGISTRATION_ENABLED,
     corsOrigins: (parsed.CORS_ORIGINS ?? "*")
       .split(",")
