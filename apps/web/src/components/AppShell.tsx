@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { ChevronDown, Heart, History, Home, LogOut, Menu, Radio, UserRound, X } from "lucide-react";
 import { useAuthStore } from "../stores/auth.js";
+import { Footer } from "./Footer.js";
 import { SierraEmblem } from "./SierraEmblem.js";
 import { PlayerBar } from "./PlayerBar.js";
 import { ThemeToggle } from "./ThemeToggle.js";
@@ -302,6 +303,7 @@ export function AppShell() {
         <Outlet />
       </main>
       <MountainWall />
+      <Footer />
       <PlayerBar />
     </div>
   );

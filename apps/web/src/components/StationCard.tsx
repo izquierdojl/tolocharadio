@@ -1,11 +1,12 @@
 import { Play, Radio } from "lucide-react";
 import { toast } from "sonner";
 import type { Station } from "../lib/types.js";
+import { formatAbsoluteDate, timeAgo } from "../lib/time.js";
 import { usePlayerStore } from "../stores/player.js";
 import { FavoriteButton } from "./FavoriteButton.js";
 import { SierraEmblem } from "./SierraEmblem.js";
 
-export function StationCard({ station, isEditing = false }: { station: Station; isEditing?: boolean }) {
+export function StationCard({ station, isEditing = false, playedAt }: { station: Station; isEditing?: boolean; playedAt?: number }) {
   const play = usePlayerStore((s) => s.play);
   const isPlaying = usePlayerStore((s) => s.isPlaying && s.station?.id === station.id);
 
@@ -75,6 +76,11 @@ export function StationCard({ station, isEditing = false }: { station: Station; 
             <span className="ml-auto text-xs text-faint">{station.bitrate} kbps</span>
           ) : null}
         </div>
+        {playedAt != null && (
+          <span className="mt-1 text-xs text-faint" title={formatAbsoluteDate(playedAt)}>
+            {timeAgo(playedAt)}
+          </span>
+        )}
       </div>
     </article>
   );

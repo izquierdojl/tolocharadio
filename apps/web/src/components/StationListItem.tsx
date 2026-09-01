@@ -1,11 +1,12 @@
 import { Play, Radio } from "lucide-react";
 import { toast } from "sonner";
 import type { Station } from "../lib/types.js";
+import { formatAbsoluteDate, timeAgo } from "../lib/time.js";
 import { usePlayerStore } from "../stores/player.js";
 import { FavoriteButton } from "./FavoriteButton.js";
 import { SierraEmblem } from "./SierraEmblem.js";
 
-export function StationListItem({ station, isEditing = false }: { station: Station; isEditing?: boolean }) {
+export function StationListItem({ station, isEditing = false, playedAt }: { station: Station; isEditing?: boolean; playedAt?: number }) {
   const play = usePlayerStore((s) => s.play);
   const isPlaying = usePlayerStore((s) => s.isPlaying && s.station?.id === station.id);
 
@@ -54,6 +55,11 @@ export function StationListItem({ station, isEditing = false }: { station: Stati
         <p className="truncate text-xs text-muted">
           {[station.country, station.language].filter(Boolean).join(" · ") || "Emisora"}
         </p>
+        {playedAt != null && (
+          <span className="text-xs text-faint" title={formatAbsoluteDate(playedAt)}>
+            {timeAgo(playedAt)}
+          </span>
+        )}
         <div className="flex flex-wrap items-center gap-1">
           {station.tags.slice(0, 3).map((tag) => (
             <span

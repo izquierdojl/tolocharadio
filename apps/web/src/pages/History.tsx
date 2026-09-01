@@ -3,28 +3,20 @@ import { History as HistoryIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { HistoryEntry, Station } from "../lib/types.js";
 import { api } from "../lib/api.js";
+import { formatAbsoluteDate, timeAgo } from "../lib/time.js";
 import { EmptyState } from "../components/EmptyState.js";
 import { useAuthStore } from "../stores/auth.js";
 import { useViewModeStore } from "../stores/viewMode.js";
 import { StationCard } from "../components/StationCard.js";
 import { StationListItem } from "../components/StationListItem.js";
 
-function formatDate(ts: number): string {
-  return new Date(ts).toLocaleString("es-ES", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function dedupeStations(entries: HistoryEntry[]): Station[] {
+function dedupeStations(entries: HistoryEntry[]): { station: Station; playedAt: number }[] {
   const seen = new Set<string>();
-  const out: Station[] = [];
+  const out: { station: Station; playedAt: number }[] = [];
   for (const e of entries) {
     if (seen.has(e.station.id)) continue;
     seen.add(e.station.id);
-    out.push(e.station);
+    out.push({ station: e.station, playedAt: e.playedAt });
   }
   return out;
 }
@@ -112,14 +104,14 @@ export function History() {
             <span className="text-xs uppercase tracking-wide text-faint">Última escucha</span>
             <div className="flex items-center gap-3">
               <span className="text-lg font-semibold text-foreground">{latest.station.name}</span>
-              <span className="text-sm text-muted">{formatDate(latest.playedAt)}</span>
+              <span className="text-sm text-muted" title={formatAbsoluteDate(latest.playedAt)}>{timeAgo(latest.playedAt)}</span>
             </div>
           </div>
           {viewMode === "card" ? (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {stations.map((station) => (
+              {stations.map(({ station, playedAt }) => (
                 <div key={station.id} className="relative">
-                  <StationCard station={station} />
+                  <StationCard station={station} playedAt={playedAt} />
                   <button
                     type="button"
                     onClick={() => removeStationMutation.mutate(station.id)}
@@ -134,10 +126,10 @@ export function History() {
             </div>
           ) : (
             <ul className="flex flex-col gap-2">
-              {stations.map((station) => (
+              {stations.map(({ station, playedAt }) => (
                 <li key={station.id} className="flex items-center gap-2 rounded-lg border border-line bg-surface-raised p-2.5">
                   <div className="min-w-0 flex-1">
-                    <StationListItem station={station} />
+                    <StationListItem station={station} playedAt={playedAt} />
                   </div>
                   <button
                     type="button"
