@@ -11,7 +11,6 @@ interface PlayerState {
   play: (station: Station) => void;
   toggle: () => void;
   stop: () => void;
-  next: (stations: Station[]) => void;
   setVolume: (volume: number) => void;
 }
 
@@ -80,14 +79,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       audio!.removeAttribute("src");
       audio!.load();
       set({ station: null, isPlaying: false, isBuffering: false });
-    },
-
-    next(stations: Station[]) {
-      const { station } = get();
-      if (stations.length === 0) return;
-      const idx = station ? stations.findIndex((s) => s.id === station.id) : -1;
-      const next = stations[(idx + 1) % stations.length] ?? stations[0]!;
-      get().play(next);
     },
 
     setVolume(volume) {

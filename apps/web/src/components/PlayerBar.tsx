@@ -1,15 +1,9 @@
 import { useRef, useState } from "react";
-import { Check, Copy, Loader2, Pause, Play, SkipForward, Volume2, VolumeX, X } from "lucide-react";
+import { Check, Copy, Loader2, Pause, Play, Volume2, VolumeX, X } from "lucide-react";
 import { usePlayerStore } from "../stores/player.js";
-import type { Station } from "../lib/types.js";
 
-interface PlayerBarProps {
-  fallbackStations?: Station[];
-}
-
-export function PlayerBar({ fallbackStations = [] }: PlayerBarProps) {
-  const { station, isPlaying, isBuffering, volume, toggle, stop, next, setVolume } =
-    usePlayerStore();
+export function PlayerBar() {
+  const { station, isPlaying, isBuffering, volume, toggle, stop, setVolume } = usePlayerStore();
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -89,14 +83,6 @@ export function PlayerBar({ fallbackStations = [] }: PlayerBarProps) {
           ) : (
             <Play className="ml-0.5 size-5" />
           )}
-        </button>
-        <button
-          type="button"
-          onClick={() => next(fallbackStations)}
-          title="Siguiente emisora"
-          className="flex size-9 items-center justify-center rounded-full text-pine-300 transition hover:bg-pine-800 hover:text-pine-100"
-        >
-          <SkipForward className="size-5" />
         </button>
 
         <div className="hidden items-center gap-2 sm:flex">
