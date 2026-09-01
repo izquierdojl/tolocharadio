@@ -5,7 +5,7 @@ Ver proposal.md para la motivación. La aplicación web de TolochaRadio no expon
 ## Goals / Non-Goals
 
 **Goals:**
-- Mostrar la versión de la app en el footer de forma discreta
+- Mostrar la versión de la app en una sección "Acerca de..." accesible desde el menú
 - Detectar releases nuevos en GitHub y enlazar directamente
 - No golpear la API de GitHub en cada recarga (cache)
 - Degradación graceful: si falla la comprobación, solo se muestra la versión local
@@ -50,17 +50,22 @@ Ver proposal.md para la motivación. La aplicación web de TolochaRadio no expon
 
 **Rationale**: La comparación es trivial (3 números), no justifica una dependencia externa.
 
-### D4: Posición del footer
+### D4: Ubicación de la información de versión
 
-**Elección**: Componente `Footer` renderizado en `AppShell.tsx` entre `MountainWall` y `PlayerBar`.
+**Elección**: Sección "Acerca de..." accesible desde el menú de usuario (desktop) y menú hamburguesa (mobile), como un link/sección que muestra la versión, link al repo, y link de actualización.
 
-**Rationale**: Respeta el layout existente. La montaña es decorativa, el footer añade información útil debajo. El PlayerBar sigue siendo sticky bottom.
+**Alternativas consideradas**:
+- Footer debajo de MountainWall: queda tapado por el PlayerBar sticky en mobile, muy discreto en desktop
+- Badge en el header: compite con la navegación, visualmente ruidoso
+- Página dedicada `/acerca-de`: overkill para 3 líneas de información
 
-### D5: Estilo del footer
+**Rationale**: El menú de usuario ya es el lugar natural para información de la app. En desktop aparece como item del menú desplegable; en mobile, en el menú hamburguesa. Siempre visible y accesible sin competir con el contenido principal.
 
-**Elección**: `text-xs text-muted`, link al release con hover sutil. Sin fondo diferenciado.
+### D5: Estilo de la sección "Acerca de..."
 
-**Rationale**: Debe ser discreto, no competir con el contenido principal. Consistente con el sistema de diseño existente.
+**Elección**: Link en el menú con texto "Acerca de..." que expande/muestra inline la información de versión. Versión como `vX.Y.Z` con link al repo, link de actualización con hover sutil.
+
+**Rationale**: Mantiene la consistencia con los items existentes del menú. La información aparece en contexto sin necesidad de navegar a otra página.
 
 ## Risks / Trade-offs
 

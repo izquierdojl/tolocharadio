@@ -5,11 +5,11 @@ Mostrar al usuario la versión actual de la aplicación en el footer y detectar 
 ## ADDED Requirements
 
 ### Requirement: Mostrar versión actual
-El sistema SHALL mostrar la versión actual de la aplicación (extraída de `package.json`) en el footer de la interfaz web, debajo de la decoración de montañas.
+El sistema SHALL mostrar la versión actual de la aplicación (extraída de `package.json`) en una sección "Acerca de..." accesible desde el menú de usuario (desktop) y menú hamburguesa (mobile).
 
-#### Scenario: Versión visible en el footer
-- **WHEN** el usuario carga cualquier página de la aplicación
-- **THEN** el footer muestra la versión actual en formato `vX.Y.Z` (ej: `v0.16.0`)
+#### Scenario: Versión visible en "Acerca de..."
+- **WHEN** el usuario abre el menú de usuario o el menú hamburguesa
+- **THEN** se muestra un item "Acerca de..." que, al seleccionarse, muestra la versión actual en formato `vX.Y.Z` (ej: `v0.16.0`)
 
 #### Scenario: Versión enlaza al repositorio
 - **WHEN** el usuario hace clic en la versión mostrada
@@ -20,15 +20,15 @@ El sistema SHALL comprobar si hay un release más reciente en GitHub al cargar l
 
 #### Scenario: Hay una actualización disponible
 - **WHEN** la versión del release más reciente en GitHub es mayor que la versión local
-- **THEN** el footer muestra un enlace con el texto `-> vX.Y.Z` que apunta al release de GitHub y se abre en nueva pestaña
+- **THEN** la sección "Acerca de..." muestra un enlace con el texto `-> vX.Y.Z` que apunta al release de GitHub y se abre en nueva pestaña
 
 #### Scenario: No hay actualización disponible
 - **WHEN** la versión del release más reciente en GitHub es igual a la versión local
-- **THEN** el footer muestra solo la versión actual sin enlace de actualización
+- **THEN** la sección "Acerca de..." muestra solo la versión actual sin enlace de actualización
 
 #### Scenario: Error de red o API
 - **WHEN** la comprobación de actualizaciones falla (sin red, rate limit, error de API)
-- **THEN** el footer muestra silenciosamente solo la versión actual sin indicar error
+- **THEN** la sección "Acerca de..." muestra silenciosamente solo la versión actual sin indicar error
 
 ### Requirement: Cache de comprobación
 El sistema SHALL cachear el resultado de la comprobación de actualizaciones en `sessionStorage` para evitar requests repetidos a la API de GitHub.

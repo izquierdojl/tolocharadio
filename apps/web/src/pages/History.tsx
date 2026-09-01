@@ -3,7 +3,7 @@ import { History as HistoryIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { HistoryEntry, Station } from "../lib/types.js";
 import { api } from "../lib/api.js";
-import { formatAbsoluteDate, timeAgo } from "../lib/time.js";
+
 import { EmptyState } from "../components/EmptyState.js";
 import { useAuthStore } from "../stores/auth.js";
 import { useViewModeStore } from "../stores/viewMode.js";
@@ -100,13 +100,6 @@ export function History() {
         />
       ) : latest ? (
         <>
-          <div className="flex flex-col gap-2 rounded-2xl border border-line bg-surface-raised p-4">
-            <span className="text-xs uppercase tracking-wide text-faint">Última escucha</span>
-            <div className="flex items-center gap-3">
-              <span className="text-lg font-semibold text-foreground">{latest.station.name}</span>
-              <span className="text-sm text-muted" title={formatAbsoluteDate(latest.playedAt)}>{timeAgo(latest.playedAt)}</span>
-            </div>
-          </div>
           {viewMode === "card" ? (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
               {stations.map(({ station, playedAt }) => (

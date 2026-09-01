@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { ChevronDown, Heart, History, Home, LogOut, Menu, Radio, UserRound, X } from "lucide-react";
 import { useAuthStore } from "../stores/auth.js";
-import { Footer } from "./Footer.js";
+import { AboutSection } from "./AboutSection.js";
 import { SierraEmblem } from "./SierraEmblem.js";
 import { PlayerBar } from "./PlayerBar.js";
 import { ThemeToggle } from "./ThemeToggle.js";
@@ -107,6 +107,9 @@ function UserMenu() {
           </NavLink>
           <div role="menuitem">
             <ThemeToggle menuItem />
+          </div>
+          <div role="menuitem">
+            <AboutSection />
           </div>
           <button
             type="button"
@@ -248,6 +251,9 @@ function Header() {
               <div role="menuitem">
                 <ThemeToggle menuItem />
               </div>
+              <div role="menuitem">
+                <AboutSection />
+              </div>
               {status === "authenticated" ? (
                 <>
                   <div role="menuitem">
@@ -303,7 +309,6 @@ export function AppShell() {
         <Outlet />
       </main>
       <MountainWall />
-      <Footer />
       <PlayerBar />
     </div>
   );

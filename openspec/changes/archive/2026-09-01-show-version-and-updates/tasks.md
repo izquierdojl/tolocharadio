@@ -7,10 +7,10 @@
 
 - [x] 2.1 Crear `apps/web/src/hooks/useVersionCheck.ts` con la lógica de fetch a la API de GitHub (`/repos/izquierdojl/tolocharadio/releases/latest`), parsing semver, comparación de versiones, y cache en sessionStorage con TTL de 5 minutos. Verificar que el hook compila sin errores de TypeScript.
 
-## 3. Componente Footer
+## 3. Sección "Acerca de..."
 
-- [x] 3.1 Crear `apps/web/src/components/Footer.tsx` que muestre la versión actual (`vX.Y.Z`) con link al repositorio de GitHub, y si hay actualización disponible, un link `-> vX.Y.Z` al release. Estilo discreto (`text-xs text-muted`). Verificar que el componente compila.
-- [x] 3.2 Modificar `apps/web/src/components/AppShell.tsx` para importar y renderizar `<Footer />` entre `MountainWall` y `PlayerBar`. Verificar con `npm run dev` que el footer aparece en la interfaz.
+- [x] 3.1 Crear `apps/web/src/components/AboutSection.tsx` que muestre la versión actual (`vX.Y.Z`) con link al repositorio de GitHub, y si hay actualización disponible, un link `-> vX.Y.Z` al release. Estilo consistente con los items del menú. Verificar que el componente compila.
+- [x] 3.2 Modificar `apps/web/src/components/AppShell.tsx` para añadir un link "Acerca de..." en el menú de usuario (desktop) y en el menú hamburguesa (mobile), que renderice `<AboutSection />`. Verificar con `npm run dev` que la sección aparece en ambos menús.
 
 ## 4. Verificación integrada
 
