@@ -49,7 +49,7 @@ export function Register() {
       <div className="rounded-2xl border border-line bg-surface-raised p-6">
         <h1 className="text-xl font-bold text-foreground">Crear tu cuenta</h1>
         <p className="mt-1 text-sm text-muted">
-          Guárdate las emisoras de la sierra que más te gusten.
+          Guárdate las emisoras que más te gusten.
         </p>
 
         {disabled && (

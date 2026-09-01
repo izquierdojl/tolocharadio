@@ -323,7 +323,7 @@ export function Explore() {
       ) : !data ? (
         <div className="flex items-center justify-center gap-2 py-16 text-faint">
           <Loader2 className="size-5 animate-spin" />
-          <span className="text-sm">Buscando en la sierra…</span>
+          <span className="text-sm">Buscando emisoras…</span>
         </div>
       ) : data.items.length === 0 ? (
         <EmptyState

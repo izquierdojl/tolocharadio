@@ -34,7 +34,7 @@ export function PlayerBar({ fallbackStations = [] }: PlayerBarProps) {
     return (
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-pine-800 bg-pine-900/90 px-4 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between text-sm text-pine-400">
-          <span className="hidden sm:inline">Elige una emisora para empezar a escuchar la sierra en directo</span>
+          <span className="hidden sm:inline">Elige una emisora para empezar a escuchar</span>
           <span className="sm:hidden">Elige una emisora para escuchar</span>
         </div>
       </div>

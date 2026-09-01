@@ -69,7 +69,7 @@ export function History() {
       <div className="flex items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Tu historial</h1>
-          <p className="text-sm text-muted">Lo último que has escuchado en la sierra.</p>
+          <p className="text-sm text-muted">Lo último que has escuchado.</p>
         </div>
         {stations.length ? (
           <button

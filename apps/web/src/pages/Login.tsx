@@ -72,7 +72,7 @@ export function Login() {
       <div className="rounded-2xl border border-line bg-surface-raised p-6">
         <h1 className="text-xl font-bold text-foreground">Iniciar sesión</h1>
         <p className="mt-1 text-sm text-muted">
-          Accede a tus favoritos e historial mientras exploras la sierra.
+          Accede a tus favoritos e historial mientras exploras.
         </p>
         <form onSubmit={(e) => void onSubmit(e)} className="mt-5 flex flex-col gap-4">
           <label className="flex flex-col gap-1.5 text-sm text-foreground">
