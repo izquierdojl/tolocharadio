@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { History as HistoryIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -6,6 +7,7 @@ import { api } from "../lib/api.js";
 
 import { EmptyState } from "../components/EmptyState.js";
 import { useAuthStore } from "../stores/auth.js";
+import { usePlayerStore } from "../stores/player.js";
 import { useViewModeStore } from "../stores/viewMode.js";
 import { StationCard } from "../components/StationCard.js";
 import { StationListItem } from "../components/StationListItem.js";
@@ -25,6 +27,17 @@ export function History() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const viewMode = useViewModeStore((s) => s.viewMode);
+  const prevStationIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    return usePlayerStore.subscribe((state) => {
+      const currentId = state.station?.id ?? null;
+      if (currentId && currentId !== prevStationIdRef.current) {
+        void queryClient.invalidateQueries({ queryKey: ["history"] });
+      }
+      prevStationIdRef.current = currentId;
+    });
+  }, [queryClient]);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["history"],

@@ -67,6 +67,17 @@ Un usuario autenticado SHALL poder borrar todo su historial de reproducción de 
 - **WHEN** un usuario intenta eliminar una emisora que no está en su historial
 - **THEN** el sistema responde con un error 404
 
+### Requirement: Actualización automática al reproducir
+Cuando un usuario reproduce una emisora desde la pestaña de historial, la lista de historial SHALL actualizarse automáticamente para reflejar el nuevo orden, posicionando la emisora reproducida en la primera posición sin necesidad de recargar la página.
+
+#### Scenario: Reordenamiento automático tras reproducir
+- **WHEN** un usuario autenticado reproduce una emisora desde la pestaña de historial
+- **THEN** la lista de historial se actualiza automáticamente y la emisora reproducida aparece en la primera posición
+
+#### Scenario: Actualización sin interrupción de reproducción
+- **WHEN** la lista de historial se actualiza automáticamente tras reproducir
+- **THEN** la reproducción de la emisora continúa sin interrupción mientras la lista se reordena
+
 ### Requirement: Aislamiento entre usuarios
 El historial SHALL ser estrictamente privado de cada cuenta: ningún usuario podrá ver ni modificar el historial de otro.
 
