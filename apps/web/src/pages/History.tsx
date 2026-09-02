@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { History as HistoryIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -27,15 +27,13 @@ export function History() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const viewMode = useViewModeStore((s) => s.viewMode);
-  const prevStationIdRef = useRef<string | null>(null);
-
   useEffect(() => {
-    return usePlayerStore.subscribe((state) => {
-      const currentId = state.station?.id ?? null;
-      if (currentId && currentId !== prevStationIdRef.current) {
-        void queryClient.invalidateQueries({ queryKey: ["history"] });
+    return usePlayerStore.subscribe((state, prev) => {
+      if (state.isPlaying && !prev.isPlaying) {
+        setTimeout(() => {
+          void queryClient.invalidateQueries({ queryKey: ["history"] });
+        }, 500);
       }
-      prevStationIdRef.current = currentId;
     });
   }, [queryClient]);
 
