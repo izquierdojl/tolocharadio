@@ -1,42 +1,21 @@
+import { useState } from "react";
 import { Info } from "lucide-react";
-import { useVersionCheck } from "../hooks/useVersionCheck.js";
-
-const GITHUB_URL = "https://www.github.com/izquierdojl/tolocharadio";
+import { AboutModal } from "./AboutModal.js";
 
 export function AboutSection() {
-  const { current, latest, hasUpdate, releaseUrl } = useVersionCheck();
+  const [open, setOpen] = useState(false);
 
   return (
-    <div className="rounded-lg px-3 py-2 text-sm text-muted">
-      <div className="flex items-center gap-2">
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-surface-soft hover:text-foreground"
+      >
         <Info className="size-4" />
         <span>Acerca de...</span>
-      </div>
-      <div className="mt-1 pl-6 text-xs">
-        <a
-          href={GITHUB_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="transition hover:text-foreground"
-          title="Repositorio en GitHub"
-        >
-          v{current}
-        </a>
-        {hasUpdate && latest && releaseUrl ? (
-          <>
-            {" "}
-            <a
-              href={releaseUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-brand transition hover:text-foreground"
-              title="Nueva version disponible"
-            >
-              -&gt; v{latest}
-            </a>
-          </>
-        ) : null}
-      </div>
-    </div>
+      </button>
+      <AboutModal open={open} onClose={() => setOpen(false)} />
+    </>
   );
 }
