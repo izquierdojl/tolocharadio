@@ -111,10 +111,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 
 export type UserTheme = "light" | "dark";
 
+export type UserDefaultView = "explorar" | "favoritos" | "historial";
+
 export interface PublicUser {
   id: number;
   email: string;
   name: string | null;
   theme: UserTheme;
+  defaultView: UserDefaultView;
   createdAt: number;
 }

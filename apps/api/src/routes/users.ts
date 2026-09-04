@@ -8,6 +8,7 @@ import { requireAuth } from "../middleware/auth.js";
 const updateProfileSchema = z.object({
   name: z.string().optional(),
   theme: z.enum(["light", "dark"]).optional(),
+  defaultView: z.enum(["explorar", "favoritos", "historial"]).optional(),
 });
 const updatePasswordSchema = z.object({ currentPassword: z.string(), newPassword: z.string() });
 

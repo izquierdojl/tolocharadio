@@ -6,6 +6,7 @@ export const users = sqliteTable("users", {
   passwordHash: text("password_hash").notNull(),
   name: text("name"),
   theme: text("theme").notNull().default("dark"),
+  defaultView: text("default_view").notNull().default("explorar"),
   createdAt: integer("created_at").notNull(),
 });
 

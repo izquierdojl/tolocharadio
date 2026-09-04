@@ -36,6 +36,13 @@
       "when": 1788189012340,
       "tag": "0004_flippant_lady_mastermind",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1788561204916,
+      "tag": "0005_late_colossus",
+      "breakpoints": true
     }
   ]
 }

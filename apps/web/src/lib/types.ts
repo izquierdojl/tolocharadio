@@ -19,17 +19,21 @@ export interface Station {
 
 export type UserTheme = "light" | "dark";
 
+export type UserDefaultView = "explorar" | "favoritos" | "historial";
+
 export interface User {
   id: number;
   email: string;
   name: string | null;
   theme: UserTheme;
+  defaultView: UserDefaultView;
   createdAt: number;
 }
 
 export interface UpdateProfileBody {
   name?: string;
   theme?: UserTheme;
+  defaultView?: UserDefaultView;
 }
 
 export interface AuthResponse {

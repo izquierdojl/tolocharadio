@@ -14,7 +14,7 @@ Todos los textos visibles de la interfaz SHALL estar en español, incluidos men�
 - **THEN** todos los textos y mensajes de la interfaz se muestran en español
 
 ### Requirement: Portada de inicio temática
-La pantalla de inicio de la aplicación (`/`) SHALL ser pública y mostrar la temática de la Sierra de TolochaRadio: titular, ilustración/fono de la sierra (montañas y radio), botones hacia el inicio de sesión y el registro, y, si el usuario ya tiene sesión, un acceso directo a la exploración de emisoras.
+La pantalla de inicio de la aplicación (`/`) SHALL ser pública y mostrar la temática de la Sierra de TolochaRadio: titular, ilustración/fono de la sierra (montañas y radio), botones hacia el inicio de sesión y el registro, y, si el usuario ya tiene sesión, SHALL redirigir automáticamente a su vista inicial por defecto (exploración, favoritos o historial) sin mostrar la portada.
 
 #### Scenario: Invitado en la portada
 - **WHEN** un usuario sin sesión abre la aplicación
@@ -25,8 +25,8 @@ La pantalla de inicio de la aplicación (`/`) SHALL ser pública y mostrar la te
 - **THEN** se muestra la pantalla correspondiente de autenticación
 
 #### Scenario: Usuario autenticado en la portada
-- **WHEN** un usuario con sesión abierta está en la portada
-- **THEN** puede ir directamente a explorar emisoras
+- **WHEN** un usuario con sesión abierta abre la raíz (`/`)
+- **THEN** es redirigido automáticamente a su vista inicial por defecto (`/explorar`, `/favoritos` o `/historial`) en lugar de ver la portada
 
 ### Requirement: Exploración de emisoras en rejilla
 La exploración de emisoras en rejilla SHALL estar disponible únicamente para usuarios con sesión abierta. La pantalla muestra las emisoras en tarjetas responsive (adaptable a móvil y escritorio), cada una con imagen, nombre y acciones rápidas (reproducir y añadir a favoritos). El botón de reproducción SHALL ser siempre visible sobre la imagen de la tarjeta con un fondo semi-transparente, sin depender del hover del ratón. Un usuario sin sesión que intente acceder a la exploración SHALL ser conducido a la portada o al inicio de sesión, sin ver la rejilla. En pantallas de smartphones (menores de 640px), la navegación principal SHALL ocultarse tras un menú hamburguesa para maximizar el espacio disponible para el contenido. Todas las tarjetas en la rejilla SHALL tener altura uniforme, autoajustándose al contenido más alto de la fila, para mantener un diseño visual consistente.
@@ -282,3 +282,30 @@ La interfaz SHALL mostrar, de forma visible y accesible desde todas las vistas, 
 #### Scenario: Disponible sin sesión
 - **WHEN** un usuario sin sesión abierta ve la aplicación
 - **THEN** el enlace al repositorio de GitHub sigue visible y operativo
+
+### Requirement: Vista inicial por defecto configurable
+La interfaz SHALL ofrecer en el perfil (`/perfil`) un selector de vista inicial por defecto con las opciones Explorar, Favoritos e Historial, que muestre el valor guardado en el perfil del usuario y permita cambiarlo con confirmación visual. Tras iniciar sesión o registrarse, la interfaz SHALL dirigir al usuario a su vista por defecto. La preferencia guardada en el perfil SHALL ser la única fuente de verdad (sin copia en localStorage) y el valor `explorar` SHALL aplicarse cuando no exista preferencia guardada. Todos los textos del selector SHALL estar en español.
+
+#### Scenario: Selector visible en el perfil
+- **WHEN** un usuario autenticado abre su perfil
+- **THEN** ve un selector de vista por defecto con las opciones Explorar, Favoritos e Historial marcando su valor actual
+
+#### Scenario: Cambio de vista por defecto
+- **WHEN** un usuario autenticado elige otra opción en el selector y la guarda
+- **THEN** la preferencia se envía a la API, se confirma visualmente que se ha guardado y el selector refleja el nuevo valor
+
+#### Scenario: Error al guardar la preferencia
+- **WHEN** el guardado de la nueva vista por defecto falla (error de red o de validación)
+- **THEN** la interfaz muestra un mensaje de error comprensible en español y mantiene el valor anterior en el selector
+
+#### Scenario: Redirección tras iniciar sesión
+- **WHEN** un usuario inicia sesión con una vista por defecto de Favoritos o Historial
+- **THEN** la aplicación lo dirige directamente a `/favoritos` o `/historial` en lugar de a la portada o a la exploración
+
+#### Scenario: Redirección tras registrarse
+- **WHEN** un usuario completa el registro (con vista por defecto `explorar`)
+- **THEN** la aplicación lo dirige a `/explorar`
+
+#### Scenario: Vista por defecto sin preferencia guardada
+- **WHEN** un usuario autenticado sin preferencia de vista guardada accede o abre la aplicación
+- **THEN** la aplicación lo dirige a `/explorar`

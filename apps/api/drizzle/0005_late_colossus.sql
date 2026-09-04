@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `default_view` text DEFAULT 'explorar' NOT NULL;

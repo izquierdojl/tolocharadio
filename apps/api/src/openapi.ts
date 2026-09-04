@@ -48,9 +48,10 @@ const userSchema = {
     email: { type: "string", format: "email" },
     name: { type: ["string", "null"] },
     theme: { type: "string", enum: ["light", "dark"], description: "Preferencia de tema de la interfaz" },
+    defaultView: { type: "string", enum: ["explorar", "favoritos", "historial"], description: "Vista inicial por defecto" },
     createdAt: { type: "integer", description: "Marca de tiempo en milisegundos" },
   },
-  required: ["id", "email", "name", "theme", "createdAt"],
+  required: ["id", "email", "name", "theme", "defaultView", "createdAt"],
 } as const;
 
 const authResponseSchema = {
@@ -328,11 +329,11 @@ export function buildOpenApi(): Record<string, unknown> {
         },
         patch: {
           tags: ["Usuarios"],
-          summary: "Actualizar perfil (nombre y/o tema)",
+          summary: "Actualizar perfil (nombre, tema y/o vista por defecto)",
           ...requireAuth,
           requestBody: {
             required: true,
-            content: { "application/json": { schema: { type: "object", properties: { name: { type: "string", maxLength: 80 }, theme: { type: "string", enum: ["light", "dark"] } } } } },
+            content: { "application/json": { schema: { type: "object", properties: { name: { type: "string", maxLength: 80 }, theme: { type: "string", enum: ["light", "dark"] }, defaultView: { type: "string", enum: ["explorar", "favoritos", "historial"] } } } } },
           },
           responses: {
             "200": { description: "Perfil actualizado", content: { "application/json": { schema: { type: "object", properties: { user: { $ref: "#/components/schemas/User" } }, required: ["user"] } } } },

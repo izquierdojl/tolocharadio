@@ -1,5 +1,6 @@
-import { CheckCircle2, Radio } from "lucide-react";
-import { Link } from "react-router-dom";
+import { CheckCircle2 } from "lucide-react";
+import { Link, Navigate } from "react-router-dom";
+import { defaultViewPath } from "../lib/defaultView.js";
 import { useAuthStore } from "../stores/auth.js";
 
 function SierraIllustration() {
@@ -60,7 +61,15 @@ const PERMITS = [
 
 export function Home() {
   const status = useAuthStore((s) => s.status);
-  const authenticated = status === "authenticated";
+  const user = useAuthStore((s) => s.user);
+
+  if (status === "loading") {
+    return <div className="flex h-64 items-center justify-center text-faint">Cargando sesión…</div>;
+  }
+
+  if (status === "authenticated") {
+    return <Navigate to={defaultViewPath(user?.defaultView)} replace />;
+  }
 
   return (
     <div className="flex flex-col gap-12 pb-6 pt-4">
@@ -76,38 +85,22 @@ export function Home() {
             catálogo extenso y actualizado de emisoras de todo el mundo.
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-            {authenticated ? (
-              <Link
-                to="/explorar"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-ochre-500 px-6 py-3 text-sm font-semibold text-pine-950 transition hover:bg-ochre-400"
-              >
-                <Radio className="size-4" />
-                Explorar emisoras
-              </Link>
-            ) : (
-              <>
-                <Link
-                  to="/registro"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-ochre-500 px-6 py-3 text-sm font-semibold text-pine-950 transition hover:bg-ochre-400"
-                >
-                  Crear cuenta
-                </Link>
-                <Link
-                  to="/login"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-line-strong px-6 py-3 text-sm font-medium text-foreground transition hover:bg-surface-soft"
-                >
-                  Iniciar sesión
-                </Link>
-              </>
-            )}
+            <Link
+              to="/registro"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-ochre-500 px-6 py-3 text-sm font-semibold text-pine-950 transition hover:bg-ochre-400"
+            >
+              Crear cuenta
+            </Link>
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-line-strong px-6 py-3 text-sm font-medium text-foreground transition hover:bg-surface-soft"
+            >
+              Iniciar sesión
+            </Link>
           </div>
-          {authenticated ? (
-            <p className="mt-3 text-sm text-faint">O entra en tu perfil para gestionar tus favoritos.</p>
-          ) : (
-            <p className="mt-3 text-sm text-faint">
-              Regístrate gratis para guardar favoritas, repasar tu historial y disfrutar de la radio sin interrupciones.
-            </p>
-          )}
+          <p className="mt-3 text-sm text-faint">
+            Regístrate gratis para guardar favoritas, repasar tu historial y disfrutar de la radio sin interrupciones.
+          </p>
         </div>
         <div className="flex-1">
           <SierraIllustration />

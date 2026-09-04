@@ -1,4 +1,4 @@
-import type { Config, PublicUser, UserTheme } from "./config/env.js";
+import type { Config, PublicUser, UserDefaultView, UserTheme } from "./config/env.js";
 import type { DB } from "./db/client.js";
 import type { JwtService } from "./lib/jwt.js";
 import type { AuthService } from "./services/auth.js";
@@ -13,6 +13,7 @@ export interface UserIdentity {
   email: string;
   name: string | null;
   theme: UserTheme;
+  defaultView: UserDefaultView;
   createdAt: number;
 }
 
@@ -34,6 +35,7 @@ export function toPublicUser(user: UserIdentity): PublicUser {
     email: user.email,
     name: user.name,
     theme: user.theme,
+    defaultView: user.defaultView,
     createdAt: user.createdAt,
   };
 }

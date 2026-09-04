@@ -3,7 +3,8 @@ import { toast } from "sonner";
 import { type FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api.js";
-import type { User } from "../lib/types.js";
+import { DEFAULT_VIEW_OPTIONS } from "../lib/defaultView.js";
+import type { User, UserDefaultView } from "../lib/types.js";
 import { useAuthStore } from "../stores/auth.js";
 
 const inputClass =
@@ -22,6 +23,7 @@ export function Profile() {
   const setUser = useAuthStore((s) => s.setUser);
   const queryClient = useQueryClient();
   const [name, setName] = useState(user?.name ?? "");
+  const [defaultView, setDefaultView] = useState<UserDefaultView>(user?.defaultView ?? "explorar");
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [passwordStep, setPasswordStep] = useState(false);
@@ -38,8 +40,19 @@ export function Profile() {
     },
   });
 
-  const changePassword = useMutation({
-    mutationFn: () =>
+  const updateDefaultView = useMutation({
+    mutationFn: () => api.patch<{ user: User }>("/users/me", { defaultView }),
+    onSuccess: (data) => {
+      setUser(data.user);
+      toast.success("Vista por defecto actualizada");
+      void queryClient.invalidateQueries();
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "No se pudo guardar la vista por defecto");
+    },
+  });
+
+  const changePassword = useMutation({    mutationFn: () =>
       api.patch<{ ok: true }>("/users/me/password", { currentPassword: current, newPassword: next }),
     onSuccess: () => {
       toast.success("Contraseña actualizada");
@@ -55,6 +68,11 @@ export function Profile() {
   const onSubmitName = (e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
     updateName.mutate();
+  };
+
+  const onSubmitDefaultView = (e: FormEvent<HTMLFormElement>): void => {
+    e.preventDefault();
+    updateDefaultView.mutate();
   };
 
   const onSubmitPassword = (e: FormEvent<HTMLFormElement>): void => {
@@ -94,6 +112,43 @@ export function Profile() {
           className="self-start rounded-lg bg-pine-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-500 disabled:opacity-50"
         >
           Guardar cambios
+        </button>
+      </form>
+
+      <form
+        onSubmit={onSubmitDefaultView}
+        className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-5"
+      >
+        <div className="flex flex-col gap-1">
+          <h2 className="font-semibold text-foreground">Vista inicial por defecto</h2>
+          <p className="text-sm text-muted">
+            Elige qué vista verás al acceder o abrir la aplicación.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2" role="radiogroup" aria-label="Vista inicial por defecto">
+          {DEFAULT_VIEW_OPTIONS.map((option) => (
+            <label
+              key={option.value}
+              className="flex cursor-pointer items-center gap-3 rounded-lg border border-line px-3 py-2.5 text-sm text-foreground transition hover:border-pine-500"
+            >
+              <input
+                type="radio"
+                name="defaultView"
+                value={option.value}
+                checked={defaultView === option.value}
+                onChange={() => setDefaultView(option.value)}
+                className="size-4 accent-pine-600"
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
+        <button
+          type="submit"
+          disabled={updateDefaultView.isPending || defaultView === (user.defaultView ?? "explorar")}
+          className="self-start rounded-lg bg-pine-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-500 disabled:opacity-50"
+        >
+          Guardar vista por defecto
         </button>
       </form>
 
