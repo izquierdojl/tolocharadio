@@ -1,13 +1,13 @@
 ---
 name: openspec-archive-change
 description: Archive a completed change in the experimental workflow. Use when the user wants to finalize and archive a change after implementation is complete.
-allowed-tools: Bash(openspec:*), Bash(node:*), Bash(git:*), Bash(mkdir:*), Bash(mv:*)
+allowed-tools: Bash(openspec:*)
 license: MIT
 compatibility: Requires openspec CLI.
 metadata:
   author: openspec
   version: "1.0"
-  generatedBy: "1.11.0"
+  generatedBy: "1.13.0"
 ---
 
 Archive a completed change in the experimental workflow.
@@ -153,35 +153,6 @@ Archive a completed change in the experimental workflow.
    - Whether specs were synced (if applicable)
    - Note about any warnings (incomplete artifacts/tasks)
 
-7. **Release the new version (automático — proyecto TolochaRadio)**
-
-   Cada change archivado genera automáticamente una nueva versión de la aplicación. Ejecutar SIEMPRE
-   después del archivo, sin preguntar al usuario (es el mecanismo acordado):
-
-   1. Si quedan cambios sin commitear del archivo/sync de specs, comitéalos primero:
-      ```bash
-      git add openspec/ && git commit -m "chore: archive <change-name>"
-      ```
-      (o `git add -A openspec/` si hay borrados/renombres). Si no hay cambios, omitir este paso.
-   2. Determinar el tipo de bump a partir del contenido del change:
-      - `patch` si el change era una corrección/hotfix (sin features nuevas)
-      - `minor` en cualquier otro caso (feature, infraestructura, docs, etc.)
-   3. Ejecutar:
-      ```bash
-      node scripts/bump.js <minor|patch>
-      ```
-      El script sincroniza la versión en la raíz y en todos los workspaces (raíz, `apps/api`,
-      `apps/web`), crea el commit `chore: release vX.Y.Z` y el tag `vX.Y.Z`. No empuja nada.
-   4. Publicar:
-      ```bash
-      git push origin <rama-actual> && git push origin --tags
-      ```
-
-   El push del tag `vX.Y.Z` dispara automáticamente el workflow `release` de GitHub Actions, que
-   construye la imagen y la publica en GHCR (tags semVer + `latest`). Mientras la versión principal
-   siga siendo 0, cada especificación archivada sube `0.n.0`; la primera versión estable se decide
-   explícitamente un día con `node scripts/bump.js major` (→ 1.0.0).
-
 **Output On Success**
 
 ```markdown
@@ -193,7 +164,6 @@ Archive a completed change in the experimental workflow.
 **Specs:** <"✓ Synced to main specs" only if the step 4 verification passed; otherwise "No delta specs" or "Sync skipped">
 
 <"All artifacts complete. All tasks complete." — or, if archived with warnings, list them instead (e.g. "Archived with 2 incomplete tasks")>
-<"Release publicado: vX.Y.Z (tag creado y pusheado; GHCR se actualiza automáticamente)">
 ```
 
 **Guardrails**
@@ -203,7 +173,6 @@ Archive a completed change in the experimental workflow.
 - Preserve .openspec.yaml when moving to archive (it moves with the directory)
 - Show clear summary of what happened
 - If sync is requested, run the `openspec-sync-specs` workflow inline (agent-driven)
-- Release step (7) is project-specific and mandatory: bump version, tag and push on every archive
 - Never archive while a spec sync is still in flight — run the sync inline and verify the main specs before moving `changeRoot`
 - If delta specs exist, always run the sync assessment and show the combined summary before prompting
 - Apply relevant runtime context and report conflicts; operation guidance remains advisory
