@@ -97,7 +97,11 @@ const playableSchema = {
   properties: {
     id: { type: "string" },
     playable: { type: "boolean" },
-    reason: { type: "string" },
+    reason: {
+      type: "string",
+      description:
+        "Motivo cuando no es reproducible: STREAM_UNREACHABLE, PLAYLIST_UNREACHABLE, PLAYLIST_EMPTY, PLAYLIST_INSECURE_ONLY o PLAYLIST_MALFORMED",
+    },
   },
 } as const;
 
@@ -705,12 +709,64 @@ export function buildOpenApi(): Record<string, unknown> {
       "/playback/{stationId}": {
         get: {
           tags: ["Reproduccion"],
-          summary: "Proxy de stream de una emisora",
+          summary: "Proxy de stream de una emisora (directo, HLS o lista de texto)",
+          description:
+            "Retransmite el audio de la emisora. Si la URL termina en .m3u8 se sirve el manifiesto HLS reescrito para que variantes y segmentos pasen por el proxy; si termina en .m3u o .pls se resuelve server-side la primera entrada HTTPS reproducible; en el resto de casos se retransmite el stream directo.",
           ...requireAuth,
           parameters: [{ name: "stationId", in: "path", required: true, schema: { type: "string" } }],
           responses: {
-            "200": { description: "Stream de audio (audio/mpeg, audio/aac, ...)" },
+            "200": {
+              description:
+                "Stream de audio directo o manifiesto HLS reescrito (application/vnd.apple.mpegurl)",
+            },
             "401": errorResponses["401"],
+            "404": errorResponses["404"],
+            "503": {
+              description:
+                "Stream, lista o manifiesto no disponible (STREAM_UNAVAILABLE, PLAYLIST_UNREACHABLE, PLAYLIST_EMPTY, PLAYLIST_INSECURE_ONLY, PLAYLIST_MALFORMED)",
+              content: { "application/json": { schema: errorSchema } },
+            },
+          },
+        },
+      },
+      "/playback/{stationId}/hls": {
+        get: {
+          tags: ["Reproduccion"],
+          summary: "Proxy firmado de subrecursos HLS (variantes, segmentos, mapas y claves)",
+          description:
+            "Las URLs de este endpoint se generan al reescribir un manifiesto HLS en /playback/{stationId} e incluyen una firma HMAC no falsificable. Solo se admiten URLs HTTPS y una profundidad maxima de 2.",
+          ...requireAuth,
+          parameters: [
+            { name: "stationId", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "u",
+              in: "query",
+              required: true,
+              schema: { type: "string" },
+              description: "URL absoluta HTTPS del subrecurso, codificada en base64url",
+            },
+            {
+              name: "d",
+              in: "query",
+              required: true,
+              schema: { type: "integer", minimum: 0, maximum: 2 },
+              description: "Profundidad del manifiesto (0..2)",
+            },
+            {
+              name: "s",
+              in: "query",
+              required: true,
+              schema: { type: "string" },
+              description: "Firma HMAC-SHA256 del subrecurso",
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Subrecurso retransmitido: manifiesto HLS reescrito o bytes del segmento",
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
             "404": errorResponses["404"],
             "503": errorResponses["503"],
           },
@@ -719,7 +775,7 @@ export function buildOpenApi(): Record<string, unknown> {
       "/playback/{stationId}/status": {
         get: {
           tags: ["Reproduccion"],
-          summary: "Comprobar disponibilidad del stream",
+          summary: "Comprobar disponibilidad del stream (directo o lista)",
           ...requireAuth,
           parameters: [{ name: "stationId", in: "path", required: true, schema: { type: "string" } }],
           responses: {

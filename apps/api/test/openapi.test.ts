@@ -35,11 +35,20 @@ describe("OpenAPI spec", () => {
       "/favorites/{stationId}",
       "/history",
       "/playback/{stationId}",
+      "/playback/{stationId}/hls",
       "/playback/{stationId}/status",
     ];
     for (const path of expected) {
       expect(spec.paths).toHaveProperty(path);
     }
+  });
+
+  it("documenta los parametros firmados del proxy de subrecursos HLS", () => {
+    const hlsGet = spec.paths["/playback/{stationId}/hls"]!.get! as {
+      parameters?: Array<{ name: string; required?: boolean }>;
+    };
+    const names = (hlsGet.parameters ?? []).map((parameter) => parameter.name);
+    expect(names).toEqual(expect.arrayContaining(["stationId", "u", "d", "s"]));
   });
 
   it("define el esquema bearerAuth y la respuesta de error", () => {
