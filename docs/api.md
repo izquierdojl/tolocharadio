@@ -33,5 +33,11 @@ Resumen de endpoints (todos bajo `/api/v1`):
 | `DELETE` | `/favorites/:stationId` | autenticado | Quita un favorito |
 | `GET` | `/history` | autenticado | Historial reciente |
 | `DELETE` | `/history` | autenticado | Limpia el historial |
+| `GET` | `/stats/me/top` | autenticado | Emisoras más escuchadas (from/to/limit) |
+| `GET` | `/stats/me/timeline` | autenticado | Evolución temporal (from/to/granularity) |
+| `GET` | `/stats/me/habits` | autenticado | Hábitos por hora y día (from/to) |
+| `GET` | `/stats/me/genres` | autenticado | Tiempo por género (from/to/limit) |
+| `GET` | `/stats/me/countries` | autenticado | Tiempo por país (from/to) |
+| `GET` | `/stats/me/recent` | autenticado | Escuchas recientes con duración (limit) |
 
 Errores en formato `{ "error": { "code", "message", "status", "details?" } }`.

@@ -22,6 +22,7 @@ import {
   PLAYLIST_MAX_BYTES,
 } from "../services/playlist.js";
 import type { Station } from "../services/normalize.js";
+import type { StatsSource } from "../services/stats.js";
 
 const STATUS_TIMEOUT_MS = 6000;
 const COPY_HEADERS = [
@@ -45,7 +46,12 @@ function upstreamHeaders(station: Station, req: Request, appName: string): Recor
   };
 }
 
-function pipeOrigin(res: ExpressResponse, origin: Response, onError: () => void): void {
+function pipeOrigin(
+  res: ExpressResponse,
+  origin: Response,
+  onError: () => void,
+  onBytes?: () => void,
+): void {
   for (const name of COPY_HEADERS) {
     const value = origin.headers.get(name);
     if (value) res.setHeader(name, value);
@@ -55,8 +61,22 @@ function pipeOrigin(res: ExpressResponse, origin: Response, onError: () => void)
   const stream = Readable.fromWeb(
     origin.body as import("node:stream/web").ReadableStream,
   );
+  if (onBytes) stream.on("data", onBytes);
   stream.on("error", onError);
   stream.pipe(res);
+}
+
+function trackListening(
+  ctx: AppContext,
+  userId: number,
+  station: Station,
+  source: StatsSource,
+  req: Request,
+  res: ExpressResponse,
+): void {
+  const end = ctx.stats.startListening(userId, station, source);
+  req.on("close", end);
+  res.on("close", end);
 }
 
 async function fetchOriginOrThrow(
@@ -184,8 +204,9 @@ export function playbackRouter(ctx: AppContext): Router {
             "La emisora no esta disponible en este momento",
           );
         }
+        trackListening(ctx, user.id, station, "playlist", req, res);
         ctx.history.record(user.id, station.id).catch(() => {});
-        pipeOrigin(res, winner.response, abort);
+        pipeOrigin(res, winner.response, abort, () => ctx.stats.pulse(user.id, station, "playlist"));
         return;
       }
 
@@ -207,6 +228,7 @@ export function playbackRouter(ctx: AppContext): Router {
             ),
         });
         ctx.history.record(user.id, station.id).catch(() => {});
+        ctx.stats.pulse(user.id, station, "hls");
         res.setHeader("content-type", HLS_MANIFEST_CONTENT_TYPE);
         res.setHeader("cache-control", "no-store");
         res.status(200).send(rewritten);
@@ -214,8 +236,9 @@ export function playbackRouter(ctx: AppContext): Router {
       }
 
       const origin = await fetchOriginOrThrow(station, headers, controller.signal);
+      trackListening(ctx, user.id, station, "direct", req, res);
       ctx.history.record(user.id, station.id).catch(() => {});
-      pipeOrigin(res, origin, abort);
+      pipeOrigin(res, origin, abort, () => ctx.stats.pulse(user.id, station, "direct"));
     } catch (err) {
       if (res.headersSent) {
         res.destroy();
@@ -308,7 +331,7 @@ export function playbackRouter(ctx: AppContext): Router {
         return;
       }
 
-      pipeOrigin(res, response, abort);
+      pipeOrigin(res, response, abort, () => ctx.stats.pulse(user.id, station, "hls"));
     } catch (err) {
       if (res.headersSent) {
         res.destroy();

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseDuration } from "../lib/time.js";
+import { isValidTimeZone, parseDuration } from "../lib/time.js";
 
 const stringBoolean = z
   .enum(["true", "false"])
@@ -24,6 +24,14 @@ const EnvSchema = z
     CACHE_TTL_MS: z.coerce.number().int().positive().default(300_000),
     CACHE_MAX_ENTRIES: z.coerce.number().int().positive().default(500),
     HISTORY_LIMIT: z.coerce.number().int().positive().default(50),
+    STATS_TIMEZONE: z
+      .string()
+      .min(1)
+      .default("Europe/Madrid")
+      .refine(isValidTimeZone, "Zona horaria IANA invalida"),
+    STATS_FLUSH_INTERVAL_MS: z.coerce.number().int().positive().default(30_000),
+    STATS_PULSE_CAP_MS: z.coerce.number().int().positive().default(15_000),
+    STATS_HLS_IDLE_MS: z.coerce.number().int().positive().default(60_000),
     STATIC_DIR: z.string().optional(),
   })
   .superRefine((data, ctx) => {
@@ -67,6 +75,10 @@ export interface Config {
   cacheTtlMs: number;
   cacheMaxEntries: number;
   historyLimit: number;
+  statsTimezone: string;
+  statsFlushIntervalMs: number;
+  statsPulseCapMs: number;
+  statsHlsIdleMs: number;
   staticDir: string | null;
 }
 
@@ -105,6 +117,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     cacheTtlMs: parsed.CACHE_TTL_MS,
     cacheMaxEntries: parsed.CACHE_MAX_ENTRIES,
     historyLimit: parsed.HISTORY_LIMIT,
+    statsTimezone: parsed.STATS_TIMEZONE,
+    statsFlushIntervalMs: parsed.STATS_FLUSH_INTERVAL_MS,
+    statsPulseCapMs: parsed.STATS_PULSE_CAP_MS,
+    statsHlsIdleMs: parsed.STATS_HLS_IDLE_MS,
     staticDir: parsed.STATIC_DIR || null,
   };
 }

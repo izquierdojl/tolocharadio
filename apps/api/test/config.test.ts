@@ -61,4 +61,18 @@ describe("loadConfig", () => {
     expect(() => loadConfig({ PORT: "99999" })).toThrow();
     expect(() => loadConfig({ PORT: "no" })).toThrow();
   });
+
+  it("aplica los valores por defecto de estadisticas", () => {
+    const config = loadConfig({ NODE_ENV: "development" });
+    expect(config.statsTimezone).toBe("Europe/Madrid");
+    expect(config.statsFlushIntervalMs).toBe(30_000);
+    expect(config.statsPulseCapMs).toBe(15_000);
+    expect(config.statsHlsIdleMs).toBe(60_000);
+  });
+
+  it("rechaza una zona horaria invalida", () => {
+    expect(() =>
+      loadConfig({ NODE_ENV: "development", STATS_TIMEZONE: "Mars/Olympus" }),
+    ).toThrow(/STATS_TIMEZONE/);
+  });
 });

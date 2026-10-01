@@ -62,3 +62,7 @@ npm run db:migrate    # aplica las migraciones pendientes
 | `CACHE_TTL_MS` | `300000` | TTL de la caché del catálogo |
 | `CACHE_MAX_ENTRIES` | `100` | Máximo de claves en caché |
 | `HISTORY_LIMIT` | `100` | Máximo de entradas de historial por usuario |
+| `STATS_TIMEZONE` | `Europe/Madrid` | Zona horaria IANA de los acumulados de estadísticas de escucha |
+| `STATS_FLUSH_INTERVAL_MS` | `30000` | Intervalo de volcado del tiempo de escucha en memoria (ms) |
+| `STATS_PULSE_CAP_MS` | `15000` | Tope de tiempo acreditado entre dos pulsos consecutivos (ms) |
+| `STATS_HLS_IDLE_MS` | `60000` | Inactividad máxima en HLS antes de cerrar una escucha (ms) |

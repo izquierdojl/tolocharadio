@@ -43,6 +43,13 @@
       "when": 1788561204916,
       "tag": "0005_late_colossus",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790886816696,
+      "tag": "0006_blue_matthew_murdock",
+      "breakpoints": true
     }
   ]
 }

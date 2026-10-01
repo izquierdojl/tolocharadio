@@ -6,6 +6,7 @@ import type { CustomStationsService } from "./services/customStations.js";
 import type { FavoritesService } from "./services/favorites.js";
 import type { HistoryService } from "./services/history.js";
 import type { StationsService } from "./services/stations.js";
+import type { StatsService } from "./services/stats.js";
 import type { SuggestionsService } from "./services/suggestions.js";
 
 export interface UserIdentity {
@@ -26,6 +27,7 @@ export interface AppContext {
   customStations: CustomStationsService;
   favorites: FavoritesService;
   history: HistoryService;
+  stats: StatsService;
   suggestions: SuggestionsService;
 }
 

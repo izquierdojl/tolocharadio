@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -98,5 +98,38 @@ export const suggestions = sqliteTable(
   (t) => [
     uniqueIndex("suggestions_user_genre").on(t.userId, t.genre),
     index("suggestions_user").on(t.userId),
+  ],
+);
+
+export const playbackSessions = sqliteTable(
+  "playback_sessions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    stationId: text("station_id").notNull(),
+    snapshot: text("snapshot").notNull(),
+    source: text("source").notNull(),
+    startedAt: integer("started_at").notNull(),
+    endedAt: integer("ended_at").notNull(),
+    durationMs: integer("duration_ms").notNull(),
+  },
+  (t) => [index("playback_sessions_user_started").on(t.userId, t.startedAt)],
+);
+
+export const userStationStatsHourly = sqliteTable(
+  "user_station_stats_hourly",
+  {
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    stationId: text("station_id").notNull(),
+    bucket: text("bucket").notNull(),
+    totalMs: integer("total_ms").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.stationId, t.bucket] }),
+    index("user_station_stats_hourly_user_bucket").on(t.userId, t.bucket),
   ],
 );

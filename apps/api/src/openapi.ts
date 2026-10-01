@@ -91,6 +91,92 @@ const suggestionSchema = {
   required: ["id", "genre"],
 } as const;
 
+const statsTopEntrySchema = {
+  type: "object",
+  properties: {
+    station: { $ref: "#/components/schemas/Station" },
+    totalMs: { type: "integer", description: "Tiempo escuchado en milisegundos" },
+  },
+  required: ["station", "totalMs"],
+} as const;
+
+const statsTimelineEntrySchema = {
+  type: "object",
+  properties: {
+    bucket: {
+      type: "string",
+      description:
+        "Dia (YYYY-MM-DD), lunes de la semana o primer dia del mes, en la zona horaria configurada",
+    },
+    totalMs: { type: "integer", description: "Tiempo escuchado en milisegundos" },
+  },
+  required: ["bucket", "totalMs"],
+} as const;
+
+const statsHabitEntrySchema = {
+  type: "object",
+  properties: {
+    weekday: { type: "integer", minimum: 0, maximum: 6, description: "Dia de la semana ISO (0 = lunes)" },
+    hour: { type: "integer", minimum: 0, maximum: 23, description: "Hora local" },
+    totalMs: { type: "integer", description: "Tiempo escuchado en milisegundos" },
+  },
+  required: ["weekday", "hour", "totalMs"],
+} as const;
+
+const statsGenreEntrySchema = {
+  type: "object",
+  properties: {
+    genre: { type: "string", description: "Etiqueta de la emisora o 'desconocido'" },
+    totalMs: { type: "integer", description: "Tiempo escuchado en milisegundos" },
+  },
+  required: ["genre", "totalMs"],
+} as const;
+
+const statsCountryEntrySchema = {
+  type: "object",
+  properties: {
+    country: { type: "string", description: "Pais de la emisora o 'desconocido'" },
+    countryCode: { type: ["string", "null"] },
+    totalMs: { type: "integer", description: "Tiempo escuchado en milisegundos" },
+  },
+  required: ["country", "totalMs"],
+} as const;
+
+const statsRecentEntrySchema = {
+  type: "object",
+  properties: {
+    station: { $ref: "#/components/schemas/Station" },
+    startedAt: { type: "integer", description: "Marca de tiempo de inicio en milisegundos" },
+    durationMs: { type: "integer", description: "Tiempo escuchado en milisegundos" },
+  },
+  required: ["station", "startedAt", "durationMs"],
+} as const;
+
+const statsRangeParams = [
+  {
+    name: "from",
+    in: "query",
+    required: false,
+    schema: { type: "string", format: "date" },
+    description: "Dia local inicial inclusive (YYYY-MM-DD en la zona configurada)",
+  },
+  {
+    name: "to",
+    in: "query",
+    required: false,
+    schema: { type: "string", format: "date" },
+    description: "Dia local final inclusive (YYYY-MM-DD en la zona configurada)",
+  },
+] as const;
+
+function listOf(ref: string): Record<string, unknown> {
+  return {
+    type: "object",
+    required: ["items"],
+    properties: { items: { type: "array", items: { $ref: `#/components/schemas/${ref}` } } },
+  };
+}
+
 const playableSchema = {
   type: "object",
   required: ["id", "playable"],
@@ -127,7 +213,7 @@ export function buildOpenApi(): Record<string, unknown> {
       title: "TolochaRadio API",
       version: "0.1.0",
       description:
-        "API interna de TolochaRadio: autenticacion JWT, catalogo de emisoras, favoritos, historial y proxy de streaming.",
+        "API interna de TolochaRadio: autenticacion JWT, catalogo de emisoras, favoritos, historial, estadisticas de escucha y proxy de streaming.",
     },
     servers: [{ url: "/api/v1" }],
     security: [{ bearerAuth: [] }],
@@ -706,6 +792,132 @@ export function buildOpenApi(): Record<string, unknown> {
           },
         },
       },
+      "/stats/me/top": {
+        get: {
+          tags: ["Estadisticas"],
+          summary: "Emisoras mas escuchadas por tiempo acumulado",
+          ...requireAuth,
+          parameters: [
+            ...statsRangeParams,
+            { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 50, default: 10 } },
+          ],
+          responses: {
+            "200": {
+              description: "Ranking de emisoras",
+              content: { "application/json": { schema: listOf("StatsTopEntry") } },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+          },
+        },
+      },
+      "/stats/me/timeline": {
+        get: {
+          tags: ["Estadisticas"],
+          summary: "Evolucion temporal del tiempo escuchado",
+          ...requireAuth,
+          parameters: [
+            ...statsRangeParams,
+            {
+              name: "granularity",
+              in: "query",
+              required: false,
+              schema: { type: "string", enum: ["day", "week", "month"], default: "day" },
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Serie temporal con dias sin actividad a cero",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["granularity", "items"],
+                    properties: {
+                      granularity: { type: "string", enum: ["day", "week", "month"] },
+                      items: {
+                        type: "array",
+                        items: { $ref: "#/components/schemas/StatsTimelineEntry" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+          },
+        },
+      },
+      "/stats/me/habits": {
+        get: {
+          tags: ["Estadisticas"],
+          summary: "Habitos de escucha por hora local y dia de la semana",
+          ...requireAuth,
+          parameters: [...statsRangeParams],
+          responses: {
+            "200": {
+              description: "Distribucion por hora y dia",
+              content: { "application/json": { schema: listOf("StatsHabitEntry") } },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+          },
+        },
+      },
+      "/stats/me/genres": {
+        get: {
+          tags: ["Estadisticas"],
+          summary: "Tiempo escuchado por genero (etiquetas de la emisora)",
+          ...requireAuth,
+          parameters: [
+            ...statsRangeParams,
+            { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 50, default: 10 } },
+          ],
+          responses: {
+            "200": {
+              description: "Desglose por genero",
+              content: { "application/json": { schema: listOf("StatsGenreEntry") } },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+          },
+        },
+      },
+      "/stats/me/countries": {
+        get: {
+          tags: ["Estadisticas"],
+          summary: "Tiempo escuchado por pais de la emisora",
+          ...requireAuth,
+          parameters: [...statsRangeParams],
+          responses: {
+            "200": {
+              description: "Desglose por pais",
+              content: { "application/json": { schema: listOf("StatsCountryEntry") } },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+          },
+        },
+      },
+      "/stats/me/recent": {
+        get: {
+          tags: ["Estadisticas"],
+          summary: "Escuchas recientes con su duracion",
+          ...requireAuth,
+          parameters: [
+            { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 200, default: 50 } },
+          ],
+          responses: {
+            "200": {
+              description: "Escuchas recientes",
+              content: { "application/json": { schema: listOf("StatsRecentEntry") } },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+          },
+        },
+      },
       "/playback/{stationId}": {
         get: {
           tags: ["Reproduccion"],
@@ -804,6 +1016,12 @@ export function buildOpenApi(): Record<string, unknown> {
         Favorite: favoriteSchema,
         HistoryEntry: historyEntrySchema,
         Suggestion: suggestionSchema,
+        StatsTopEntry: statsTopEntrySchema,
+        StatsTimelineEntry: statsTimelineEntrySchema,
+        StatsHabitEntry: statsHabitEntrySchema,
+        StatsGenreEntry: statsGenreEntrySchema,
+        StatsCountryEntry: statsCountryEntrySchema,
+        StatsRecentEntry: statsRecentEntrySchema,
       },
     },
   };

@@ -10,6 +10,7 @@ const config = loadConfig();
 const { db, sqlite } = createDb(config.databasePath);
 applyMigrations(db, migrationsFolderPath());
 const ctx = createContext(config, db);
+ctx.stats.start();
 const app = createApp(ctx);
 
 const server = app.listen(config.port, () => {
@@ -19,6 +20,7 @@ const server = app.listen(config.port, () => {
 
 function shutdown(): void {
   server.close(() => {
+    ctx.stats.stop();
     sqlite.close();
     process.exit(0);
   });

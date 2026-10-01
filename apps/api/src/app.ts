@@ -14,6 +14,7 @@ import { favoritesRouter } from "./routes/favorites.js";
 import { historyRouter } from "./routes/history.js";
 import { playbackRouter } from "./routes/playback.js";
 import { stationsRouter } from "./routes/stations.js";
+import { statsRouter } from "./routes/stats.js";
 import { suggestionsRouter } from "./routes/suggestions.js";
 import { usersRouter } from "./routes/users.js";
 
@@ -87,6 +88,7 @@ export function createApp(ctx: AppContext): express.Express {
   app.use("/api/v1", historyRouter(ctx));
   app.use("/api/v1", customStationsRouter(ctx));
   app.use("/api/v1", suggestionsRouter(ctx));
+  app.use("/api/v1", statsRouter(ctx));
   app.use("/api/v1", playbackRouter(ctx));
 
   app.get("/api/v1/openapi.json", (req, res) => {
