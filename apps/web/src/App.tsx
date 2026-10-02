@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell.js";
 import { useAuthStore } from "./stores/auth.js";
@@ -10,6 +11,8 @@ import { Login } from "./pages/Login.js";
 import { Register } from "./pages/Register.js";
 import { Profile } from "./pages/Profile.js";
 import { NotFound } from "./pages/NotFound.js";
+
+const Stats = lazy(() => import("./pages/Stats.js").then((m) => ({ default: m.Stats })));
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const status = useAuthStore((s) => s.status);
@@ -57,6 +60,22 @@ export function App() {
             element={
               <RequireAuth>
                 <CustomStations />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/estadisticas"
+            element={
+              <RequireAuth>
+                <Suspense
+                  fallback={
+                    <div className="flex h-64 items-center justify-center text-faint">
+                      Cargando estadísticas…
+                    </div>
+                  }
+                >
+                  <Stats />
+                </Suspense>
               </RequireAuth>
             }
           />

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { ChevronDown, Heart, History, Home, LogOut, Menu, Radio, UserRound, X } from "lucide-react";
+import { ChartColumn, ChevronDown, Heart, History, Home, LogOut, Menu, Radio, UserRound, X } from "lucide-react";
 import { useAuthStore } from "../stores/auth.js";
 import { AboutSection } from "./AboutSection.js";
 import { SierraEmblem } from "./SierraEmblem.js";
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { to: "/explorar", label: "Explorar", icon: Home, auth: true },
   { to: "/favoritos", label: "Favoritos", icon: Heart, auth: true },
   { to: "/historial", label: "Historial", icon: History, auth: true },
+  { to: "/estadisticas", label: "Estadísticas", icon: ChartColumn, auth: true },
   { to: "/mis-emisoras", label: "Mis emisoras", icon: Radio, auth: true },
 ];
 
