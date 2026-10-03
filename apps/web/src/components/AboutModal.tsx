@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { ExternalLink, X } from "lucide-react";
 import { useVersionCheck } from "../hooks/useVersionCheck.js";
+import { usePwaUpdate } from "../hooks/usePwaUpdate.js";
+import { resolveUpdateNotice } from "../lib/updateNotice.js";
 
 const GITHUB_URL = "https://www.github.com/izquierdojl/tolocharadio";
 
@@ -11,6 +13,8 @@ interface AboutModalProps {
 
 export function AboutModal({ open, onClose }: AboutModalProps) {
   const { current, latest, hasUpdate, releaseUrl } = useVersionCheck();
+  const { swWaiting, applySwUpdate } = usePwaUpdate();
+  const notice = resolveUpdateNotice({ githubHasUpdate: hasUpdate, swWaiting });
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -64,18 +68,29 @@ export function AboutModal({ open, onClose }: AboutModalProps) {
               <span className="font-medium text-foreground">v{current}</span>
             </div>
 
-            {hasUpdate && latest && releaseUrl ? (
+            {notice.show ? (
               <div className="flex items-center justify-between">
                 <span className="text-muted">Actualización</span>
-                <a
-                  href={releaseUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 font-medium text-brand transition hover:text-foreground"
-                >
-                  v{latest}
-                  <ExternalLink className="size-3" />
-                </a>
+                {notice.source === "sw" ? (
+                  <button
+                    type="button"
+                    onClick={applySwUpdate}
+                    title="Hay nueva versión — Recargar"
+                    className="inline-flex items-center gap-1 font-medium text-brand transition hover:text-foreground"
+                  >
+                    Recargar ahora
+                  </button>
+                ) : latest && releaseUrl ? (
+                  <a
+                    href={releaseUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 font-medium text-brand transition hover:text-foreground"
+                  >
+                    v{latest}
+                    <ExternalLink className="size-3" />
+                  </a>
+                ) : null}
               </div>
             ) : null}
 

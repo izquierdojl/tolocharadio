@@ -16,7 +16,7 @@ El sistema SHALL mostrar la versión actual de la aplicación (extraída de `pac
 - **THEN** se abre el repositorio de GitHub en una nueva pestaña
 
 ### Requirement: Comprobar actualizaciones disponibles
-El sistema SHALL comprobar si hay un release más reciente en GitHub al cargar la página, comparando la versión local con la última release publicada.
+El sistema SHALL comprobar si hay una versión más reciente mediante el release de GitHub o un Service Worker en espera, y mostrar un único aviso de recarga en español.
 
 #### Scenario: Hay una actualización disponible
 - **WHEN** la versión del release más reciente en GitHub es mayor que la versión local
@@ -29,6 +29,14 @@ El sistema SHALL comprobar si hay un release más reciente en GitHub al cargar l
 #### Scenario: Error de red o API
 - **WHEN** la comprobación de actualizaciones falla (sin red, rate limit, error de API)
 - **THEN** el footer muestra silenciosamente solo la versión actual sin indicar error
+
+#### Scenario: Service Worker en espera
+- **WHEN** hay un Service Worker nuevo instalado en espera mientras la app está abierta
+- **THEN** el sistema muestra el mismo aviso único de "Hay nueva versión — Recargar" y al aceptarlo recarga con la versión nueva
+
+#### Scenario: Sin doble aviso
+- **WHEN** GitHub y el Service Worker señalan actualización a la vez
+- **THEN** el usuario ve un solo aviso, no dos
 
 ### Requirement: Cache de comprobación
 El sistema SHALL cachear el resultado de la comprobación de actualizaciones en `sessionStorage` para evitar requests repetidos a la API de GitHub.
