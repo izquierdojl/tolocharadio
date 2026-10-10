@@ -14,12 +14,30 @@ pub struct PlayerUpdate {
     pub is_playing: bool,
     pub is_buffering: bool,
     pub volume: f64,
+    pub muted: bool,
 }
 
 impl PlayerUpdate {
     pub fn has_station(&self) -> bool {
         self.station_id.is_some()
     }
+}
+
+/// Favorito publicado por la interfaz web (evento `desktop:favorites`).
+///
+/// Solo se guarda en memoria para construir el submenú de la bandeja.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct FavoriteItem {
+    pub id: String,
+    pub name: String,
+    pub favicon: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct FavoritesUpdate {
+    pub items: Vec<FavoriteItem>,
 }
 
 /// Comando de reproducción enviado a la interfaz web (evento `player:command`).
@@ -29,24 +47,35 @@ pub struct PlayerCommand {
     pub action: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub value: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub station_id: Option<String>,
 }
 
-pub fn toggle_command() -> PlayerCommand {
+/// Comando sin parámetros: `toggle`, `stop`, `volume_up`, `volume_down`, `mute_toggle`.
+pub fn action_command(action: &'static str) -> PlayerCommand {
     PlayerCommand {
-        action: "toggle",
+        action,
         value: None,
+        station_id: None,
     }
 }
 
-pub fn stop_command() -> PlayerCommand {
+/// Reproducir una emisora concreta (favorito seleccionado en la bandeja).
+pub fn play_station_command(station_id: &str) -> PlayerCommand {
     PlayerCommand {
-        action: "stop",
+        action: "play",
         value: None,
+        station_id: Some(station_id.to_string()),
     }
 }
 
 pub fn emit_command(app: &AppHandle, command: PlayerCommand) {
     let _ = app.emit_to("main", "player:command", command);
+}
+
+/// Pide a la interfaz navegar a una sección (`/explorar`, `/favoritos`, ...).
+pub fn emit_navigate(app: &AppHandle, path: &str) {
+    let _ = app.emit_to("main", "desktop:navigate", serde_json::json!({ "path": path }));
 }
 
 /// Informa a la interfaz de la versión del cliente de escritorio.

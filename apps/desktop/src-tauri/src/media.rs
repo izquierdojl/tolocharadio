@@ -68,11 +68,13 @@ mod imp {
     fn on_media_event(app: &AppHandle, event: MediaControlEvent) {
         match event {
             MediaControlEvent::Play | MediaControlEvent::Pause | MediaControlEvent::Toggle => {
-                bridge::emit_command(app, bridge::toggle_command());
+                bridge::emit_command(app, bridge::action_command("toggle"));
             }
             MediaControlEvent::Stop => {
-                bridge::emit_command(app, bridge::stop_command());
+                bridge::emit_command(app, bridge::action_command("stop"));
             }
+            // Las emisoras no tienen cola: siguiente y anterior no tienen acción.
+            MediaControlEvent::Next | MediaControlEvent::Previous => {}
             _ => {}
         }
     }

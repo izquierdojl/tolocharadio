@@ -8,13 +8,16 @@ interface PlayerState {
   isPlaying: boolean;
   isBuffering: boolean;
   volume: number;
+  muted: boolean;
   play: (station: Station) => void;
   toggle: () => void;
   stop: () => void;
   setVolume: (volume: number) => void;
+  toggleMute: () => void;
 }
 
 const VOLUME_KEY = "tolocha:volume";
+const MUTED_KEY = "tolocha:muted";
 
 function loadVolume(): number {
   const raw = window.localStorage.getItem(VOLUME_KEY);
@@ -22,11 +25,16 @@ function loadVolume(): number {
   return Number.isFinite(n) && n >= 0 && n <= 1 ? n : 0.8;
 }
 
+function loadMuted(): boolean {
+  return window.localStorage.getItem(MUTED_KEY) === "true";
+}
+
 let audio: HTMLAudioElement | null = null;
 
 export const usePlayerStore = create<PlayerState>((set, get) => {
   audio ??= new Audio();
   audio.volume = loadVolume();
+  audio.muted = loadMuted();
   audio.preload = "none";
 
   audio.addEventListener("playing", () => set({ isPlaying: true, isBuffering: false }));
@@ -39,6 +47,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     isPlaying: false,
     isBuffering: false,
     volume: loadVolume(),
+    muted: loadMuted(),
 
     play(station) {
       const current = get();
@@ -83,9 +92,15 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
     setVolume(volume) {
       audio!.volume = volume;
-      audio!.muted = volume === 0;
       window.localStorage.setItem(VOLUME_KEY, String(volume));
       set({ volume });
+    },
+
+    toggleMute() {
+      const muted = !get().muted;
+      audio!.muted = muted;
+      window.localStorage.setItem(MUTED_KEY, String(muted));
+      set({ muted });
     },
   };
 });
