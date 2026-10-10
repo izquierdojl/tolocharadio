@@ -84,7 +84,9 @@ jobs:
           workspaces: apps/desktop/src-tauri -> target
 
       - name: Instalar dependencias npm
-        run: npm ci
+        # --ignore-scripts: el cliente no usa dependencias nativas (la API no se
+        # compila aquí) y en Windows node-gyp no detecta Visual Studio del runner.
+        run: npm ci --ignore-scripts
 
       - name: Build y publicación de instaladores
         uses: tauri-apps/tauri-action@v0
