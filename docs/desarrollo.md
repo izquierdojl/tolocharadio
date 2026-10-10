@@ -67,11 +67,11 @@ npx tauri signer generate -- -w ~/.tauri/tolocharadio.key
 ## Integración continua y publicación (GitHub)
 
 - **`ci`**: en `push`/`pull_request` ejecuta `npm ci`, typecheck, lint, tests y build, y además compila la imagen Docker y hace un smoke test en contenedor (`/api/v1/health` y servido de la web).
-- **`release`**: al crear un tag `v*` (`git tag v0.1.0 && git push --tags`) construye la imagen y la publica en GitHub Container Registry (GHCR) con tags semVer y `latest`, y además compila el cliente de escritorio en Linux y Windows publicando los instaladores y `latest.json` (updater) como assets de la release. Requiere los secretos del updater configurados.
+- **`release`**: al crear un tag `v*` **sobre `main`** construye la imagen y la publica en GitHub Container Registry (GHCR) con tags semVer y `latest`, y además compila el cliente de escritorio en Linux y Windows publicando los instaladores y `latest.json` (updater) como assets de la release. Requiere los secretos del updater configurados. Un job `preflight` comprueba que el tag apunta a un commit de `main`; los tags de ramas sin fusionar no publican nada (solo un warning).
 
 ## Versionado automático
 
-La versión sube **sola al archivar una especificación** (flujo OpenSpec): al finalizar el archivo de un change, se ejecuta automáticamente `node scripts/bump.js minor`, que sincroniza la versión en la raíz, en todos los workspaces (incluido el cliente de escritorio, también en `src-tauri/tauri.conf.json` y `src-tauri/Cargo.toml`), crea el commit `chore: release vX.Y.Z` y el tag `vX.Y.Z`, y lo empuja a GitHub. El tag dispara de forma automática el workflow `release` → GHCR e instaladores de escritorio.
+La versión sube **sola al archivar una especificación** (flujo OpenSpec): al finalizar el archivo de un change, se **fusiona la rama feature a `main`** y, ya en `main`, se ejecuta `node scripts/bump.js minor`. El script sincroniza la versión en la raíz, en todos los workspaces (incluido el cliente de escritorio, también en `src-tauri/tauri.conf.json` y `src-tauri/Cargo.toml`), crea el commit `chore: release vX.Y.Z` y el tag `vX.Y.Z`. Tras `git push origin main && git push origin --tags`, el tag dispara el workflow `release` → GHCR e instaladores de escritorio. Las releases **solo se publican desde `main`**: el workflow ignora los tags que no apunten a un commit fusionado (guard `preflight`), así que nunca se etiqueta desde una rama feature.
 
 Regla semver mientras la versión principal sea `0`:
 
@@ -87,7 +87,7 @@ Comandos manuales equivalentes (por si quieres lanzar un release sin archivar na
 npm run release:spec   # minor (0.1.0 -> 0.2.0)
 npm run release:fix    # patch (0.1.0 -> 0.1.1)
 npm run release:major  # major (0.1.0 -> 1.0.0)
-git push && git push --tags
+git push origin main && git push origin --tags   # siempre desde main
 ```
 
 **A prueba de `openspec update`**: el trigger se ancla en el `AGENTS.md` de la raíz (que openspec

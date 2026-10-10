@@ -14,7 +14,36 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  # Las releases solo se publican cuando el tag apunta a un commit de `main`
+  # (es decir, después de fusionar la rama feature). Un tag en una rama sin
+  # fusionar no publica nada.
+  preflight:
+    name: Comprobar que el tag está en main
+    runs-on: ubuntu-latest
+    outputs:
+      on_main: ${{ steps.check.outputs.on_main }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: check
+        run: |
+          if ! git rev-parse --verify origin/main >/dev/null 2>&1; then
+            echo "on_main=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No se encontró origin/main; no se publica release."
+            exit 0
+          fi
+          if git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "on_main=true" >> "$GITHUB_OUTPUT"
+            echo "El tag $GITHUB_REF_NAME está en main: se publica la release."
+          else
+            echo "on_main=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::El tag $GITHUB_REF_NAME no apunta a un commit de main; no se publica release. Fusiona la rama a main y etiqueta de nuevo."
+          fi
+
   release:
+    needs: preflight
+    if: needs.preflight.outputs.on_main == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -46,6 +75,8 @@ jobs:
 
   desktop:
     name: Cliente de escritorio (${{ matrix.platform }})
+    needs: preflight
+    if: needs.preflight.outputs.on_main == 'true'
     runs-on: ${{ matrix.platform }}
     permissions:
       contents: write

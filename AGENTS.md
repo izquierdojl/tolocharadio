@@ -16,14 +16,16 @@ Monorepo TypeScript con `apps/api` (Express 5 + Drizzle/better-sqlite3) y `apps/
 ## Versionado y release (IMPORTANTE — a prueba de `openspec update`)
 
 Cada vez que se **archive un change OpenSpec**, tras el archivado hay que generar obligatoriamente
-una nueva versión de la aplicación:
+una nueva versión de la aplicación, **siempre desde `main`**. Nunca se etiqueta desde una rama
+feature: el workflow `release` comprueba en un job `preflight` que el tag apunta a un commit de
+`main` y, si no, no publica nada (solo avisa con un warning).
 
-1. Commitear el archivo/sync de specs si quedó algo pendiente (`git add openspec/ && git commit`).
-2. Ejecutar la release:
+1. En la rama feature: commitear TODO (código + archivado/sync de specs) y fusionarla a `main`.
+2. Ya en `main` actualizado, ejecutar la release:
    - `node scripts/bump.js minor` para un change de feature/infra/docs (lo habitual), o
    - `node scripts/bump.js patch` si el change era un bugfix/hotfix.
-   El script sincroniza la versión en raíz + workspaces, crea el commit `chore: release vX.Y.Z` y el tag `vX.Y.Z`.
-3. `git push origin <rama> && git push origin --tags` → el tag dispara el workflow `release` de GitHub Actions → GHCR.
+   El script sincroniza la versión en raíz + workspaces (+ `tauri.conf.json` y `Cargo.toml`), crea el commit `chore: release vX.Y.Z` y el tag `vX.Y.Z`.
+3. `git push origin main && git push origin --tags` → el tag dispara el workflow `release` de GitHub Actions (solo si está en `main`) → GHCR + instaladores del cliente de escritorio.
 
 Primera versión estable: cuando el usuario la decida, `node scripts/bump.js major` (→ 1.0.0).
 
