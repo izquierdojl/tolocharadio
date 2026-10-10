@@ -1,6 +1,6 @@
 [package]
 name = "tolocharadio-desktop"
-version = "0.26.0"
+version = "0.26.1"
 description = "Cliente de escritorio de TolochaRadio"
 authors = ["TolochaRadio"]
 edition = "2021"
