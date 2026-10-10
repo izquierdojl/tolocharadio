@@ -110,7 +110,7 @@ mod imp {
     #[cfg(target_os = "windows")]
     fn platform_hwnd(app: &AppHandle) -> Option<*mut std::ffi::c_void> {
         use tauri::Manager;
-        let window = app.get_window("main")?;
+        let window = app.get_webview_window("main")?;
         window.hwnd().ok().map(|handle| handle.0)
     }
 
