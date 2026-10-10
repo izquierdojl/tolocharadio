@@ -1,5 +1,3 @@
-use crate::bridge::PlayerUpdate;
-
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 mod imp {
     use std::sync::mpsc::{self, Receiver, Sender};
@@ -15,7 +13,6 @@ mod imp {
     }
 
     /// Envío de actualizaciones al hilo que posee los controles multimedia.
-    #[derive(Clone)]
     pub struct MediaSender(Mutex<Sender<MediaCmd>>);
 
     impl MediaSender {

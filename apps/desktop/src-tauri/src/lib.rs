@@ -227,7 +227,7 @@ pub fn run() {
                 state.media.send(media::MediaCmd::Update(update.clone()));
                 if let Ok(mut guard) = state.player.lock() {
                     *guard = update;
-                }
+                };
             });
 
             let external_app = app.handle().clone();
