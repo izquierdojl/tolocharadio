@@ -28,6 +28,7 @@ El proyecto ha sido realizado utilizando enteramente la metodología SDD, utiliz
 | [Uso](docs/uso.md) | Características y guía de uso de la aplicación |
 | [Instalación](docs/instalacion.md) | Requisitos, arranque local, variables de entorno |
 | [Despliegue](docs/despliegue.md) | Docker, Docker Compose e imagen GHCR |
+| [Escritorio](docs/escritorio.md) | Cliente nativo para Windows/Linux (Tauri): instalación y uso |
 | [Arquitectura](docs/arquitectura.md) | Monorepo, almacenamiento, sesiones y catálogo |
 | [API](docs/api.md) | OpenAPI, endpoints y formato de errores |
 | [Desarrollo](docs/desarrollo.md) | Comandos, CI/CD y versionado automático |

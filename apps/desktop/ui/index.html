@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TolochaRadio</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <img class="emblem" src="tolocha.svg" alt="" width="96" height="96" />
+      <h1>Tolocha<span>Radio</span></h1>
+      <p id="lead" class="lead">Preparando tu cliente de escritorio…</p>
+
+      <section id="view-loading" class="view">
+        <div class="spinner" aria-hidden="true"></div>
+      </section>
+
+      <section id="view-configure" class="view" hidden>
+        <form id="server-form" novalidate>
+          <label for="server-url">URL de tu servidor TolochaRadio</label>
+          <input
+            id="server-url"
+            name="url"
+            type="url"
+            inputmode="url"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="https://radio.ejemplo.com"
+            required
+          />
+          <p class="hint">
+            La raíz de tu instancia autoalojada (https://). En desarrollo se permite
+            http://localhost.
+          </p>
+          <p id="form-error" class="error" role="alert" hidden></p>
+          <button type="submit" class="primary">Guardar y conectar</button>
+        </form>
+      </section>
+
+      <section id="view-error" class="view" hidden>
+        <p id="error-message" class="error" role="alert"></p>
+        <div class="actions">
+          <button id="retry" type="button" class="primary">Reintentar</button>
+          <button id="change" type="button" class="secondary">Cambiar servidor</button>
+        </div>
+      </section>
+
+      <footer>Cliente de escritorio <span id="shell-version">v—</span></footer>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

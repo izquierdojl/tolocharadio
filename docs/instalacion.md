@@ -2,6 +2,11 @@
 
 > [← Volver al README](../README.md)
 
+## Cliente de escritorio
+
+Además de la web y la PWA, existe un cliente nativo para Windows y Linux (Tauri) que se
+conecta a tu servidor. Guía completa en [Escritorio](escritorio.md).
+
 ## Requisitos
 
 - Node.js >= 22 (se usa `.nvmrc`)

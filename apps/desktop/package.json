@@ -1,0 +1,14 @@
+{
+  "name": "@tolocharadio/desktop",
+  "version": "0.25.1",
+  "private": true,
+  "description": "Cliente de escritorio de TolochaRadio (Tauri 2)",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}

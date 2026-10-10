@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ExternalLink, X } from "lucide-react";
 import { useVersionCheck } from "../hooks/useVersionCheck.js";
 import { usePwaUpdate } from "../hooks/usePwaUpdate.js";
+import { isDesktop, onShellVersion } from "../lib/desktop.js";
 import { resolveUpdateNotice } from "../lib/updateNotice.js";
 
 const GITHUB_URL = "https://www.github.com/izquierdojl/tolocharadio";
@@ -14,8 +15,18 @@ interface AboutModalProps {
 export function AboutModal({ open, onClose }: AboutModalProps) {
   const { current, latest, hasUpdate, releaseUrl } = useVersionCheck();
   const { swWaiting, applySwUpdate } = usePwaUpdate();
-  const notice = resolveUpdateNotice({ githubHasUpdate: hasUpdate, swWaiting });
+  const desktop = isDesktop();
+  const notice = resolveUpdateNotice({
+    githubHasUpdate: !desktop && hasUpdate,
+    swWaiting: !desktop && swWaiting,
+  });
+  const [shellVersion, setShellVersion] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!desktop) return;
+    return onShellVersion(setShellVersion);
+  }, [desktop]);
 
   useEffect(() => {
     if (!open) return;
@@ -67,6 +78,13 @@ export function AboutModal({ open, onClose }: AboutModalProps) {
               <span className="text-muted">Versión</span>
               <span className="font-medium text-foreground">v{current}</span>
             </div>
+
+            {desktop && shellVersion ? (
+              <div className="flex items-center justify-between">
+                <span className="text-muted">Cliente de escritorio</span>
+                <span className="font-medium text-foreground">v{shellVersion}</span>
+              </div>
+            ) : null}
 
             {notice.show ? (
               <div className="flex items-center justify-between">

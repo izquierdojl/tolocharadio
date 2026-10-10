@@ -21,14 +21,57 @@ npm run db:generate   # genera una nueva migración desde el esquema de Drizzle
 npm run db:migrate    # aplica las migraciones pendientes
 ```
 
+## Cliente de escritorio (Tauri)
+
+El workspace `apps/desktop` contiene el cliente nativo (Tauri 2 + Rust) que carga la
+interfaz de un servidor TolochaRadio remoto y añade bandeja, controles multimedia,
+atajos globales y autoactualización.
+
+Requisitos de desarrollo:
+
+- **Rust >= 1.90** (rustup) y las herramientas de compilación del sistema.
+- **Linux (Debian/Ubuntu)**:
+  ```bash
+  sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file \
+    libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+  ```
+- **Windows**: Visual Studio Build Tools (C++) y WebView2 (incluido en Windows 10/11).
+
+Comandos:
+
+```bash
+npm run tauri dev --workspace @tolocharadio/desktop    # desarrollo con recarga
+npm run tauri build --workspace @tolocharadio/desktop  # instaladores en src-tauri/target/release/bundle
+```
+
+La ventana principal se crea en Rust (`src-tauri/src/lib.rs`) con un guard de navegación
+que solo permite la página local y el origen del servidor configurado. El puente con la
+interfaz usa eventos (`player:update`, `player:command`, `external:open`,
+`desktop:ready`, `desktop:info`).
+
+### Claves del updater
+
+La autoactualización firmada requiere un par de claves de Tauri:
+
+```bash
+npx tauri signer generate -- -w ~/.tauri/tolocharadio.key
+```
+
+- La **clave pública** se pega en `apps/desktop/src-tauri/tauri.conf.json`
+  (`plugins.updater.pubkey`), sustituyendo el placeholder.
+- La **clave privada** y su contraseña se guardan como secretos del repositorio:
+  `TAURI_SIGNING_PRIVATE_KEY` y `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+- Si se pierde la clave privada no se podrán publicar actualizaciones para las
+  instalaciones existentes; guárdala en un lugar seguro.
+
 ## Integración continua y publicación (GitHub)
 
 - **`ci`**: en `push`/`pull_request` ejecuta `npm ci`, typecheck, lint, tests y build, y además compila la imagen Docker y hace un smoke test en contenedor (`/api/v1/health` y servido de la web).
-- **`release`**: al crear un tag `v*` (`git tag v0.1.0 && git push --tags`) construye la imagen y la publica en GitHub Container Registry (GHCR) con tags semVer y `latest`.
+- **`release`**: al crear un tag `v*` (`git tag v0.1.0 && git push --tags`) construye la imagen y la publica en GitHub Container Registry (GHCR) con tags semVer y `latest`, y además compila el cliente de escritorio en Linux y Windows publicando los instaladores y `latest.json` (updater) como assets de la release. Requiere los secretos del updater configurados.
 
 ## Versionado automático
 
-La versión sube **sola al archivar una especificación** (flujo OpenSpec): al finalizar el archivo de un change, se ejecuta automáticamente `node scripts/bump.js minor`, que sincroniza la versión en la raíz y en todos los workspaces, crea el commit `chore: release vX.Y.Z` y el tag `vX.Y.Z`, y lo empuja a GitHub. El tag dispara de forma automática el workflow `release` → GHCR.
+La versión sube **sola al archivar una especificación** (flujo OpenSpec): al finalizar el archivo de un change, se ejecuta automáticamente `node scripts/bump.js minor`, que sincroniza la versión en la raíz, en todos los workspaces (incluido el cliente de escritorio, también en `src-tauri/tauri.conf.json` y `src-tauri/Cargo.toml`), crea el commit `chore: release vX.Y.Z` y el tag `vX.Y.Z`, y lo empuja a GitHub. El tag dispara de forma automática el workflow `release` → GHCR e instaladores de escritorio.
 
 Regla semver mientras la versión principal sea `0`:
 

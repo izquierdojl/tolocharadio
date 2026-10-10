@@ -4,10 +4,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { App } from "./App.js";
 import "./index.css";
+import { initDesktopBridge } from "./lib/desktop.js";
 import { useAuthStore } from "./stores/auth.js";
 import { getInitialTheme, useThemeStore } from "./stores/theme.js";
 
 document.documentElement.dataset.theme = getInitialTheme();
+
+void initDesktopBridge();
 
 const queryClient = new QueryClient({
   defaultOptions: {

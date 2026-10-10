@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { isDesktop } from "../lib/desktop.js";
 
 const GITHUB_API = "https://api.github.com/repos/izquierdojl/tolocharadio/releases/latest";
 const CACHE_KEY = "tolocha:version-check";
@@ -69,6 +70,8 @@ export function useVersionCheck(): VersionCheckResult {
   const [result, setResult] = useState<VersionCheckResult>(() => getInitialResult(current));
 
   useEffect(() => {
+    // En el cliente de escritorio las actualizaciones las gestiona el shell nativo.
+    if (isDesktop()) return;
     if (result.latest !== null) return;
 
     let cancelled = false;

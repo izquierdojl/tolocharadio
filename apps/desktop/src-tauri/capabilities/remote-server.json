@@ -1,0 +1,10 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "remote-server",
+  "description": "Permisos mínimos del puente para el servidor TolochaRadio remoto (solo eventos)",
+  "windows": ["main"],
+  "remote": {
+    "urls": ["https://*", "http://localhost", "http://127.0.0.1"]
+  },
+  "permissions": ["core:event:default"]
+}

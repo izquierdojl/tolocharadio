@@ -16,7 +16,13 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const WORKSPACES = ["apps/api/package.json", "apps/web/package.json"];
+const WORKSPACES = [
+  "apps/api/package.json",
+  "apps/web/package.json",
+  "apps/desktop/package.json",
+];
+const TAURI_CONF = "apps/desktop/src-tauri/tauri.conf.json";
+const CARGO_TOML = "apps/desktop/src-tauri/Cargo.toml";
 const DRY = process.env.BUMP_DRY_RUN === "1";
 
 const type = process.argv[2] ?? "minor";
@@ -49,7 +55,22 @@ for (const rel of WORKSPACES) {
   writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
 }
 
-execSync(`git add package.json ${WORKSPACES.join(" ")}`, { cwd: REPO_ROOT, stdio: "inherit" });
+const tauriConfPath = join(REPO_ROOT, TAURI_CONF);
+const tauriConf = JSON.parse(readFileSync(tauriConfPath, "utf8"));
+tauriConf.version = version;
+writeFileSync(tauriConfPath, `${JSON.stringify(tauriConf, null, 2)}\n`);
+
+const cargoTomlPath = join(REPO_ROOT, CARGO_TOML);
+const cargoToml = readFileSync(cargoTomlPath, "utf8");
+const versionPattern = /^version\s*=\s*"[^"]*"/m;
+if (!versionPattern.test(cargoToml)) {
+  console.error(`No se encontró la versión en ${CARGO_TOML}`);
+  process.exit(1);
+}
+writeFileSync(cargoTomlPath, cargoToml.replace(versionPattern, `version = "${version}"`));
+
+const changed = ["package.json", ...WORKSPACES, TAURI_CONF, CARGO_TOML];
+execSync(`git add ${changed.join(" ")}`, { cwd: REPO_ROOT, stdio: "inherit" });
 execSync(`git commit -m "chore: release v${version}"`, { cwd: REPO_ROOT, stdio: "inherit" });
 execSync(`git tag "v${version}"`, { cwd: REPO_ROOT, stdio: "inherit" });
 console.log(`Release local creado: commit + tag v${version}`);
