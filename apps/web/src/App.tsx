@@ -1,5 +1,6 @@
-import { Suspense, lazy } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Suspense, lazy, useEffect } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { registerDesktopNavigator } from "./lib/desktop.js";
 import { AppShell } from "./components/AppShell.js";
 import { useAuthStore } from "./stores/auth.js";
 import { Home } from "./pages/Home.js";
@@ -25,9 +26,20 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   return children;
 }
 
+/// Conecta la navegación del router con las órdenes de sección del shell de escritorio.
+function DesktopNavigator() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    registerDesktopNavigator((path) => navigate(path));
+    return () => registerDesktopNavigator(null);
+  }, [navigate]);
+  return null;
+}
+
 export function App() {
   return (
     <BrowserRouter>
+      <DesktopNavigator />
       <Routes>
         <Route element={<AppShell />}>
           <Route path="/" element={<Home />} />

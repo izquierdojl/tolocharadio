@@ -3,7 +3,7 @@ import { Check, Copy, Loader2, Pause, Play, Volume2, VolumeX, X } from "lucide-r
 import { usePlayerStore } from "../stores/player.js";
 
 export function PlayerBar() {
-  const { station, isPlaying, isBuffering, volume, toggle, stop, setVolume } = usePlayerStore();
+  const { station, isPlaying, isBuffering, volume, muted, toggle, stop, setVolume, toggleMute } = usePlayerStore();
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -86,11 +86,18 @@ export function PlayerBar() {
         </button>
 
         <div className="hidden items-center gap-2 sm:flex">
-          {volume === 0 ? (
-            <VolumeX className="size-4 text-pine-400" />
-          ) : (
-            <Volume2 className="size-4 text-pine-400" />
-          )}
+          <button
+            type="button"
+            onClick={toggleMute}
+            aria-label={muted ? "Reactivar sonido" : "Silenciar"}
+            className="cursor-pointer"
+          >
+            {muted || volume === 0 ? (
+              <VolumeX className="size-4 text-pine-400" />
+            ) : (
+              <Volume2 className="size-4 text-pine-400" />
+            )}
+          </button>
           <input
             type="range"
             min={0}

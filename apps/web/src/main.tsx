@@ -4,7 +4,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { App } from "./App.js";
 import "./index.css";
-import { initDesktopBridge } from "./lib/desktop.js";
+import { initDesktopBridge, publishFavorites } from "./lib/desktop.js";
+import type { FavoriteEntry } from "./lib/types.js";
 import { useAuthStore } from "./stores/auth.js";
 import { getInitialTheme, useThemeStore } from "./stores/theme.js";
 
@@ -27,12 +28,24 @@ const queryClient = new QueryClient({
 
 void useAuthStore.getState().restore();
 
+// Sincroniza con el shell de escritorio el listado de favoritos (solo memoria en el shell).
+queryClient.getQueryCache().subscribe((event) => {
+  if (event.type !== "updated" || event.query.queryKey[0] !== "favorites") return;
+  const { status, data } = event.query.state;
+  if (status === "success") {
+    publishFavorites((data as { items: FavoriteEntry[] } | undefined)?.items ?? []);
+  } else if (status === "error") {
+    publishFavorites([]);
+  }
+});
+
 useAuthStore.subscribe((state, prev) => {
   if (state.user && state.user !== prev.user) {
     useThemeStore.getState().applyFromProfile(state.user.theme);
   }
   if (!state.user && state.user !== prev.user) {
     useThemeStore.getState().applyFromProfile(getInitialTheme());
+    publishFavorites([]);
   }
 });
 

@@ -20,6 +20,8 @@ const SERVER_KEY: &str = "server_url";
 pub struct AppState {
     pub server: Arc<Mutex<Option<Url>>>,
     pub player: Mutex<bridge::PlayerUpdate>,
+    pub favorites: Mutex<Vec<bridge::FavoriteItem>>,
+    pub shortcuts: Mutex<tray::ShortcutLabels>,
     pub media: media::MediaSender,
 }
 
@@ -114,14 +116,24 @@ fn is_local_url(url: &Url) -> bool {
     }
 }
 
-fn register_shortcuts(app: &tauri::AppHandle) {
-    // En Wayland u otros entornos sin soporte puede fallar: no es bloqueante.
-    let _ = app
-        .global_shortcut()
-        .register(Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyP));
-    let _ = app
-        .global_shortcut()
-        .register(Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyS));
+/// Registra los atajos globales y devuelve cuáles quedaron disponibles.
+///
+/// En Wayland u otros entornos sin soporte el registro puede fallar: no es bloqueante
+/// y la acción sigue disponible desde la bandeja, sin mostrar el atajo.
+fn register_shortcuts(app: &tauri::AppHandle) -> tray::ShortcutLabels {
+    let ctrl_alt = Some(Modifiers::CONTROL | Modifiers::ALT);
+    let register = |code: Code| {
+        app.global_shortcut()
+            .register(Shortcut::new(ctrl_alt, code))
+            .is_ok()
+    };
+    tray::ShortcutLabels {
+        play_pause: register(Code::KeyP),
+        stop: register(Code::KeyS),
+        volume_up: register(Code::ArrowUp),
+        volume_down: register(Code::ArrowDown),
+        mute: register(Code::KeyM),
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -146,11 +158,21 @@ pub fn run() {
                     if event.state != ShortcutState::Pressed {
                         return;
                     }
-                    if shortcut.matches(Modifiers::CONTROL | Modifiers::ALT, Code::KeyP) {
-                        bridge::emit_command(app, bridge::toggle_command());
-                    } else if shortcut.matches(Modifiers::CONTROL | Modifiers::ALT, Code::KeyS) {
-                        bridge::emit_command(app, bridge::stop_command());
-                    }
+                    let ctrl_alt = Modifiers::CONTROL | Modifiers::ALT;
+                    let action = if shortcut.matches(ctrl_alt, Code::KeyP) {
+                        "toggle"
+                    } else if shortcut.matches(ctrl_alt, Code::KeyS) {
+                        "stop"
+                    } else if shortcut.matches(ctrl_alt, Code::ArrowUp) {
+                        "volume_up"
+                    } else if shortcut.matches(ctrl_alt, Code::ArrowDown) {
+                        "volume_down"
+                    } else if shortcut.matches(ctrl_alt, Code::KeyM) {
+                        "mute_toggle"
+                    } else {
+                        return;
+                    };
+                    bridge::emit_command(app, bridge::action_command(action));
                 })
                 .build(),
         )
@@ -173,6 +195,8 @@ pub fn run() {
             app.manage(AppState {
                 server: server.clone(),
                 player: Mutex::new(bridge::PlayerUpdate::default()),
+                favorites: Mutex::new(Vec::new()),
+                shortcuts: Mutex::new(tray::ShortcutLabels::default()),
                 media: media::spawn(app.handle()),
             });
             app.manage(updater::PendingUpdate(Mutex::new(None)));
@@ -207,9 +231,11 @@ pub fn run() {
             })
             .build()?;
 
+            let labels = register_shortcuts(app.handle());
+            if let Ok(mut guard) = app.state::<AppState>().shortcuts.lock() {
+                *guard = labels;
+            }
             tray::build_tray(app)?;
-            tray::build_app_menu(app.handle())?;
-            register_shortcuts(app.handle());
 
             let player_app = app.handle().clone();
             app.listen("player:update", move |event| {
@@ -228,6 +254,24 @@ pub fn run() {
                 if let Ok(mut guard) = state.player.lock() {
                     *guard = update;
                 };
+                tray::refresh(&player_app);
+            });
+
+            let favorites_app = app.handle().clone();
+            app.listen("desktop:favorites", move |event| {
+                let state = favorites_app.state::<AppState>();
+                let server = state.server.lock().ok().and_then(|guard| guard.clone());
+                if !bridge::caller_is_server(&favorites_app, &server) {
+                    return;
+                }
+                let update: bridge::FavoritesUpdate = match serde_json::from_str(event.payload()) {
+                    Ok(update) => update,
+                    Err(_) => return,
+                };
+                if let Ok(mut guard) = state.favorites.lock() {
+                    *guard = update.items;
+                }
+                tray::refresh(&favorites_app);
             });
 
             let external_app = app.handle().clone();
