@@ -41,14 +41,16 @@ release también incluyen `:node<versión>`, y el `Dockerfile` acepta
 
 ### Dependencias y acciones
 
-- `npm audit --audit-level=high` y Trivy (`HIGH`/`CRITICAL` con corrección) bloquean la
-  CI; el workflow `security` escanea a diario la imagen publicada (SARIF) y audita los
-  crates Rust con `cargo audit`.
-- Dependabot (`.github/dependabot.yml`) abre PRs para npm y GitHub Actions cada semana y
-  para los crates de `apps/desktop/src-tauri` cada mes.
-- `dependabot-auto-merge` fusiona **solo** parches/minors de dependencias npm de
-  desarrollo y de GitHub Actions, después de que `ci` pase en verde. Los majors, las
-  dependencias de producción y los crates de Rust requieren revisión manual.
+- `npm audit --omit=dev --audit-level=high` (solo producción) y Trivy (`HIGH`/`CRITICAL`
+  con corrección) bloquean la CI; el workflow `security` escanea a diario la imagen
+  publicada (SARIF) y audita los crates Rust con `cargo audit`.
+- Dependabot (`.github/dependabot.yml`) abre PRs semanales para npm (grupos de producción y
+  desarrollo con parches y menores) y GitHub Actions, y mensuales para los crates de
+  `apps/desktop/src-tauri`. Las alertas y actualizaciones de seguridad están activadas en el
+  repositorio.
+- El auto-merge está habilitado a nivel de repositorio, pero **no hay un workflow que fusione
+  solo**: se activa manualmente por PR (`gh pr merge --auto`) y no se salta los checks
+  requeridos.
 - No añadir `npm`/`npx` a la etapa de ejecución: el servicio solo necesita `node` y así se
   evitan las dependencias internas de npm (con CVEs propios) en la imagen publicada.
 

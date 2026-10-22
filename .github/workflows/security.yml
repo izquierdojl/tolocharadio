@@ -17,6 +17,7 @@ permissions:
   packages: read
   security-events: write
   issues: write
+  checks: write
 
 jobs:
   trivy:
@@ -50,4 +51,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           working-directory: apps/desktop/src-tauri
+          # zip 4.6.1 lo fija tauri-plugin-updater; ver .cargo/audit.toml.
+          ignore: "RUSTSEC-2026-0367,RUSTSEC-2026-0368,RUSTSEC-2026-0369"
 

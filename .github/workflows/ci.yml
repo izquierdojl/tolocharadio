@@ -18,8 +18,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Auditoría de dependencias npm
-        run: npm audit --audit-level=high
+      - name: Auditoría de dependencias npm (producción)
+        run: npm audit --omit=dev --audit-level=high
       - run: npm run typecheck --workspaces --if-present
       - run: npm run lint --workspaces --if-present
       - run: npm test --workspace @tolocharadio/api

@@ -12,14 +12,15 @@ updates:
       timezone: "Europe/Madrid"
     open-pull-requests-limit: 5
     groups:
+      produccion:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
       desarrollo:
         dependency-type: "development"
         update-types:
           - "minor"
-          - "patch"
-      produccion-parches:
-        dependency-type: "production"
-        update-types:
           - "patch"
 
   - package-ecosystem: "github-actions"
