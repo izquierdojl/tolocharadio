@@ -35,6 +35,10 @@ COPY --from=build /app/apps/api/drizzle ./apps/api/drizzle
 COPY --from=build /app/apps/web/dist ./apps/web/dist
 COPY --from=build /app/node_modules ./node_modules
 RUN apk add --no-cache su-exec \
+  && rm -rf /usr/local/lib/node_modules/npm \
+            /usr/local/lib/node_modules/corepack \
+            /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+            /opt/yarn* \
   && mkdir -p /data \
   && chown -R node:node /app /data
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh

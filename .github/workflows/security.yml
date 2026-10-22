@@ -1,0 +1,53 @@
+name: security
+
+# Escaneo diario de la imagen publicada. Los avisos con corrección disponible
+# se suben a code scanning; la CI ya bloquea un PR si la imagen trae
+# vulnerabilidades HIGH/CRITICAL corregibles.
+on:
+  schedule:
+    - cron: "43 4 * * *"
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/security.yml"
+
+permissions:
+  contents: read
+  packages: read
+  security-events: write
+  issues: write
+
+jobs:
+  trivy:
+    name: Escanear imagen :latest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Trivy (SARIF)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ghcr.io/${{ github.repository }}:latest
+          format: sarif
+          output: trivy.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "0"
+      - name: Subir resultados a code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy.sarif
+          category: trivy-imagen
+
+  cargo-audit:
+    name: Auditar crates del cliente de escritorio
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: cargo audit
+        uses: rustsec/audit-check@v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: apps/desktop/src-tauri
+

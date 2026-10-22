@@ -1,9 +1,9 @@
 name: node-image
 
-# Genera y publica una imagen nueva cuando cambia la versión de Node:
+# Genera y publica una imagen nueva cuando cambia la base de Node:
 # - push a main que toque .nvmrc, el Dockerfile o este workflow;
-# - cada 6 horas, comparando el último parche 22.x de nodejs.org con el Node
-#   que lleva la imagen :latest (si Node publica un parche, se reconstruye);
+# - cada 6 horas, comparando el último parche 22.x de nodejs.org y el digest
+#   de node:22-alpine con lo que lleva la imagen :latest (Node o Alpine nuevos);
 # - manualmente, con opción de forzar la republicación.
 on:
   push:
@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       force:
-        description: "Republicar aunque la versión de Node ya esté al día"
+        description: "Republicar aunque Node y la base ya estén al día"
         type: boolean
         default: false
 
@@ -41,14 +41,17 @@ jobs:
     outputs:
       build: ${{ steps.compare.outputs.build }}
       version: ${{ steps.compare.outputs.version }}
+      base_digest: ${{ steps.compare.outputs.base_digest }}
     steps:
+      - name: Set up BuildKit
+        uses: docker/setup-buildx-action@v4
       - name: Login a GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Comparar la imagen :latest con el último Node 22.x
+      - name: Comparar la imagen :latest con el último Node y su base
         id: compare
         run: |
           TARGET="$(curl -fsSL https://nodejs.org/dist/index.json \
@@ -59,20 +62,37 @@ jobs:
             echo "::error::No se pudo obtener la última versión de Node ${NODE_MAJOR}.x"
             exit 1
           fi
+          BASE_DIGEST="$(docker buildx imagetools inspect \
+            "docker.io/library/node:${NODE_MAJOR}-alpine" \
+            --format '{{.Manifest.Digest}}' | tr -d '\r\n')"
+          if [[ -z "$BASE_DIGEST" ]]; then
+            echo "::error::No se pudo obtener el digest de node:${NODE_MAJOR}-alpine"
+            exit 1
+          fi
           BUILD=true
           if [[ "${{ github.event_name }}" != "push" ]]; then
             IMAGE="${REGISTRY}/${IMAGE_NAME}:latest"
             CURRENT=""
+            CURRENT_DIGEST=""
             if docker manifest inspect "$IMAGE" >/dev/null 2>&1; then
+              docker pull -q "$IMAGE" >/dev/null
               CURRENT="$(docker run --rm --entrypoint node "$IMAGE" -v 2>/dev/null | sed 's/^v//' || true)"
+              CURRENT_DIGEST="$(docker image inspect \
+                --format '{{index .Config.Labels "org.opencontainers.image.base.digest"}}' \
+                "$IMAGE" 2>/dev/null || true)"
             fi
             echo "Node en :latest = ${CURRENT:-desconocido}; último ${NODE_MAJOR}.x = ${TARGET}"
-            if [[ "$CURRENT" == "$TARGET" && "${{ inputs.force }}" != "true" ]]; then
+            echo "Base en :latest = ${CURRENT_DIGEST:-desconocida}; node:${NODE_MAJOR}-alpine = ${BASE_DIGEST}"
+            if [[ "$CURRENT" == "$TARGET" && "$CURRENT_DIGEST" == "$BASE_DIGEST" \
+                  && "${{ inputs.force }}" != "true" ]]; then
               BUILD=false
             fi
           fi
-          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
-          echo "version=$TARGET" >> "$GITHUB_OUTPUT"
+          {
+            echo "build=$BUILD"
+            echo "version=$TARGET"
+            echo "base_digest=$BASE_DIGEST"
+          } >> "$GITHUB_OUTPUT"
 
   build:
     name: Publicar imagen
@@ -80,20 +100,20 @@ jobs:
     if: needs.check.outputs.build == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # El schedule se ejecuta desde la rama por defecto; construir main.
           ref: main
       - name: Set up BuildKit
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Login a GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build y push de la imagen
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
@@ -106,5 +126,6 @@ jobs:
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.base.name=node:${{ needs.check.outputs.version }}-alpine
+            org.opencontainers.image.base.digest=${{ needs.check.outputs.base_digest }}
           cache-from: type=gha,scope=node-image
           cache-to: type=gha,mode=max,scope=node-image

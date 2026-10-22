@@ -27,16 +27,30 @@ feature: el workflow `release` comprueba en un job `preflight` que el tag apunta
    El script sincroniza la versión en raíz + workspaces (+ `tauri.conf.json` y `Cargo.toml`), crea el commit `chore: release vX.Y.Z` y el tag `vX.Y.Z`.
 3. `git push origin main && git push origin --tags` → el tag dispara el workflow `release` de GitHub Actions (solo si está en `main`) → GHCR + instaladores del cliente de escritorio.
 
-### Imagen al día con Node
+### Imagen al día con Node y herramientas
 
-El workflow `node-image` mantiene la imagen de GHCR actualizada con Node: se ejecuta al
-cambiar `.nvmrc`/`Dockerfile` en `main`, **cada 6 horas** y a mano. Compara el último
-parche `22.x` de `nodejs.org/dist/index.json` con el Node de la imagen `:latest` y, si hay
-uno nuevo, reconstruye y publica `:latest` y `:node<versión>` (por ejemplo,
-`node22.23.4`) sin tocar la versión de la aplicación. Para lanzarlo manualmente:
+El workflow `node-image` mantiene la imagen de GHCR actualizada con Node y su base Alpine:
+se ejecuta al cambiar `.nvmrc`/`Dockerfile` en `main`, **cada 6 horas** y a mano. Compara
+el último parche `22.x` de `nodejs.org/dist/index.json` **y el digest de
+`node:22-alpine`** con lo que lleva la imagen `:latest`; si cambia cualquiera, reconstruye
+y publica `:latest` y `:node<versión>` (por ejemplo, `node22.23.4`) sin tocar la versión
+de la aplicación. Para lanzarlo manualmente:
 `gh workflow run node-image.yml --ref main` (fuerza con `-f force=true`). Los tags de
 release también incluyen `:node<versión>`, y el `Dockerfile` acepta
 `--build-arg NODE_VERSION=<x.y.z>`.
+
+### Dependencias y acciones
+
+- `npm audit --audit-level=high` y Trivy (`HIGH`/`CRITICAL` con corrección) bloquean la
+  CI; el workflow `security` escanea a diario la imagen publicada (SARIF) y audita los
+  crates Rust con `cargo audit`.
+- Dependabot (`.github/dependabot.yml`) abre PRs para npm y GitHub Actions cada semana y
+  para los crates de `apps/desktop/src-tauri` cada mes.
+- `dependabot-auto-merge` fusiona **solo** parches/minors de dependencias npm de
+  desarrollo y de GitHub Actions, después de que `ci` pase en verde. Los majors, las
+  dependencias de producción y los crates de Rust requieren revisión manual.
+- No añadir `npm`/`npx` a la etapa de ejecución: el servicio solo necesita `node` y así se
+  evitan las dependencias internas de npm (con CVEs propios) en la imagen publicada.
 
 Primera versión estable: cuando el usuario la decida, `node scripts/bump.js major` (→ 1.0.0).
 

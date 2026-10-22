@@ -1,0 +1,40 @@
+version: 2
+
+updates:
+  # Dependencias npm (raíz + workspaces). Los parches de desarrollo y las
+  # actualizaciones de GitHub Actions se fusionan solas tras pasar CI.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Madrid"
+    open-pull-requests-limit: 5
+    groups:
+      desarrollo:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      produccion-parches:
+        dependency-type: "production"
+        update-types:
+          - "patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Madrid"
+    open-pull-requests-limit: 5
+
+  # Crates del cliente de escritorio (Tauri). Sin auto-merge: el CI no compila
+  # Rust en cada PR.
+  - package-ecosystem: "cargo"
+    directory: "/apps/desktop/src-tauri"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3

@@ -1,0 +1,75 @@
+name: dependabot-auto-merge
+
+# Fusiona solo los PR de Dependabot de bajo riesgo, y únicamente después de
+# que el workflow `ci` del mismo commit haya terminado en success:
+# - GitHub Actions (parche/minor)
+# - dependencias npm de desarrollo (parche/minor)
+# Las dependencias de producción, los majors y los crates de Rust quedan para
+# revisión manual.
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: dependabot-auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  auto-merge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Metadatos del PR
+        id: meta
+        uses: dependabot/fetch-metadata@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Decidir si se fusiona solo
+        id: decide
+        env:
+          ECOSYSTEM: ${{ steps.meta.outputs.package-ecosystem }}
+          DEP_TYPE: ${{ steps.meta.outputs.dependency-type }}
+          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+        run: |
+          MERGE=false
+          if [[ "$ECOSYSTEM" == "github_actions" && "$UPDATE_TYPE" =~ semver-(patch|minor) ]]; then
+            MERGE=true
+          fi
+          if [[ "$ECOSYSTEM" == "npm" && "$DEP_TYPE" == "direct:development" \
+                && "$UPDATE_TYPE" =~ semver-(patch|minor) ]]; then
+            MERGE=true
+          fi
+          echo "merge=$MERGE" >> "$GITHUB_OUTPUT"
+          echo "ecosistema=$ECOSYSTEM tipo=$DEP_TYPE actualización=$UPDATE_TYPE → auto-merge=$MERGE"
+      - name: Esperar a CI y fusionar
+        if: steps.decide.outputs.merge == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          for _ in $(seq 1 90); do
+            RID="$(gh run list --workflow=ci.yml --commit "$SHA" --event pull_request \
+              --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+            if [[ -n "$RID" ]]; then
+              STATUS="$(gh run view "$RID" --json status --jq '.status')"
+              if [[ "$STATUS" == "completed" ]]; then
+                CONCLUSION="$(gh run view "$RID" --json conclusion --jq '.conclusion')"
+                if [[ "$CONCLUSION" != "success" ]]; then
+                  echo "::error::CI terminó en $CONCLUSION; no se fusiona"
+                  exit 1
+                fi
+                gh pr merge "$PR" --squash
+                exit 0
+              fi
+            fi
+            sleep 20
+          done
+          echo "::error::CI no terminó a tiempo; no se fusiona"
+          exit 1

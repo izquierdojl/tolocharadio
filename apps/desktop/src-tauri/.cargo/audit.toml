@@ -1,0 +1,14 @@
+# Configuración de cargo-audit para el cliente de escritorio.
+#
+# zip 4.6.1 (dependencia de tauri-plugin-updater 2.13.3, la última estable)
+# acumula tres RUSTSEC corregidos solo en zip >= 9, pero el plugin fija la
+# serie 4.x. La extracción está detrás de la verificación de firma del updater
+# y solo se aplica a paquetes de actualización firmados por nosotros, así que
+# no procesa archivos de terceros. Revisar cuando tauri-plugin-updater admita
+# zip 9 (seguimiento vía Dependabot, ecosistema cargo).
+[advisories]
+ignore = [
+  "RUSTSEC-2026-0367", # zip: preservación insegura de bits SUID/SGID al extraer
+  "RUSTSEC-2026-0368", # zip: enlaces simbólicos fuera del directorio destino
+  "RUSTSEC-2026-0369", # zip: permisos Unix aplicados a través de enlaces simbólicos
+]
