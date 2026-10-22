@@ -48,9 +48,11 @@ release también incluyen `:node<versión>`, y el `Dockerfile` acepta
   desarrollo con parches y menores) y GitHub Actions, y mensuales para los crates de
   `apps/desktop/src-tauri`. Las alertas y actualizaciones de seguridad están activadas en el
   repositorio.
-- El auto-merge está habilitado a nivel de repositorio, pero **no hay un workflow que fusione
-  solo**: se activa manualmente por PR (`gh pr merge --auto`) y no se salta los checks
-  requeridos.
+- El auto-merge está habilitado a nivel de repositorio y es seguro porque `main` está
+  protegida: todo PR necesita los checks `quality` y `docker` de `ci`. Se activa por PR con
+  `gh pr merge --auto --squash`; no hay un workflow que fusione directamente.
+- `enforce_admins=false`: el administrador puede saltarse la protección para empujar el
+  commit y el tag de release generados por `scripts/bump.js`.
 - No añadir `npm`/`npx` a la etapa de ejecución: el servicio solo necesita `node` y así se
   evitan las dependencias internas de npm (con CVEs propios) en la imagen publicada.
 
