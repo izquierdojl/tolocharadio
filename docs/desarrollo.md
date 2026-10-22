@@ -67,7 +67,10 @@ npx tauri signer generate -- -w ~/.tauri/tolocharadio.key
 ## Integración continua y publicación (GitHub)
 
 - **`ci`**: en `push`/`pull_request` ejecuta `npm ci`, typecheck, lint, tests y build, y además compila la imagen Docker y hace un smoke test en contenedor (`/api/v1/health` y servido de la web).
-- **`release`**: al crear un tag `v*` **sobre `main`** construye la imagen y la publica en GitHub Container Registry (GHCR) con tags semVer y `latest`, y además compila el cliente de escritorio en Linux y Windows publicando los instaladores y `latest.json` (updater) como assets de la release. Requiere los secretos del updater configurados. Un job `preflight` comprueba que el tag apunta a un commit de `main`; los tags de ramas sin fusionar no publican nada (solo un warning).
+- **`release`**: al crear un tag `v*` **sobre `main`** construye la imagen y la publica en GitHub Container Registry (GHCR) con tags semVer, `latest` y `node<versión de Node>`, y además compila el cliente de escritorio en Linux y Windows publicando los instaladores y `latest.json` (updater) como assets de la release. Requiere los secretos del updater configurados. Un job `preflight` comprueba que el tag apunta a un commit de `main`; los tags de ramas sin fusionar no publican nada (solo un warning).
+- **`node-image`**: mantiene la imagen al día con Node. Se ejecuta al hacer push a `main` que toque `.nvmrc`, el `Dockerfile` o el propio workflow, cada 6 horas y manualmente. Compara el último parche `22.x` publicado en `nodejs.org/dist/index.json` con el Node que lleva `:latest`; si cambia, reconstruye y publica `:latest` y `:node<versión>` (sin tocar la versión de la aplicación). También se puede lanzar a mano (`gh workflow run node-image.yml --ref main`) y forzar la republicación con `-f force=true`.
+
+La imagen acepta `--build-arg NODE_VERSION=<x.y.z>` para fijar la versión exacta de Node; por defecto usa la línea 22 (último parche disponible al construir).
 
 ## Versionado automático
 

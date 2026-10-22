@@ -47,6 +47,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Resolver última versión de Node 22.x
+        id: node
+        run: |
+          NODE="$(curl -fsSL https://nodejs.org/dist/index.json \
+            | jq -r '[.[] | select(.version | startswith("v22."))][0].version' \
+            | sed 's/^v//' || true)"
+          echo "version=${NODE:-22}" >> "$GITHUB_OUTPUT"
       - id: meta
         uses: docker/metadata-action@v5
         with:
@@ -54,6 +61,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=node${{ steps.node.outputs.version }}
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
       - name: Set up BuildKit
         uses: docker/setup-buildx-action@v3
@@ -70,6 +78,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NODE_VERSION=${{ steps.node.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

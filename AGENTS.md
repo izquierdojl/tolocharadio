@@ -27,6 +27,17 @@ feature: el workflow `release` comprueba en un job `preflight` que el tag apunta
    El script sincroniza la versión en raíz + workspaces (+ `tauri.conf.json` y `Cargo.toml`), crea el commit `chore: release vX.Y.Z` y el tag `vX.Y.Z`.
 3. `git push origin main && git push origin --tags` → el tag dispara el workflow `release` de GitHub Actions (solo si está en `main`) → GHCR + instaladores del cliente de escritorio.
 
+### Imagen al día con Node
+
+El workflow `node-image` mantiene la imagen de GHCR actualizada con Node: se ejecuta al
+cambiar `.nvmrc`/`Dockerfile` en `main`, **cada 6 horas** y a mano. Compara el último
+parche `22.x` de `nodejs.org/dist/index.json` con el Node de la imagen `:latest` y, si hay
+uno nuevo, reconstruye y publica `:latest` y `:node<versión>` (por ejemplo,
+`node22.23.4`) sin tocar la versión de la aplicación. Para lanzarlo manualmente:
+`gh workflow run node-image.yml --ref main` (fuerza con `-f force=true`). Los tags de
+release también incluyen `:node<versión>`, y el `Dockerfile` acepta
+`--build-arg NODE_VERSION=<x.y.z>`.
+
 Primera versión estable: cuando el usuario la decida, `node scripts/bump.js major` (→ 1.0.0).
 
 Esta regla está anclada aquí (y no solo en el skill `openspec-archive-change`) porque

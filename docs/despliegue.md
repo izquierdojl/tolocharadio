@@ -4,7 +4,7 @@
 
 ## Imagen publicada en GHCR (recomendado)
 
-La imagen se publica automáticamente en GitHub Container Registry al crear un tag `v*` (ver [docs/desarrollo.md](desarrollo.md)). El `docker-compose.yml` del repo ya apunta a ella:
+La imagen se publica automáticamente en GitHub Container Registry al crear un tag `v*` (ver [docs/desarrollo.md](desarrollo.md)). Además del tag `latest`, cada imagen lleva `node<versión>` con el Node con el que se construyó (por ejemplo, `node22.23.4`). El `docker-compose.yml` del repo ya apunta a ella:
 
 ```bash
 docker compose pull
