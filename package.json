@@ -15,9 +15,11 @@
     "dev:web": "npm run dev --workspace @tolocharadio/web",
     "build": "npm run build --workspace @tolocharadio/api && npm run build --workspace @tolocharadio/web",
     "start": "npm run start --workspace @tolocharadio/api",
-    "test": "npm run test --workspace @tolocharadio/api",
+    "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "verify": "npm run typecheck && npm run lint && npm test",
+    "verify:full": "npm run verify && npm run build",
     "release:spec": "node scripts/bump.js minor",
     "release:fix": "node scripts/bump.js patch",
     "release:major": "node scripts/bump.js major"
