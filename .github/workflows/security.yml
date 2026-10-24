@@ -1,8 +1,9 @@
 name: security
 
 # Escaneo diario de la imagen publicada. Los avisos con corrección disponible
-# se suben a code scanning; la CI ya bloquea un PR si la imagen trae
-# vulnerabilidades HIGH/CRITICAL corregibles.
+# se suben a code scanning. El workflow `release` escanea la imagen definitiva
+# antes de publicarla; la CI solo valida la imagen en PRs que tocan Dockerfile
+# o package-lock.
 on:
   schedule:
     - cron: "43 4 * * *"

@@ -1,0 +1,170 @@
+name: desktop
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag existente (por ejemplo v0.28.0)"
+        required: true
+        type: string
+      force:
+        description: "Compilar aunque apps/desktop no haya cambiado"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  checks: read
+
+concurrency:
+  group: desktop-${{ github.event.inputs.tag || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # El desktop se compila para todos los tags, salvo que no haya cambios en
+  # apps/desktop desde la release anterior. El diff se calcula contra el padre
+  # del commit de release para no contar el bump de versiones de tauri.conf y
+  # Cargo.toml.
+  preflight:
+    name: Comprobar main, CI y cambios de desktop
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+      tag: ${{ steps.check.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          fetch-depth: 0
+      - id: check
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+          FORCE: ${{ github.event.inputs.force }}
+        run: |
+          TAG="${INPUT_TAG:-${GITHUB_REF_NAME}}"
+          TAG="${TAG#refs/tags/}"
+          SHA="$(git rev-parse HEAD)"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+          ON_MAIN=false
+          if git rev-parse --verify origin/main >/dev/null 2>&1 \
+            && git merge-base --is-ancestor "$SHA" origin/main; then
+            ON_MAIN=true
+          fi
+          echo "on_main=$ON_MAIN" >> "$GITHUB_OUTPUT"
+
+          RUN=false
+          if [[ "$ON_MAIN" == "true" ]]; then
+            if [[ "$FORCE" == "true" ]]; then
+              RUN=true
+            else
+              PREV="$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)"
+              SCOPE="${TAG}^"
+              if [[ -z "$PREV" ]]; then
+                RUN=true
+              elif git diff --name-only "$PREV" "$SCOPE" -- apps/desktop | grep -q .; then
+                RUN=true
+              fi
+            fi
+          fi
+          echo "run=$RUN" >> "$GITHUB_OUTPUT"
+          if [[ "$RUN" == "true" ]]; then
+            echo "Se compila el cliente de escritorio para $TAG."
+          else
+            echo "Sin cambios en apps/desktop (o tag fuera de main): no se compila."
+          fi
+      - name: Esperar a que el CI del commit esté en verde
+        if: steps.check.outputs.on_main == 'true' && steps.check.outputs.run == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ steps.check.outputs.sha }}
+        run: |
+          echo "Esperando el check 'quality' para $SHA..."
+          for i in $(seq 1 60); do
+            if ! RESULT="$(gh api "repos/$REPO/commits/$SHA/check-runs?per_page=100" \
+              --jq '[.check_runs[] | select(.name == "quality")] | sort_by(.started_at) | last | "\(.status // "") \(.conclusion // "")"' 2>/dev/null)"; then
+              RESULT="error"
+            fi
+            echo "Intento $i: ${RESULT:-sin datos}"
+            case "$RESULT" in
+              "completed success")
+                exit 0
+                ;;
+              "completed failure"|"completed cancelled"|"completed timed_out"|"completed action_required"|"completed stale"|"completed skipped")
+                echo "::error::El CI del commit $SHA no pasó ($RESULT). No se compila el desktop."
+                exit 1
+                ;;
+            esac
+            sleep 10
+          done
+          echo "::error::Timeout esperando el CI de $SHA (10 minutos)."
+          exit 1
+
+  desktop:
+    name: Cliente de escritorio (${{ matrix.platform }})
+    needs: preflight
+    if: needs.preflight.outputs.run == 'true'
+    runs-on: ${{ matrix.platform }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-22.04, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.preflight.outputs.tag }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Dependencias del sistema (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
+
+      - name: Instalar dependencias npm
+        # --ignore-scripts: el cliente no usa dependencias nativas (la API no se
+        # compila aquí) y en Windows node-gyp no detecta Visual Studio del runner.
+        run: npm ci --ignore-scripts
+
+      - name: Build y publicación de instaladores
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: apps/desktop
+          tagName: ${{ needs.preflight.outputs.tag }}
+          releaseName: "TolochaRadio ${{ needs.preflight.outputs.tag }}"
+          releaseBody: "Imagen Docker en GHCR y binarios del cliente de escritorio adjuntos. Consulta el repositorio para los cambios."
+          releaseDraft: false
+          prerelease: false
+          uploadUpdaterJson: true

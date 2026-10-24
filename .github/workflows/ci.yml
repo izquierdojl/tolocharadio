@@ -2,13 +2,38 @@ name: ci
 
 on:
   push:
-    branches: ["main", "master"]
+    branches: ["main"]
   pull_request:
 
 permissions:
   contents: read
+  pull-requests: read
+
+# Los PR cancelan ejecuciones antiguas del mismo PR. En main no se cancela
+# nada: el gate de release consulta el CI del commit exacto.
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Solo se necesita en PRs: decide si el cambio toca la imagen Docker.
+  changes:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      docker: ${{ steps.filter.outputs.docker }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            docker:
+              - "Dockerfile"
+              - "docker-entrypoint.sh"
+              - ".dockerignore"
+              - "package-lock.json"
+
   quality:
     runs-on: ubuntu-latest
     steps:
@@ -20,21 +45,15 @@ jobs:
       - run: npm ci
       - name: Auditoría de dependencias npm (producción)
         run: npm audit --omit=dev --audit-level=high
-      - run: npm run typecheck --workspaces --if-present
-      - run: npm run lint --workspaces --if-present
-      - run: npm test --workspace @tolocharadio/api
+      - run: npm run verify
       - run: npm run build
-      - if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: build-output
-          path: |
-            apps/api/dist
-            apps/web/dist
-          retention-days: 7
 
+  # La imagen solo se valida en PRs que tocan el Dockerfile o el lockfile.
+  # El release construye, escanea y prueba la imagen definitiva antes de
+  # publicarla; no se publican imágenes desde integración.
   docker:
-    needs: quality
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.docker == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -50,6 +69,7 @@ jobs:
           cache-to: type=gha,mode=max
       - name: Smoke test en contenedor
         run: |
+          trap 'docker rm -f tolocharadio-smoke >/dev/null 2>&1 || true' EXIT
           docker run -d --name tolocharadio-smoke \
             -e JWT_ACCESS_SECRET="smoke-access-secret-0123456789abcd" \
             -e JWT_REFRESH_SECRET="smoke-refresh-secret-9876543210wxyz" \
@@ -59,12 +79,12 @@ jobs:
           echo "--- logs del arranque ---"
           docker logs tolocharadio-smoke
           echo "--- probando health ---"
-          for i in $(seq 1 30); do
-            curl -fsS http://127.0.0.1:3100/api/v1/health && break || sleep 1
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3100/api/v1/health; then break; fi
+            sleep 1
           done
           curl -fsS http://127.0.0.1:3100/api/v1/health
           curl -fsS http://127.0.0.1:3100/ | grep -q TolochaRadio
-          docker stop tolocharadio-smoke
       - name: Escanear vulnerabilidades de la imagen
         uses: aquasecurity/trivy-action@v0.36.0
         with:
