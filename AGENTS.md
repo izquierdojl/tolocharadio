@@ -9,8 +9,9 @@ Monorepo TypeScript con `apps/api` (Express 5 + Drizzle/better-sqlite3) y `apps/
 - Hablar y escribir textos (UI, commits, docs) en **español**.
 - No publicar secretos: `.env` está gitignored; no comitearlo ni exponerlo.
 - No empezar implementaciones nuevas sin que exista un change OpenSpec propuesto.
-- Calidad antes de terminar una tarea: `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build`.
+- Calidad antes de terminar una tarea: `npm run verify:full` (equivale a typecheck + lint + tests de todos los workspaces + build). Para el día a día, `npm run verify` (sin build).
 - Confirmar en Docker tras cambios del backend: `docker compose up --build -d` + smoke.
+- **Carriles:** los cambios pequeños (pocos archivos, sin dependencias, Dockerfile, esquema ni desktop) pueden ir directos a `main`; los cambios grandes van por rama + PR. En ambos casos, `main` protegida y el release gateado por CI siguen aplicando.
 - **Archivar = commitear TODO incluido codigo.** Al archivar un change, los cambios de codigo (componentes, CSS, etc.) DEBEN estar commiteados en la rama feature **antes** de mergeear a main. No commitear solo los openspec y el bump: verificar con `git status` que no quedan archivos modificados sin commitear.
 
 ## Versionado y release (IMPORTANTE — a prueba de `openspec update`)
@@ -18,38 +19,44 @@ Monorepo TypeScript con `apps/api` (Express 5 + Drizzle/better-sqlite3) y `apps/
 Cada vez que se **archive un change OpenSpec**, tras el archivado hay que generar obligatoriamente
 una nueva versión de la aplicación, **siempre desde `main`**. Nunca se etiqueta desde una rama
 feature: el workflow `release` comprueba en un job `preflight` que el tag apunta a un commit de
-`main` y, si no, no publica nada (solo avisa con un warning).
+`main` **y que el CI de ese commit está en verde**; si no, no publica nada.
 
 1. En la rama feature: commitear TODO (código + archivado/sync de specs) y fusionarla a `main`.
 2. Ya en `main` actualizado, ejecutar la release:
    - `node scripts/bump.js minor` para un change de feature/infra/docs (lo habitual), o
    - `node scripts/bump.js patch` si el change era un bugfix/hotfix.
    El script sincroniza la versión en raíz + workspaces (+ `tauri.conf.json` y `Cargo.toml`), crea el commit `chore: release vX.Y.Z` y el tag `vX.Y.Z`.
-3. `git push origin main && git push origin --tags` → el tag dispara el workflow `release` de GitHub Actions (solo si está en `main`) → GHCR + instaladores del cliente de escritorio.
+3. `git push origin main`, esperar a que el CI del commit de release esté en verde y después
+   `git push origin --tags`. El tag dispara `release` (solo si está en `main` y el CI está verde)
+   → GHCR; el workflow `desktop` publica los instaladores solo si cambió `apps/desktop`.
 
 ### Imagen al día con Node y herramientas
 
-El workflow `node-image` mantiene la imagen de GHCR actualizada con Node y su base Alpine:
-se ejecuta al cambiar `.nvmrc`/`Dockerfile` en `main`, **cada 6 horas** y a mano. Compara
+El workflow `node-image` mantiene al día la base Node/Alpine de **la última release publicada**:
+se ejecuta al cambiar `.nvmrc` o el propio workflow en `main`, **a diario** y a mano. Compara
 el último parche `22.x` de `nodejs.org/dist/index.json` **y el digest de
 `node:22-alpine`** con lo que lleva la imagen `:latest`; si cambia cualquiera, reconstruye
-y publica `:latest` y `:node<versión>` (por ejemplo, `node22.23.4`) sin tocar la versión
-de la aplicación. Para lanzarlo manualmente:
+el tag de la última release y publica `:latest` y `:node<versión>` (por ejemplo,
+`node22.23.4`) sin tocar la versión de la aplicación. **Nunca construye desde `main`**, para
+que `:latest` no contenga código sin liberar. Para lanzarlo manualmente:
 `gh workflow run node-image.yml --ref main` (fuerza con `-f force=true`). Los tags de
 release también incluyen `:node<versión>`, y el `Dockerfile` acepta
 `--build-arg NODE_VERSION=<x.y.z>`.
 
 ### Dependencias y acciones
 
-- `npm audit --omit=dev --audit-level=high` (solo producción) y Trivy (`HIGH`/`CRITICAL`
-  con corrección) bloquean la CI; el workflow `security` escanea a diario la imagen
-  publicada (SARIF) y audita los crates Rust con `cargo audit`.
+- `npm audit --omit=dev --audit-level=high` (solo producción) bloquea la CI en cada PR.
+  El workflow `release` escanea la imagen definitiva con Trivy (`HIGH`/`CRITICAL` con
+  corrección) **antes de publicarla**; el workflow `security` escanea a diario la imagen
+  publicada (SARIF) y audita los crates Rust con `cargo audit`. La CI solo construye la
+  imagen en PRs que tocan `Dockerfile`, `docker-entrypoint.sh`, `.dockerignore` o `package-lock.json`.
 - Dependabot (`.github/dependabot.yml`) abre PRs semanales para npm (grupos de producción y
   desarrollo con parches y menores) y GitHub Actions, y mensuales para los crates de
   `apps/desktop/src-tauri`. Las alertas y actualizaciones de seguridad están activadas en el
   repositorio.
 - El auto-merge está habilitado a nivel de repositorio y es seguro porque `main` está
-  protegida: todo PR necesita los checks `quality` y `docker` de `ci`. Se activa por PR con
+  protegida: todo PR necesita los checks `quality` y `docker` de `ci` (`docker` se salta en
+  PRs que no tocan la imagen, y un check skipped cuenta como correcto). Se activa por PR con
   `gh pr merge --auto --squash`; no hay un workflow que fusione directamente.
 - `enforce_admins=false`: el administrador puede saltarse la protección para empujar el
   commit y el tag de release generados por `scripts/bump.js`.
