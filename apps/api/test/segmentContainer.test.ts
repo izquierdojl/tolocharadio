@@ -4,6 +4,7 @@ import {
   isConcatenableContainer,
   skipId3Tag,
   sniffSegmentContainer,
+  stripId3Tags,
 } from "../src/lib/segmentContainer.js";
 
 function bytes(...values: number[]): Uint8Array {
@@ -41,6 +42,26 @@ describe("segment container sniffing", () => {
     const data = withId3([0xff, 0xf1, 0x50, 0x80], 12);
     expect(skipId3Tag(data)).toBe(22);
     expect(sniffSegmentContainer(data)).toBe("adts");
+  });
+
+  it("elimina una o varias etiquetas ID3 y deja los frames ADTS", () => {
+    const tag = (size: number) => [
+      0x49, 0x44, 0x33, 0x04, 0x00, 0x00,
+      (size >> 21) & 0x7f, (size >> 14) & 0x7f, (size >> 7) & 0x7f, size & 0x7f,
+      ...new Array(size).fill(0),
+    ];
+    const data = new Uint8Array([...tag(4), ...tag(6), 0xff, 0xf1, 0x50, 0x80]);
+    expect(stripId3Tags(data)).toEqual(new Uint8Array([0xff, 0xf1, 0x50, 0x80]));
+  });
+
+  it("devuelve los bytes intactos si no hay ID3", () => {
+    const data = bytes(0xff, 0xf1, 0x50);
+    expect(stripId3Tags(data)).toBe(data);
+  });
+
+  it("devuelve vacio si la etiqueta ID3 esta truncada", () => {
+    const data = bytes(0x49, 0x44, 0x33, 0x04, 0x00, 0x00, 0x7f, 0x7f, 0x7f, 0x7f, 0x00);
+    expect(stripId3Tags(data).length).toBe(0);
   });
 
   it("detecta fMP4", () => {

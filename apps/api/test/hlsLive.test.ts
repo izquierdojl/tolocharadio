@@ -46,10 +46,15 @@ function playlistResponse(text: string) {
 }
 
 function segmentResponse(marker: number) {
-  const data = new Uint8Array(64).fill(0);
-  data[0] = 0xff;
-  data[1] = 0xf1;
-  data[2] = marker;
+  const id3 = new Uint8Array([
+    0x49, 0x44, 0x33, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
+  ]);
+  const data = new Uint8Array(id3.length + 64);
+  data.set(id3, 0);
+  const base = id3.length;
+  data[base] = 0xff;
+  data[base + 1] = 0xf1;
+  data[base + 2] = marker;
   return new Response(data, { status: 200, headers: { "content-type": "audio/aacp" } });
 }
 
@@ -139,9 +144,10 @@ describe("playback /live con HLS", () => {
     expect(res.headers["cache-control"]).toBe("no-store");
     expect(res.headers["content-length"]).toBeUndefined();
     const body = Buffer.from(res.body as Buffer);
-    expect(body.length).toBe(128);
-    expect(body[2]).toBe(0x22);
-    expect(body[66]).toBe(0x33);
+    expect(body.length).toBe(192);
+    expect(body[2]).toBe(0x11);
+    expect(body[66]).toBe(0x22);
+    expect(body[130]).toBe(0x33);
   }, 15_000);
 
   it("resincroniza al segmento mas reciente si se acumula retraso", async () => {
@@ -177,9 +183,10 @@ describe("playback /live con HLS", () => {
       .expect(200);
 
     const body = Buffer.from(res.body as Buffer);
-    expect(body.length).toBe(128);
-    expect(body[2]).toBe(0x22);
-    expect(body[66]).toBe(0x66);
+    expect(body.length).toBe(192);
+    expect(body[2]).toBe(0x11);
+    expect(body[66]).toBe(0x22);
+    expect(body[130]).toBe(0x66);
   }, 15_000);
 
   it("renueva la sesion caducada y continua el flujo", async () => {
@@ -241,10 +248,11 @@ describe("playback /live con HLS", () => {
       .expect(200);
 
     const body = Buffer.from(res.body as Buffer);
-    expect(body.length).toBe(192);
-    expect(body[2]).toBe(0x22);
-    expect(body[66]).toBe(0x10);
-    expect(body[130]).toBe(0x11);
+    expect(body.length).toBe(256);
+    expect(body[2]).toBe(0x11);
+    expect(body[66]).toBe(0x22);
+    expect(body[130]).toBe(0x10);
+    expect(body[194]).toBe(0x11);
   }, 15_000);
 
   it("responde 415 para segmentos fMP4", async () => {

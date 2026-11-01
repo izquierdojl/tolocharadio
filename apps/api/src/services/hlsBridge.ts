@@ -14,6 +14,7 @@ import {
   contentTypeForContainer,
   isConcatenableContainer,
   sniffSegmentContainer,
+  stripId3Tags,
 } from "../lib/segmentContainer.js";
 import { fetchFollowingRedirects, readBodyCapped, readBytesCapped } from "../lib/upstream.js";
 import { PLAYLIST_MAX_BYTES } from "./playlist.js";
@@ -244,10 +245,12 @@ export async function streamHlsLive(options: HlsLiveOptions): Promise<void> {
   let first: MediaSegment;
   let firstBytes: Uint8Array;
   let contentType: string;
+  let warmup: MediaSegment[];
 
   try {
     media = await resolveMedia(stationUrl, headers, signal);
-    const start = lastSegment(media.playlist);
+    warmup = media.playlist.segments.slice(-2);
+    const start = warmup[0] ?? lastSegment(media.playlist);
     if (!start) {
       throw serviceUnavailable(
         "PLAYLIST_EMPTY",
@@ -255,7 +258,8 @@ export async function streamHlsLive(options: HlsLiveOptions): Promise<void> {
       );
     }
     first = start;
-    firstBytes = await fetchSegment(first.url, headers, signal);
+    firstBytes = stripId3Tags(await fetchSegment(first.url, headers, signal));
+    if (firstBytes.length === 0) throw new TransientStreamError();
     const container = sniffSegmentContainer(firstBytes);
     if (!isConcatenableContainer(container)) throw unsupportedContainerError();
     contentType = contentTypeForContainer(container);
@@ -266,6 +270,19 @@ export async function streamHlsLive(options: HlsLiveOptions): Promise<void> {
   await onChunk(firstBytes, { contentType, first: true });
 
   let last = first;
+  const second = warmup[1];
+  if (second && second.url !== first.url) {
+    let secondBytes: Uint8Array | null;
+    try {
+      secondBytes = stripId3Tags(await fetchSegment(second.url, headers, signal));
+    } catch {
+      secondBytes = null;
+    }
+    if (secondBytes && secondBytes.length > 0) {
+      await onChunk(secondBytes, { contentType, first: false });
+      last = second;
+    }
+  }
   let failures = 0;
   let sameSession = true;
 
@@ -302,7 +319,8 @@ export async function streamHlsLive(options: HlsLiveOptions): Promise<void> {
     }
 
     try {
-      const bytes = await fetchSegment(next.url, headers, signal);
+      const bytes = stripId3Tags(await fetchSegment(next.url, headers, signal));
+      if (bytes.length === 0) throw new TransientStreamError();
       await onChunk(bytes, { contentType, first: false });
       last = next;
       failures = 0;
@@ -316,7 +334,8 @@ export async function streamHlsLive(options: HlsLiveOptions): Promise<void> {
           sameSession = false;
           const retry = pickNextSegment(media.playlist, last, false);
           if (!retry) continue;
-          const bytes = await fetchSegment(retry.url, headers, signal);
+          const bytes = stripId3Tags(await fetchSegment(retry.url, headers, signal));
+          if (bytes.length === 0) throw new TransientStreamError();
           await onChunk(bytes, { contentType, first: false });
           last = retry;
           failures = 0;
