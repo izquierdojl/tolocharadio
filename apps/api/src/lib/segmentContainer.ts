@@ -26,6 +26,20 @@ export function skipId3Tag(bytes: Uint8Array): number {
   return Math.min(bytes.length, ID3_HEADER_SIZE + size);
 }
 
+export function stripId3Tags(bytes: Uint8Array): Uint8Array {
+  let offset = 0;
+  while (
+    offset + ID3_HEADER_SIZE <= bytes.length &&
+    asciiAt(bytes, offset, 3) === "ID3"
+  ) {
+    const size = syncsafeSize(bytes, offset + 6);
+    const end = offset + ID3_HEADER_SIZE + size;
+    if (end <= offset || end > bytes.length) return new Uint8Array(0);
+    offset = end;
+  }
+  return offset === 0 ? bytes : bytes.subarray(offset);
+}
+
 export function sniffSegmentContainer(bytes: Uint8Array): SegmentContainer {
   if (bytes.length === 0) return "unknown";
 
