@@ -43,11 +43,14 @@ export async function fetchFollowingRedirects(
   throw badRequest("STREAM_UNAVAILABLE", "Demasiadas redirecciones al reproducir la emisora");
 }
 
-export async function readBodyCapped(response: Response, maxBytes: number): Promise<string | null> {
+export async function readBytesCapped(
+  response: Response,
+  maxBytes: number,
+): Promise<Uint8Array | null> {
   const reader = response.body?.getReader() as
     | ReadableStreamDefaultReader<Uint8Array>
     | undefined;
-  if (!reader) return "";
+  if (!reader) return new Uint8Array(0);
 
   const chunks: Uint8Array[] = [];
   let total = 0;
@@ -68,5 +71,10 @@ export async function readBodyCapped(response: Response, maxBytes: number): Prom
     reader.releaseLock();
   }
 
-  return Buffer.concat(chunks).toString("utf8");
+  return Buffer.concat(chunks);
+}
+
+export async function readBodyCapped(response: Response, maxBytes: number): Promise<string | null> {
+  const bytes = await readBytesCapped(response, maxBytes);
+  return bytes === null ? null : Buffer.from(bytes).toString("utf8");
 }

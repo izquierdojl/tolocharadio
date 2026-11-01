@@ -32,6 +32,35 @@ GHCR conserva los tags de las releases. La política recomendada es mantener las
 docker build -t tolocharadio .
 ```
 
+## Proxy inverso (Apache)
+
+El contenedor publica en `127.0.0.1:3000`, así que en producción lo habitual es poner un proxy inverso delante (Apache, nginx, Caddy…). El audio en directo usa conexiones HTTP de larga duración: conviene darles timeouts holgados y no comprimirlas.
+
+Configuración recomendada para **Apache 2.4** con `mod_proxy` y `mod_proxy_http`:
+
+```apache
+# Conexiones largas de audio: no cerrar por inactividad antes de tiempo
+ProxyTimeout 3600
+
+# flushpackets evita acumular audio en el proxy antes de enviarlo al cliente
+ProxyPass        /api/v1/playback/ http://127.0.0.1:3000/api/v1/playback/ timeout=3600
+ProxyPassReverse /api/v1/playback/ http://127.0.0.1:3000/api/v1/playback/
+
+# El audio nunca se comprime
+SetEnvIf Request_URI "^/api/v1/playback/" no-gzip dont-vary
+```
+
+Notas:
+
+- `Timeout` y `ProxyTimeout` afectan a conexiones **ociosas**. Un `ProxyTimeout 1800` (30 minutos) explicaría cortes de stream a los 30 minutos; con `3600` hay margen de sobra.
+- Si `mod_http2` está activo (los navegadores modernos hablan HTTP/2 con Apache), revisa también `H2StreamTimeout`.
+- `mod_proxy_http` reenvía el audio según llega, sin acumularlo; `flushpackets` solo tiene efecto en AJP y FastCGI, así que no hace falta para este caso.
+- `mod_deflate` no debe tocar `audio/*`; la regla `no-gzip` lo garantiza solo para las rutas de reproducción.
+- El cliente reconecta automáticamente aunque el proxy corte, pero ajustar estos valores evita cortes innecesarios y mejora la continuidad.
+- Tras editar el virtual host: `sudo apachectl configtest && sudo systemctl reload apache2`.
+
+Equivalencia orientativa en nginx: `proxy_read_timeout 3600s;`, `proxy_buffering off;` y `proxy_request_buffering off;` en la ubicación de `/api/v1/playback/`.
+
 ## Recordatorio de variables críticas
 
 Los secretos `JWT_ACCESS_SECRET` y `JWT_REFRESH_SECRET` son obligatorios en producción (`NODE_ENV=production`). La tabla completa está en [docs/instalacion.md](instalacion.md).

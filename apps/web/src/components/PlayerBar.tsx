@@ -1,9 +1,22 @@
 import { useRef, useState } from "react";
-import { Check, Copy, Loader2, Pause, Play, Volume2, VolumeX, X } from "lucide-react";
+import { Check, Copy, Loader2, Pause, Play, RotateCcw, Volume2, VolumeX, X } from "lucide-react";
 import { usePlayerStore } from "../stores/player.js";
 
 export function PlayerBar() {
-  const { station, isPlaying, isBuffering, volume, muted, toggle, stop, setVolume, toggleMute } = usePlayerStore();
+  const {
+    station,
+    isPlaying,
+    isBuffering,
+    status,
+    error,
+    toggle,
+    stop,
+    retry,
+    volume,
+    muted,
+    setVolume,
+    toggleMute,
+  } = usePlayerStore();
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -11,6 +24,15 @@ export function PlayerBar() {
     station?.bitrate != null ? `${station.bitrate} kbps` : null,
     station?.codec ?? null,
   ].filter(Boolean) as string[];
+
+  const statusText =
+    status === "failed"
+      ? (error ?? "No se pudo reproducir la emisora")
+      : status === "reconnecting"
+        ? "Reconectando…"
+        : null;
+
+  const canRetry = status === "failed";
 
   async function copyLink() {
     if (!station) return;
@@ -48,10 +70,16 @@ export function PlayerBar() {
         />
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate font-medium text-pine-100">{station.name}</span>
-          <span className="truncate text-xs text-pine-400">
-            {[station.country, station.language].filter(Boolean).join(" · ") || "Emisora de radio"}
+          <span
+            className={`truncate text-xs ${
+              statusText ? "text-ochre-300" : "text-pine-400"
+            }`}
+          >
+            {statusText ??
+              ([station.country, station.language].filter(Boolean).join(" · ") ||
+                "Emisora de radio")}
           </span>
-          {technicalBits.length > 0 && (
+          {!statusText && technicalBits.length > 0 && (
             <span className="hidden truncate text-xs text-pine-500 sm:block">{technicalBits.join(" · ")}</span>
           )}
         </div>
@@ -70,14 +98,27 @@ export function PlayerBar() {
           {copied ? "Enlace copiado" : "Copiar enlace"}
         </button>
 
+        {canRetry && (
+          <button
+            type="button"
+            onClick={retry}
+            className="hidden shrink-0 items-center gap-1.5 rounded-full bg-ochre-600 px-3 py-1.5 text-xs font-semibold text-pine-950 transition hover:bg-ochre-500 sm:flex"
+          >
+            <RotateCcw className="size-3.5" />
+            Reintentar
+          </button>
+        )}
+
         <button
           type="button"
-          onClick={toggle}
-          title={isPlaying ? "Pausar" : "Reproducir"}
+          onClick={canRetry ? retry : toggle}
+          title={canRetry ? "Reintentar" : isPlaying ? "Pausar" : "Reproducir"}
           className="flex size-11 items-center justify-center rounded-full bg-ochre-500 text-pine-950 shadow-lg shadow-ochre-900/30 transition hover:bg-ochre-400"
         >
-          {isBuffering ? (
+          {isBuffering && !canRetry ? (
             <Loader2 className="size-5 animate-spin" />
+          ) : canRetry ? (
+            <RotateCcw className="size-5" />
           ) : isPlaying ? (
             <Pause className="size-5" />
           ) : (

@@ -33,6 +33,9 @@ export const conflict = (code = "CONFLICT", message = "Conflicto") =>
 export const validationError = (details: ErrorDetail[]) =>
   new AppError(422, "VALIDATION_ERROR", "Datos de entrada invalidos", details);
 
+export const unsupportedMediaType = (code: string, message: string) =>
+  new AppError(415, code, message);
+
 export const serviceUnavailable = (
   code = "SERVICE_UNAVAILABLE",
   message = "Servicio no disponible",

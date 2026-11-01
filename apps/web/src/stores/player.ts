@@ -1,17 +1,27 @@
 import { create } from "zustand";
 import type { Station } from "../lib/types.js";
-import { playbackUrl, ensureValidToken } from "../lib/api.js";
+import {
+  ensureValidToken,
+  fetchPlaybackStatus,
+  livePlaybackUrl,
+  playbackUrl,
+} from "../lib/api.js";
+import { PlaybackEngine, type PlaybackStatus } from "../lib/playbackEngine.js";
+import { supportsNativeHls } from "../lib/playbackSupervisor.js";
 import { toast } from "sonner";
 
 interface PlayerState {
   station: Station | null;
   isPlaying: boolean;
   isBuffering: boolean;
+  status: PlaybackStatus;
+  error: string | null;
   volume: number;
   muted: boolean;
   play: (station: Station) => void;
   toggle: () => void;
   stop: () => void;
+  retry: () => void;
   setVolume: (volume: number) => void;
   toggleMute: () => void;
 }
@@ -37,57 +47,60 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
   audio.muted = loadMuted();
   audio.preload = "none";
 
-  audio.addEventListener("playing", () => set({ isPlaying: true, isBuffering: false }));
-  audio.addEventListener("pause", () => set({ isPlaying: false }));
-  audio.addEventListener("waiting", () => set({ isBuffering: true }));
-  audio.addEventListener("error", () => set({ isPlaying: false, isBuffering: false }));
+  const engine = new PlaybackEngine({
+    audio,
+    prepareSession: ensureValidToken,
+    sourceUrl: (stationId, attempt, mode) =>
+      mode === "native" ? playbackUrl(stationId, attempt) : livePlaybackUrl(stationId, attempt),
+    supportsNativeHls: () => supportsNativeHls(audio!),
+    onChange: (snapshot) => {
+      set({
+        status: snapshot.status,
+        error: snapshot.error,
+        isPlaying: snapshot.status === "playing",
+        isBuffering:
+          snapshot.buffering ||
+          snapshot.status === "connecting" ||
+          snapshot.status === "reconnecting",
+      });
+    },
+  });
 
   return {
     station: null,
     isPlaying: false,
     isBuffering: false,
+    status: "idle",
+    error: null,
     volume: loadVolume(),
     muted: loadMuted(),
 
     play(station) {
-      const current = get();
-      if (current.station?.id === station.id) {
-        if (audio!.paused) {
-          void audio!.play().catch(() => undefined);
-        }
-        return;
-      }
-      set({ station, isPlaying: false, isBuffering: true });
-      void ensureValidToken()
-        .then((valid) => {
-          if (!valid) {
-            toast.error("La sesión ha caducado. Inicia sesión de nuevo.");
-            set({ isBuffering: false });
-            return;
-          }
-          audio!.src = playbackUrl(station.id);
-          void audio!.play().catch(() => set({ isBuffering: false }));
+      const isNew = get().station?.id !== station.id;
+      set({ station });
+      engine.play({ id: station.id, url: station.url });
+
+      if (!isNew) return;
+      void fetchPlaybackStatus(station.id)
+        .then((result) => {
+          if (result.playable) return;
+          if (get().station?.id !== station.id) return;
+          toast.error("La emisora no está disponible en este momento.");
         })
-        .catch(() => {
-          toast.error("No se pudo verificar la sesión. Intenta de nuevo.");
-          set({ isBuffering: false });
-        });
+        .catch(() => undefined);
     },
 
     toggle() {
-      const { isPlaying } = get();
-      if (isPlaying) {
-        audio!.pause();
-      } else {
-        void audio!.play().catch(() => undefined);
-      }
+      engine.toggle();
     },
 
     stop() {
-      audio!.pause();
-      audio!.removeAttribute("src");
-      audio!.load();
-      set({ station: null, isPlaying: false, isBuffering: false });
+      engine.stop();
+      set({ station: null });
+    },
+
+    retry() {
+      engine.retry();
     },
 
     setVolume(volume) {

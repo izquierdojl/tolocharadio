@@ -197,6 +197,10 @@ const errorResponses = {
   "403": { description: "Prohibido", content: { "application/json": { schema: errorSchema } } },
   "404": { description: "Recurso no encontrado", content: { "application/json": { schema: errorSchema } } },
   "409": { description: "Conflicto", content: { "application/json": { schema: errorSchema } } },
+  "415": {
+    description: "Tipo de contenido no soportado",
+    content: { "application/json": { schema: errorSchema } },
+  },
   "422": { description: "Datos invalidos", content: { "application/json": { schema: errorSchema } } },
   "503": { description: "Servicio no disponible", content: { "application/json": { schema: errorSchema } } },
 } as const;
@@ -933,6 +937,29 @@ export function buildOpenApi(): Record<string, unknown> {
             },
             "401": errorResponses["401"],
             "404": errorResponses["404"],
+            "503": {
+              description:
+                "Stream, lista o manifiesto no disponible (STREAM_UNAVAILABLE, PLAYLIST_UNREACHABLE, PLAYLIST_EMPTY, PLAYLIST_INSECURE_ONLY, PLAYLIST_MALFORMED)",
+              content: { "application/json": { schema: errorSchema } },
+            },
+          },
+        },
+      },
+      "/playback/{stationId}/live": {
+        get: {
+          tags: ["Reproduccion"],
+          summary: "Flujo continuo de audio de una emisora",
+          description:
+            "Entrega siempre audio continuo: retransmite un stream directo, resuelve una lista M3U/PLS o convierte un HLS concatenable (AAC-ADTS o MP3) en un flujo continuo, renovando la sesion de origen cuando caduca. Para HLS no concatenable (fMP4, MPEG-TS o cifrado) responde 415 HLS_UNSUPPORTED_CONTAINER.",
+          ...requireAuth,
+          parameters: [{ name: "stationId", in: "path", required: true, schema: { type: "string" } }],
+          responses: {
+            "200": {
+              description: "Flujo de audio continuo (audio/aac o audio/mpeg)",
+            },
+            "401": errorResponses["401"],
+            "404": errorResponses["404"],
+            "415": errorResponses["415"],
             "503": {
               description:
                 "Stream, lista o manifiesto no disponible (STREAM_UNAVAILABLE, PLAYLIST_UNREACHABLE, PLAYLIST_EMPTY, PLAYLIST_INSECURE_ONLY, PLAYLIST_MALFORMED)",
