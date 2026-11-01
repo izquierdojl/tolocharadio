@@ -135,8 +135,23 @@ export function fetchPublicConfig(): Promise<PublicConfig> {
   return request<PublicConfig>("/config", undefined, true);
 }
 
-export function playbackUrl(stationId: string): string {
-  return `${API_PREFIX}/playback/${encodeURIComponent(stationId)}`;
+export interface PlaybackStatus {
+  id: string;
+  playable: boolean;
+  reason?: string;
+}
+
+export function playbackUrl(stationId: string, attempt?: number): string {
+  const suffix = attempt === undefined ? "" : `?r=${attempt}`;
+  return `${API_PREFIX}/playback/${encodeURIComponent(stationId)}${suffix}`;
+}
+
+export function livePlaybackUrl(stationId: string, attempt = 0): string {
+  return `${API_PREFIX}/playback/${encodeURIComponent(stationId)}/live?r=${attempt}`;
+}
+
+export function fetchPlaybackStatus(stationId: string): Promise<PlaybackStatus> {
+  return api.get<PlaybackStatus>(`/playback/${encodeURIComponent(stationId)}/status`);
 }
 
 export function fetchCatalogCountries(): Promise<StringListPage> {

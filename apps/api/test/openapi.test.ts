@@ -41,6 +41,7 @@ describe("OpenAPI spec", () => {
       "/stats/me/countries",
       "/stats/me/recent",
       "/playback/{stationId}",
+      "/playback/{stationId}/live",
       "/playback/{stationId}/hls",
       "/playback/{stationId}/status",
     ];

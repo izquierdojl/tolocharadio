@@ -26,6 +26,19 @@ La API sirve también el frontend compilado (`STATIC_DIR`). En desarrollo, Vite 
 - **Sesiones**: access token JWT (15 min) en memoria + cookie httpOnly `tolocha-refresh` rotatoria; refuerzo con cookie httpOnly `tolocha-access` para que el `<audio>` del reproductor pueda autenticarse.
 - **Catálogo**: cliente con caché en memoria, `User-Agent`/`appname` `TolochaRadio`, degradación con servidor caído (caché si existe, 503 si no).
 
+## Reproducción
+
+El cliente mantiene un único `<audio>` gestionado por `PlaybackEngine` (`apps/web/src/lib/playbackEngine.ts`) y el store de Zustand; así la reproducción sobrevive a la navegación. El motor vigila el progreso, reconecta con espera creciente (0, 1, 2, 4, 8 y 15 s), refresca la sesión antes de reconectar y expone estados de conexión, reconexión y error.
+
+El endpoint `GET /api/v1/playback/{stationId}/live` entrega siempre audio continuo:
+
+- **Stream directo**: proxy transparente del origen.
+- **Lista M3U/PLS**: resolución server-side y proxy del primer candidato reproducible.
+- **HLS concatenable** (AAC-ADTS o MP3): el servidor resuelve el master, elige la variante y encadena los segmentos; renueva la sesión de origen cuando caduca (`404`/`410`) y alinea por `EXT-X-PROGRAM-DATE-TIME`. Si el contenedor no es concatenable (fMP4, MPEG-TS, cifrado) responde `415 HLS_UNSUPPORTED_CONTAINER`.
+- **Atajo progresivo**: si la URL HLS es de StreamTheWorld (`/livestream-redirect/<MOUNT>.m3u8`), se prueba primero su variante `.aac`, que evita el HLS por completo.
+
+Las rutas anteriores (`/playback/{id}`, `/playback/{id}/hls` y `/playback/{id}/status`) se mantienen intactas para clientes externos (por ejemplo la app Android).
+
 ## Referencia rápida
 
 | Tema | Documento |

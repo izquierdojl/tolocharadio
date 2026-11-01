@@ -7,7 +7,7 @@ TolochaRadio es un cliente web (self-hosted) para explorar y escuchar emisoras d
 ## Características
 
 - **Catálogo global**: búsqueda de emisoras por nombre, país e idioma con paginación, a través de la API pública de radio-browser.
-- **Reproductor flotante persistente**: `<audio>` gestionado por Zustand, la música no se interrumpe al navegar; controles de reproducir/pausar, siguiente, volumen y quitar emisora.
+- **Reproductor flotante persistente**: `<audio>` gestionado por Zustand con reconexión automática, la música no se interrumpe al navegar; controles de reproducir/pausar, volumen y quitar emisora.
 - **Cuentas propias**: registro (desactivable), inicio de sesión, perfil, cambio de contraseña y restablecimiento con token de un solo uso.
 - **Favoritos e historial**: snapshot de cada emisora guardada o escuchada, aislamiento por usuario, limpieza completa.
 - **Proxy de streaming autenticado**: la API retransmite el stream con tus credenciales; nunca se expone el token en la URL.
@@ -30,9 +30,12 @@ Entra en la sección **Explorar**. Puedes buscar por **nombre**, **país**, **id
 El reproductor es **flotante y persistente**: al cambiar de página la música continúa. Desde él puedes:
 
 - Reproducir o pausar la emisora actual.
-- Saltar a la siguiente.
 - Ajustar el volumen.
 - Quitar la emisora y detener la reproducción.
+
+Si el stream se interrumpe (corte de red, cierre del origen o estancamiento), el reproductor **reconecta solo** con esperas crecientes y muestra «Reconectando…». Si agota los reintentos, muestra el motivo y un botón **Reintentar**. Al elegir una emisora también se comprueba su disponibilidad y, si no está accesible, se avisa con un mensaje.
+
+Las emisoras que emiten en HLS se reproducen como un flujo continuo: el servidor descarga y encadena los segmentos y renueva la sesión del origen cuando caduca, de modo que el navegador solo ve audio. Las emisoras HLS con un formato no concatenable (por ejemplo fMP4 o cifrado) muestran un aviso de formato no compatible.
 
 ## Cuentas propias
 
