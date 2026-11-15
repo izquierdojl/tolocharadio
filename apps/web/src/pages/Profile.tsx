@@ -4,7 +4,7 @@ import { type FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api.js";
 import { DEFAULT_VIEW_OPTIONS } from "../lib/defaultView.js";
-import type { User, UserDefaultView } from "../lib/types.js";
+import type { User, UserDefaultSection, UserDefaultView } from "../lib/types.js";
 import { useAuthStore } from "../stores/auth.js";
 
 const inputClass =
@@ -24,6 +24,9 @@ export function Profile() {
   const queryClient = useQueryClient();
   const [name, setName] = useState(user?.name ?? "");
   const [defaultView, setDefaultView] = useState<UserDefaultView>(user?.defaultView ?? "explorar");
+  const [defaultSection, setDefaultSection] = useState<UserDefaultSection>(
+    user?.defaultSection ?? "radio",
+  );
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [passwordStep, setPasswordStep] = useState(false);
@@ -52,9 +55,20 @@ export function Profile() {
     },
   });
 
+  const updateDefaultSection = useMutation({
+    mutationFn: () => api.patch<{ user: User }>("/users/me", { defaultSection }),
+    onSuccess: (data) => {
+      setUser(data.user);
+      toast.success("Sección inicial actualizada");
+      void queryClient.invalidateQueries();
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "No se pudo guardar la sección inicial");
+    },
+  });
+
   const changePassword = useMutation({    mutationFn: () =>
-      api.patch<{ ok: true }>("/users/me/password", { currentPassword: current, newPassword: next }),
-    onSuccess: () => {
+      api.patch<{ ok: true }>("/users/me/password", { currentPassword: current, newPassword: next }),    onSuccess: () => {
       toast.success("Contraseña actualizada");
       setCurrent("");
       setNext("");
@@ -73,6 +87,11 @@ export function Profile() {
   const onSubmitDefaultView = (e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
     updateDefaultView.mutate();
+  };
+
+  const onSubmitDefaultSection = (e: FormEvent<HTMLFormElement>): void => {
+    e.preventDefault();
+    updateDefaultSection.mutate();
   };
 
   const onSubmitPassword = (e: FormEvent<HTMLFormElement>): void => {
@@ -149,6 +168,49 @@ export function Profile() {
           className="self-start rounded-lg bg-pine-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-500 disabled:opacity-50"
         >
           Guardar vista por defecto
+        </button>
+      </form>
+
+      <form
+        onSubmit={onSubmitDefaultSection}
+        className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-5"
+      >
+        <div className="flex flex-col gap-1">
+          <h2 className="font-semibold text-foreground">Sección inicial</h2>
+          <p className="text-sm text-muted">
+            Elige si al entrar quieres ver la radio o tus podcasts.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2" role="radiogroup" aria-label="Sección inicial">
+          {[
+            { value: "radio" as const, label: "Radio" },
+            { value: "podcasts" as const, label: "Podcasts" },
+          ].map((option) => (
+            <label
+              key={option.value}
+              className="flex cursor-pointer items-center gap-3 rounded-lg border border-line px-3 py-2.5 text-sm text-foreground transition hover:border-pine-500"
+            >
+              <input
+                type="radio"
+                name="defaultSection"
+                value={option.value}
+                checked={defaultSection === option.value}
+                onChange={() => setDefaultSection(option.value)}
+                className="size-4 accent-pine-600"
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
+        <button
+          type="submit"
+          disabled={
+            updateDefaultSection.isPending ||
+            defaultSection === (user.defaultSection ?? "radio")
+          }
+          className="self-start rounded-lg bg-pine-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-500 disabled:opacity-50"
+        >
+          Guardar sección inicial
         </button>
       </form>
 

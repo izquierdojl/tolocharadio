@@ -9,8 +9,12 @@ use crate::server::same_origin;
 #[serde(rename_all = "camelCase", default)]
 pub struct PlayerUpdate {
     pub station_id: Option<String>,
+    pub kind: Option<String>,
     pub name: Option<String>,
+    pub artist: Option<String>,
     pub favicon: Option<String>,
+    pub duration_sec: Option<f64>,
+    pub position_sec: Option<f64>,
     pub is_playing: bool,
     pub is_buffering: bool,
     pub volume: f64,
@@ -18,8 +22,8 @@ pub struct PlayerUpdate {
 }
 
 impl PlayerUpdate {
-    pub fn has_station(&self) -> bool {
-        self.station_id.is_some()
+    pub fn has_media(&self) -> bool {
+        self.station_id.is_some() || self.kind.is_some()
     }
 }
 
@@ -51,7 +55,8 @@ pub struct PlayerCommand {
     pub station_id: Option<String>,
 }
 
-/// Comando sin parámetros: `toggle`, `stop`, `volume_up`, `volume_down`, `mute_toggle`.
+/// Comando sin parámetros: `toggle`, `stop`, `next`, `previous`,
+/// `volume_up`, `volume_down`, `mute_toggle`.
 pub fn action_command(action: &'static str) -> PlayerCommand {
     PlayerCommand {
         action,

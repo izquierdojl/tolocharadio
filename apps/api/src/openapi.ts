@@ -191,6 +191,178 @@ const playableSchema = {
   },
 } as const;
 
+const podcastSummarySchema = {
+  type: "object",
+  required: [
+    "id",
+    "feedUrl",
+    "title",
+    "categories",
+    "episodeCount",
+    "isSubscribed",
+  ],
+  properties: {
+    id: { type: "integer" },
+    feedUrl: { type: "string" },
+    title: { type: "string" },
+    author: { type: ["string", "null"] },
+    description: { type: ["string", "null"] },
+    imageUrl: { type: ["string", "null"] },
+    language: { type: ["string", "null"] },
+    link: { type: ["string", "null"] },
+    categories: { type: "array", items: { type: "string" } },
+    lastFetchedAt: { type: ["integer", "null"] },
+    episodeCount: { type: "integer" },
+    isSubscribed: { type: "boolean" },
+    subscribedAt: { type: ["integer", "null"] },
+  },
+} as const;
+
+const podcastEpisodeSchema = {
+  type: "object",
+  required: ["id", "podcastId", "title", "explicit", "progress"],
+  properties: {
+    id: { type: "integer" },
+    podcastId: { type: "integer" },
+    title: { type: "string" },
+    description: { type: ["string", "null"] },
+    publishedAt: { type: ["integer", "null"] },
+    durationSec: { type: ["integer", "null"] },
+    imageUrl: { type: ["string", "null"] },
+    episodeNumber: { type: ["integer", "null"] },
+    seasonNumber: { type: ["integer", "null"] },
+    explicit: { type: "boolean" },
+    progress: {
+      type: ["object", "null"],
+      properties: {
+        positionSec: { type: "integer" },
+        durationSec: { type: ["integer", "null"] },
+        completed: { type: "boolean" },
+        completedAt: { type: ["integer", "null"] },
+        updatedAt: { type: "integer" },
+      },
+    },
+    isFavorite: { type: "boolean" },
+  },
+} as const;
+
+const podcastSearchResultSchema = {
+  type: "object",
+  required: ["title", "feedUrl", "categories"],
+  properties: {
+    title: { type: "string" },
+    author: { type: ["string", "null"] },
+    feedUrl: { type: "string" },
+    imageUrl: { type: ["string", "null"] },
+    categories: { type: "array", items: { type: "string" } },
+    description: { type: ["string", "null"] },
+  },
+} as const;
+
+const podcastQueueSchema = {
+  type: "object",
+  required: ["revision", "updatedAt", "items", "limit"],
+  properties: {
+    revision: { type: "integer" },
+    updatedAt: { type: ["integer", "null"] },
+    limit: { type: "integer" },
+    items: {
+      type: "array",
+      items: { $ref: "#/components/schemas/PodcastEpisode" },
+    },
+  },
+} as const;
+
+const podcastStatsSummarySchema = {
+  type: "object",
+  required: [
+    "totalMs",
+    "episodesStarted",
+    "episodesCompleted",
+    "completionRate",
+    "podcastsCount",
+    "averageEpisodeMs",
+  ],
+  properties: {
+    totalMs: { type: "integer", description: "Tiempo de contenido consumido en milisegundos" },
+    episodesStarted: {
+      type: "integer",
+      description: "Episodios unicos con al menos 30 segundos escuchados",
+    },
+    episodesCompleted: { type: "integer", description: "Episodios unicos completados" },
+    completionRate: {
+      type: "number",
+      description: "episodesCompleted / episodesStarted (0 si no hay episodios empezados)",
+    },
+    podcastsCount: { type: "integer", description: "Podcasts distintos escuchados en el rango" },
+    averageEpisodeMs: { type: "integer", description: "totalMs / episodesStarted" },
+  },
+} as const;
+
+const podcastStatsTopPodcastSchema = {
+  type: "object",
+  required: ["podcastId", "title", "totalMs", "episodesStarted", "episodesCompleted"],
+  properties: {
+    podcastId: { type: "integer" },
+    title: { type: "string" },
+    author: { type: ["string", "null"] },
+    imageUrl: { type: ["string", "null"] },
+    totalMs: { type: "integer" },
+    episodesStarted: { type: "integer" },
+    episodesCompleted: { type: "integer" },
+  },
+} as const;
+
+const podcastStatsTopEpisodeSchema = {
+  type: "object",
+  required: ["episodeId", "podcastId", "title", "podcastTitle", "totalMs", "completed"],
+  properties: {
+    episodeId: { type: "integer" },
+    podcastId: { type: "integer" },
+    title: { type: "string" },
+    podcastTitle: { type: "string" },
+    imageUrl: { type: ["string", "null"] },
+    totalMs: { type: "integer" },
+    completed: { type: "boolean" },
+  },
+} as const;
+
+const podcastStatsCategorySchema = {
+  type: "object",
+  required: ["category", "totalMs"],
+  properties: {
+    category: { type: "string" },
+    totalMs: { type: "integer" },
+  },
+} as const;
+
+const podcastStatsRecentSchema = {
+  type: "object",
+  required: [
+    "episodeId",
+    "podcastId",
+    "episodeTitle",
+    "podcastTitle",
+    "startedAt",
+    "endedAt",
+    "listenedMs",
+    "completed",
+  ],
+  properties: {
+    episodeId: { type: "integer" },
+    podcastId: { type: "integer" },
+    episodeTitle: { type: "string" },
+    podcastTitle: { type: "string" },
+    imageUrl: { type: ["string", "null"] },
+    startedAt: { type: "integer" },
+    endedAt: { type: "integer" },
+    listenedMs: { type: "integer" },
+    positionSec: { type: ["integer", "null"] },
+    durationSec: { type: ["integer", "null"] },
+    completed: { type: "boolean" },
+  },
+} as const;
+
 const errorResponses = {
   "400": { description: "Peticion mal formada", content: { "application/json": { schema: errorSchema } } },
   "401": { description: "No autorizado / token invalido", content: { "application/json": { schema: errorSchema } } },
@@ -242,10 +414,71 @@ export function buildOpenApi(): Record<string, unknown> {
                 "application/json": {
                   schema: {
                     type: "object",
-                    required: ["appName", "registrationEnabled"],
+                    required: [
+                      "appName",
+                      "version",
+                      "apiVersion",
+                      "registrationEnabled",
+                      "features",
+                      "limits",
+                      "auth",
+                    ],
                     properties: {
                       appName: { type: "string" },
+                      version: { type: "string" },
+                      apiVersion: { type: "integer", example: 1 },
                       registrationEnabled: { type: "boolean" },
+                      features: {
+                        type: "object",
+                        required: [
+                          "radio",
+                          "podcasts",
+                          "podcastDiscovery",
+                          "podcastOpml",
+                          "podcastQueue",
+                          "podcastFavorites",
+                          "podcastStats",
+                          "podcastDownloads",
+                        ],
+                        properties: {
+                          radio: { type: "boolean" },
+                          podcasts: { type: "boolean" },
+                          podcastDiscovery: {
+                            type: "string",
+                            enum: ["itunes", "podcastindex", "none"],
+                          },
+                          podcastOpml: { type: "boolean" },
+                          podcastQueue: { type: "boolean" },
+                          podcastFavorites: { type: "boolean" },
+                          podcastStats: { type: "boolean" },
+                          podcastDownloads: { type: "boolean" },
+                        },
+                      },
+                      limits: {
+                        type: "object",
+                        required: [
+                          "podcastQueueMax",
+                          "podcastSubscriptionsMax",
+                          "podcastFeedMaxBytes",
+                          "podcastEpisodesPageSize",
+                          "podcastOpmlMaxFeeds",
+                        ],
+                        properties: {
+                          podcastQueueMax: { type: "integer" },
+                          podcastSubscriptionsMax: { type: "integer" },
+                          podcastFeedMaxBytes: { type: "integer" },
+                          podcastEpisodesPageSize: { type: "integer" },
+                          podcastOpmlMaxFeeds: { type: "integer" },
+                        },
+                      },
+                      auth: {
+                        type: "object",
+                        required: ["accessTokenTtlSec", "playbackTokenTtlSec"],
+                        properties: {
+                          accessTokenTtlSec: { type: "integer" },
+                          playbackTokenTtlSec: { type: "integer" },
+                        },
+                      },
                     },
                   },
                 },
@@ -1060,6 +1293,964 @@ export function buildOpenApi(): Record<string, unknown> {
           },
         },
       },
+      "/podcasts/search": {
+        get: {
+          tags: ["Podcasts"],
+          summary: "Buscar podcasts en el directorio configurado",
+          ...requireAuth,
+          parameters: [
+            { name: "q", in: "query", required: true, schema: { type: "string" } },
+            {
+              name: "limit",
+              in: "query",
+              required: false,
+              schema: { type: "integer", minimum: 1, maximum: 50, default: 20 },
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Resultados de busqueda",
+              content: { "application/json": { schema: listOf("PodcastSearchResult") } },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+            "503": errorResponses["503"],
+          },
+        },
+      },
+      "/podcasts/resolve": {
+        post: {
+          tags: ["Podcasts"],
+          summary: "Resolver e ingerir un feed RSS/Atom de podcast",
+          ...requireAuth,
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["feedUrl"],
+                  properties: { feedUrl: { type: "string", format: "uri" } },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "Podcast y episodios resueltos",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["podcast", "episodes"],
+                    properties: {
+                      podcast: { $ref: "#/components/schemas/PodcastSummary" },
+                      episodes: {
+                        type: "object",
+                        required: ["items", "pagination"],
+                        properties: {
+                          items: {
+                            type: "array",
+                            items: { $ref: "#/components/schemas/PodcastEpisode" },
+                          },
+                          pagination: {
+                            type: "object",
+                            required: ["offset", "limit", "hasMore"],
+                            properties: {
+                              offset: { type: "integer" },
+                              limit: { type: "integer" },
+                              hasMore: { type: "boolean" },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+            "422": errorResponses["422"],
+            "503": errorResponses["503"],
+          },
+        },
+      },
+      "/podcasts/subscriptions": {
+        get: {
+          tags: ["Podcasts"],
+          summary: "Listar suscripciones de podcasts del usuario",
+          ...requireAuth,
+          responses: {
+            "200": {
+              description: "Lista de suscripciones",
+              content: { "application/json": { schema: listOf("PodcastSummary") } },
+            },
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+          },
+        },
+        post: {
+          tags: ["Podcasts"],
+          summary: "Suscribirse a un podcast por podcastId o feedUrl",
+          ...requireAuth,
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    podcastId: { type: "integer" },
+                    feedUrl: { type: "string", format: "uri" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "201": {
+              description: "Suscripcion creada",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["podcast"],
+                    properties: { podcast: { $ref: "#/components/schemas/PodcastSummary" } },
+                  },
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+            "404": errorResponses["404"],
+            "422": errorResponses["422"],
+          },
+        },
+      },
+      "/podcasts/subscriptions/bulk": {
+        post: {
+          tags: ["Podcasts"],
+          summary: "Importar suscripciones en lote (OPML)",
+          ...requireAuth,
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["feedUrls"],
+                  properties: {
+                    feedUrls: { type: "array", items: { type: "string" } },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "Resultado de importacion en lote",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["imported", "skipped", "failed", "items", "errors"],
+                    properties: {
+                      imported: { type: "integer" },
+                      skipped: { type: "integer" },
+                      failed: { type: "integer" },
+                      items: {
+                        type: "array",
+                        items: { $ref: "#/components/schemas/PodcastSummary" },
+                      },
+                      errors: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          required: ["feedUrl", "message"],
+                          properties: {
+                            feedUrl: { type: "string" },
+                            message: { type: "string" },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+            "422": errorResponses["422"],
+          },
+        },
+      },
+      "/podcasts/subscriptions/opml": {
+        get: {
+          tags: ["Podcasts"],
+          summary: "Exportar suscripciones del usuario en formato OPML 2.0",
+          ...requireAuth,
+          responses: {
+            "200": {
+              description: "Documento XML OPML 2.0",
+            },
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+          },
+        },
+      },
+      "/podcasts/subscriptions/{podcastId}": {
+        delete: {
+          tags: ["Podcasts"],
+          summary: "Cancelar suscripcion a un podcast",
+          ...requireAuth,
+          parameters: [
+            { name: "podcastId", in: "path", required: true, schema: { type: "integer" } },
+          ],
+          responses: {
+            "200": {
+              description: "Suscripcion eliminada",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["ok"],
+                    properties: { ok: { type: "boolean" } },
+                  },
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+          },
+        },
+      },
+      "/podcasts/home": {
+        get: {
+          tags: ["Podcasts"],
+          summary: "Portada agregada de podcasts del usuario",
+          ...requireAuth,
+          responses: {
+            "200": {
+              description: "Continuar escuchando, novedades, suscripciones y resumen de la cola",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: [
+                      "continueListening",
+                      "latestEpisodes",
+                      "subscriptions",
+                      "queue",
+                    ],
+                    properties: {
+                      continueListening: {
+                        type: "array",
+                        items: { $ref: "#/components/schemas/PodcastEpisode" },
+                      },
+                      latestEpisodes: {
+                        type: "array",
+                        items: { $ref: "#/components/schemas/PodcastEpisode" },
+                      },
+                      subscriptions: {
+                        type: "array",
+                        items: { $ref: "#/components/schemas/PodcastSummary" },
+                      },
+                      queue: {
+                        type: "object",
+                        required: ["revision", "count", "limit", "next"],
+                        properties: {
+                          revision: { type: "integer" },
+                          count: { type: "integer" },
+                          limit: { type: "integer" },
+                          next: {
+                            oneOf: [
+                              { $ref: "#/components/schemas/PodcastEpisode" },
+                              { type: "null" },
+                            ],
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+          },
+        },
+      },
+      "/podcasts/queue": {
+        get: {
+          tags: ["Podcasts"],
+          summary: "Consultar la cola de reproduccion sincronizada",
+          ...requireAuth,
+          responses: {
+            "200": {
+              description: "Cola vigente con su revision",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["queue"],
+                    properties: { queue: { $ref: "#/components/schemas/PodcastQueue" } },
+                  },
+                },
+              },
+            },
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+          },
+        },
+        post: {
+          tags: ["Podcasts"],
+          summary: "Anadir un episodio al final o como siguiente en la cola",
+          ...requireAuth,
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["episodeId"],
+                  properties: {
+                    episodeId: { type: "integer" },
+                    position: { type: "string", enum: ["end", "next"] },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "201": {
+              description: "Cola actualizada",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["queue"],
+                    properties: { queue: { $ref: "#/components/schemas/PodcastQueue" } },
+                  },
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+            "404": errorResponses["404"],
+            "422": errorResponses["422"],
+          },
+        },
+      },
+      "/podcasts/queue/order": {
+        put: {
+          tags: ["Podcasts"],
+          summary: "Reordenar la cola con control optimista por revision",
+          ...requireAuth,
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["baseRevision", "episodeIds"],
+                  properties: {
+                    baseRevision: { type: "integer" },
+                    episodeIds: { type: "array", items: { type: "integer" } },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "Cola reordenada",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["queue"],
+                    properties: { queue: { $ref: "#/components/schemas/PodcastQueue" } },
+                  },
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+            "409": errorResponses["409"],
+            "422": errorResponses["422"],
+          },
+        },
+      },
+      "/podcasts/queue/{episodeId}": {
+        delete: {
+          tags: ["Podcasts"],
+          summary: "Quitar un episodio de la cola",
+          ...requireAuth,
+          parameters: [
+            { name: "episodeId", in: "path", required: true, schema: { type: "integer" } },
+          ],
+          responses: {
+            "200": {
+              description: "Cola actualizada",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["queue"],
+                    properties: { queue: { $ref: "#/components/schemas/PodcastQueue" } },
+                  },
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+          },
+        },
+      },
+      "/podcasts/favorites": {
+        get: {
+          tags: ["Podcasts"],
+          summary: "Listar episodios favoritos de podcasts",
+          ...requireAuth,
+          responses: {
+            "200": {
+              description: "Episodios favoritos ordenados por fecha de alta",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["items"],
+                    properties: {
+                      items: {
+                        type: "array",
+                        items: { $ref: "#/components/schemas/PodcastEpisode" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+          },
+        },
+        post: {
+          tags: ["Podcasts"],
+          summary: "Marcar un episodio como favorito",
+          ...requireAuth,
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["episodeId"],
+                  properties: { episodeId: { type: "integer" } },
+                },
+              },
+            },
+          },
+          responses: {
+            "201": {
+              description: "Episodio favorito",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["episode"],
+                    properties: { episode: { $ref: "#/components/schemas/PodcastEpisode" } },
+                  },
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+            "404": errorResponses["404"],
+            "422": errorResponses["422"],
+          },
+        },
+      },
+      "/podcasts/favorites/{episodeId}": {
+        delete: {
+          tags: ["Podcasts"],
+          summary: "Quitar un episodio de favoritos",
+          ...requireAuth,
+          parameters: [
+            { name: "episodeId", in: "path", required: true, schema: { type: "integer" } },
+          ],
+          responses: {
+            "200": {
+              description: "Favorito eliminado",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["ok"],
+                    properties: { ok: { type: "boolean" } },
+                  },
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+          },
+        },
+      },
+      "/podcasts/stats/summary": {
+        get: {
+          tags: ["Podcasts"],
+          summary: "Resumen de estadisticas de podcasts",
+          ...requireAuth,
+          parameters: [...statsRangeParams],
+          responses: {
+            "200": {
+              description: "Resumen de tiempo, episodios y tasa de finalizacion",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/PodcastStatsSummary" },
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+          },
+        },
+      },
+      "/podcasts/stats/top-podcasts": {
+        get: {
+          tags: ["Podcasts"],
+          summary: "Ranking de podcasts por tiempo escuchado",
+          ...requireAuth,
+          parameters: [
+            ...statsRangeParams,
+            {
+              name: "limit",
+              in: "query",
+              required: false,
+              schema: { type: "integer", minimum: 1, maximum: 50, default: 10 },
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Podcasts ordenados por tiempo consumido",
+              content: {
+                "application/json": {
+                  schema: listOf("PodcastStatsTopPodcast"),
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+          },
+        },
+      },
+      "/podcasts/stats/top-episodes": {
+        get: {
+          tags: ["Podcasts"],
+          summary: "Ranking de episodios por tiempo escuchado",
+          ...requireAuth,
+          parameters: [
+            ...statsRangeParams,
+            {
+              name: "limit",
+              in: "query",
+              required: false,
+              schema: { type: "integer", minimum: 1, maximum: 50, default: 10 },
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Episodios ordenados por tiempo consumido",
+              content: {
+                "application/json": {
+                  schema: listOf("PodcastStatsTopEpisode"),
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+          },
+        },
+      },
+      "/podcasts/stats/timeline": {
+        get: {
+          tags: ["Podcasts"],
+          summary: "Evolucion temporal del tiempo escuchado en podcasts",
+          ...requireAuth,
+          parameters: [
+            ...statsRangeParams,
+            {
+              name: "granularity",
+              in: "query",
+              required: false,
+              schema: { type: "string", enum: ["day", "week", "month"], default: "day" },
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Serie temporal con dias sin actividad a cero",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["granularity", "items"],
+                    properties: {
+                      granularity: { type: "string", enum: ["day", "week", "month"] },
+                      items: {
+                        type: "array",
+                        items: { $ref: "#/components/schemas/StatsTimelineEntry" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+          },
+        },
+      },
+      "/podcasts/stats/habits": {
+        get: {
+          tags: ["Podcasts"],
+          summary: "Habitos horarios de escucha de podcasts",
+          ...requireAuth,
+          parameters: [...statsRangeParams],
+          responses: {
+            "200": {
+              description: "Tiempo escuchado por dia de la semana y hora",
+              content: {
+                "application/json": {
+                  schema: listOf("StatsHabitEntry"),
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+          },
+        },
+      },
+      "/podcasts/stats/categories": {
+        get: {
+          tags: ["Podcasts"],
+          summary: "Tiempo escuchado por categoria de podcast",
+          ...requireAuth,
+          parameters: [
+            ...statsRangeParams,
+            {
+              name: "limit",
+              in: "query",
+              required: false,
+              schema: { type: "integer", minimum: 1, maximum: 50, default: 10 },
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Categorias ordenadas por tiempo consumido",
+              content: {
+                "application/json": {
+                  schema: listOf("PodcastStatsCategory"),
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+          },
+        },
+      },
+      "/podcasts/stats/recent": {
+        get: {
+          tags: ["Podcasts"],
+          summary: "Sesiones de escucha de podcasts recientes",
+          ...requireAuth,
+          parameters: [
+            {
+              name: "limit",
+              in: "query",
+              required: false,
+              schema: { type: "integer", minimum: 1, maximum: 100, default: 20 },
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Sesiones recientes ordenadas por fecha de inicio",
+              content: {
+                "application/json": {
+                  schema: listOf("PodcastStatsRecent"),
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+          },
+        },
+      },
+      "/podcasts/{podcastId}": {
+        get: {
+          tags: ["Podcasts"],
+          summary: "Detalle de un podcast",
+          ...requireAuth,
+          parameters: [
+            { name: "podcastId", in: "path", required: true, schema: { type: "integer" } },
+          ],
+          responses: {
+            "200": {
+              description: "Ficha del podcast",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["podcast"],
+                    properties: { podcast: { $ref: "#/components/schemas/PodcastSummary" } },
+                  },
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+            "404": errorResponses["404"],
+          },
+        },
+      },
+      "/podcasts/{podcastId}/episodes": {
+        get: {
+          tags: ["Podcasts"],
+          summary: "Listado paginado de episodios de un podcast",
+          ...requireAuth,
+          parameters: [
+            { name: "podcastId", in: "path", required: true, schema: { type: "integer" } },
+            {
+              name: "sort",
+              in: "query",
+              required: false,
+              schema: {
+                type: "string",
+                enum: ["recent", "title", "duration"],
+                default: "recent",
+              },
+            },
+            {
+              name: "filter",
+              in: "query",
+              required: false,
+              schema: {
+                type: "string",
+                enum: ["all", "unplayed", "in_progress", "completed"],
+                default: "all",
+              },
+            },
+            {
+              name: "offset",
+              in: "query",
+              required: false,
+              schema: { type: "integer", minimum: 0, default: 0 },
+            },
+            {
+              name: "limit",
+              in: "query",
+              required: false,
+              schema: { type: "integer", minimum: 1, maximum: 100, default: 50 },
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Pagina de episodios",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["items", "pagination"],
+                    properties: {
+                      items: {
+                        type: "array",
+                        items: { $ref: "#/components/schemas/PodcastEpisode" },
+                      },
+                      pagination: {
+                        type: "object",
+                        required: ["offset", "limit", "hasMore"],
+                        properties: {
+                          offset: { type: "integer" },
+                          limit: { type: "integer" },
+                          hasMore: { type: "boolean" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+            "404": errorResponses["404"],
+          },
+        },
+      },
+      "/podcasts/episodes/{episodeId}/playback": {
+        post: {
+          tags: ["Podcasts"],
+          summary: "Emitir token y URL firmada de reproduccion para un episodio",
+          ...requireAuth,
+          parameters: [
+            { name: "episodeId", in: "path", required: true, schema: { type: "integer" } },
+          ],
+          responses: {
+            "200": {
+              description: "URL firmada y expiracion",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["url", "expiresAt"],
+                    properties: {
+                      url: { type: "string" },
+                      expiresAt: { type: "integer" },
+                    },
+                  },
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+            "404": errorResponses["404"],
+          },
+        },
+      },
+      "/podcasts/episodes/{episodeId}/stream": {
+        get: {
+          tags: ["Podcasts"],
+          summary: "Stream de audio de un episodio autenticado por firma HMAC (soporta Range 206/416)",
+          security: [],
+          parameters: [
+            { name: "episodeId", in: "path", required: true, schema: { type: "integer" } },
+            { name: "u", in: "query", required: true, schema: { type: "integer" } },
+            { name: "exp", in: "query", required: true, schema: { type: "integer" } },
+            { name: "sig", in: "query", required: true, schema: { type: "string" } },
+          ],
+          responses: {
+            "200": { description: "Flujo completo de audio" },
+            "206": { description: "Contenido parcial (Range)" },
+            "302": { description: "Redireccion cuando PODCAST_STREAM_MODE=redirect" },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+            "404": errorResponses["404"],
+            "416": { description: "Rango no satisfacible (Range Not Satisfiable)" },
+            "503": errorResponses["503"],
+          },
+        },
+      },
+      "/podcasts/episodes/{episodeId}/progress": {
+        get: {
+          tags: ["Podcasts"],
+          summary: "Consultar progreso de un episodio",
+          ...requireAuth,
+          parameters: [
+            { name: "episodeId", in: "path", required: true, schema: { type: "integer" } },
+          ],
+          responses: {
+            "200": {
+              description: "Progreso actual del episodio",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["progress"],
+                    properties: {
+                      progress: {
+                        type: ["object", "null"],
+                        properties: {
+                          positionSec: { type: "integer" },
+                          durationSec: { type: ["integer", "null"] },
+                          completed: { type: "boolean" },
+                          completedAt: { type: ["integer", "null"] },
+                          updatedAt: { type: "integer" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+            "404": errorResponses["404"],
+          },
+        },
+        put: {
+          tags: ["Podcasts"],
+          summary: "Actualizar progreso y sesion de escucha de un episodio (idempotente)",
+          ...requireAuth,
+          parameters: [
+            { name: "episodeId", in: "path", required: true, schema: { type: "integer" } },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["sessionId", "sequence", "positionSec", "listenedMs"],
+                  properties: {
+                    sessionId: { type: "string" },
+                    sequence: { type: "integer", minimum: 0 },
+                    positionSec: { type: "number", minimum: 0 },
+                    durationSec: { type: ["number", "null"] },
+                    listenedMs: { type: "number", minimum: 0 },
+                    completed: { type: "boolean" },
+                    occurredAt: { type: "integer" },
+                    source: { type: "string", enum: ["web", "android", "desktop"] },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": { description: "Progreso actualizado" },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+            "404": errorResponses["404"],
+            "422": errorResponses["422"],
+          },
+        },
+        post: {
+          tags: ["Podcasts"],
+          summary: "Alias POST de actualizacion de progreso (compatible con sendBeacon/keepalive)",
+          ...requireAuth,
+          parameters: [
+            { name: "episodeId", in: "path", required: true, schema: { type: "integer" } },
+          ],
+          responses: {
+            "200": { description: "Progreso actualizado" },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+            "404": errorResponses["404"],
+            "422": errorResponses["422"],
+          },
+        },
+      },
     },
     components: {
       securitySchemes: bearer,
@@ -1078,6 +2269,15 @@ export function buildOpenApi(): Record<string, unknown> {
         StatsGenreEntry: statsGenreEntrySchema,
         StatsCountryEntry: statsCountryEntrySchema,
         StatsRecentEntry: statsRecentEntrySchema,
+        PodcastSummary: podcastSummarySchema,
+        PodcastEpisode: podcastEpisodeSchema,
+        PodcastQueue: podcastQueueSchema,
+        PodcastSearchResult: podcastSearchResultSchema,
+        PodcastStatsSummary: podcastStatsSummarySchema,
+        PodcastStatsTopPodcast: podcastStatsTopPodcastSchema,
+        PodcastStatsTopEpisode: podcastStatsTopEpisodeSchema,
+        PodcastStatsCategory: podcastStatsCategorySchema,
+        PodcastStatsRecent: podcastStatsRecentSchema,
       },
     },
   };

@@ -1,6 +1,6 @@
 import { CheckCircle2 } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
-import { defaultViewPath } from "../lib/defaultView.js";
+import { defaultEntryPath } from "../lib/defaultView.js";
 import { useAuthStore } from "../stores/auth.js";
 
 function SierraIllustration() {
@@ -68,7 +68,7 @@ export function Home() {
   }
 
   if (status === "authenticated") {
-    return <Navigate to={defaultViewPath(user?.defaultView)} replace />;
+    return <Navigate to={defaultEntryPath(user)} replace />;
   }
 
   return (

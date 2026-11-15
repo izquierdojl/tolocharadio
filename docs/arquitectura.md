@@ -22,7 +22,7 @@ La API sirve también el frontend compilado (`STATIC_DIR`). En desarrollo, Vite 
 
 ## Componentes clave
 
-- **Almacenamiento**: SQLite vía Drizzle (`users`, `refresh_tokens`, `password_reset_tokens`, `favorites`, `history`).
+- **Almacenamiento**: SQLite vía Drizzle (`users`, `refresh_tokens`, `password_reset_tokens`, `favorites`, `history`, `podcasts`, `podcast_episodes`, `podcast_subscriptions`, `podcast_progress`, `podcast_queue_*`, `podcast_favorites`, `podcast_listen_sessions`, `user_podcast_stats_hourly`).
 - **Sesiones**: access token JWT (15 min) en memoria + cookie httpOnly `tolocha-refresh` rotatoria; refuerzo con cookie httpOnly `tolocha-access` para que el `<audio>` del reproductor pueda autenticarse.
 - **Catálogo**: cliente con caché en memoria, `User-Agent`/`appname` `TolochaRadio`, degradación con servidor caído (caché si existe, 503 si no).
 
@@ -38,6 +38,15 @@ El endpoint `GET /api/v1/playback/{stationId}/live` entrega siempre audio contin
 - **Atajo progresivo**: si la URL HLS es de StreamTheWorld (`/livestream-redirect/<MOUNT>.m3u8`), se prueba primero su variante `.aac`, que evita el HLS por completo.
 
 Las rutas anteriores (`/playback/{id}`, `/playback/{id}/hls` y `/playback/{id}/status`) se mantienen intactas para clientes externos (por ejemplo la app Android).
+
+## Podcasts
+
+- **Ingesta**: `apps/api/src/services/podcasts/feedParser.ts` parsea RSS 2.0 + iTunes y Atom; `feedFetcher.ts` descarga con ETag/`304`, límite de 5 MB y validación SSRF en cada redirección (`lib/upstream.ts`). Los feeds y episodios se guardan en SQLite y se refrescan con backoff creciente (15 min, 1 h, 6 h, 24 h).
+- **Descubrimiento**: proveedor configurable (`PODCAST_DISCOVERY_PROVIDER`: `itunes`, `podcastindex` o `none`). El alta manual por RSS y OPML funciona siempre.
+- **Reproducción**: `POST /podcasts/episodes/{id}/playback` emite una URL firmada con HMAC-SHA256 (`userId + episodeId + exp`, TTL 6 h) y `GET /podcasts/episodes/{id}/stream` sirve audio progresivo con `Range` (`206`/`416`), en modo `proxy` o `redirect` (`PODCAST_STREAM_MODE`).
+- **Progreso**: `podcast_progress` guarda posición y duración por episodio; los pulsos son idempotentes por `sequence` y se agregan en `user_podcast_stats_hourly` para las estadísticas.
+- **Cola y favoritos**: `podcast_queue_state` mantiene una `revision` por usuario y `podcast_queue_items` el orden; `PUT /podcasts/queue/order` exige `baseRevision` y responde `409 QUEUE_CONFLICT` si está obsoleta. `podcast_favorites` guarda episodios favoritos.
+- **Interfaz**: `AppShell` muestra el selector `Radio | Podcasts`; las portadas se renderizan con `referrerPolicy="no-referrer"` y `loading="lazy"`; el avance de cola se engancha a `onEpisodeEnded` del reproductor.
 
 ## Referencia rápida
 

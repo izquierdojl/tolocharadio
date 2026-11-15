@@ -6,6 +6,9 @@ const stringBoolean = z
   .default("true")
   .transform((v) => v === "true");
 
+export type PodcastDiscoveryProvider = "itunes" | "podcastindex" | "none";
+export type PodcastStreamMode = "proxy" | "redirect";
+
 const EnvSchema = z
   .object({
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -32,6 +35,15 @@ const EnvSchema = z
     STATS_FLUSH_INTERVAL_MS: z.coerce.number().int().positive().default(30_000),
     STATS_PULSE_CAP_MS: z.coerce.number().int().positive().default(15_000),
     STATS_HLS_IDLE_MS: z.coerce.number().int().positive().default(60_000),
+    PODCASTS_ENABLED: stringBoolean,
+    PODCAST_DISCOVERY_PROVIDER: z.enum(["itunes", "podcastindex", "none"]).default("itunes"),
+    PODCAST_STREAM_MODE: z.enum(["proxy", "redirect"]).default("proxy"),
+    PODCAST_FEED_MAX_BYTES: z.coerce.number().int().positive().default(5_242_880),
+    PODCAST_REFRESH_INTERVAL_MS: z.coerce.number().int().positive().default(900_000),
+    PODCAST_PLAYBACK_TOKEN_TTL: z.string().min(1).default("6h"),
+    PODCAST_STATS_RETENTION_DAYS: z.coerce.number().int().positive().default(730),
+    PODCASTINDEX_API_KEY: z.string().optional(),
+    PODCASTINDEX_API_SECRET: z.string().optional(),
     STATIC_DIR: z.string().optional(),
   })
   .superRefine((data, ctx) => {
@@ -79,6 +91,21 @@ export interface Config {
   statsFlushIntervalMs: number;
   statsPulseCapMs: number;
   statsHlsIdleMs: number;
+  podcastsEnabled: boolean;
+  podcastDiscoveryProvider: PodcastDiscoveryProvider;
+  podcastStreamMode: PodcastStreamMode;
+  podcastFeedMaxBytes: number;
+  podcastRefreshIntervalMs: number;
+  podcastPlaybackTokenTtl: string;
+  podcastPlaybackTokenTtlMs: number;
+  podcastStatsRetentionDays: number;
+  podcastIndexApiKey: string | null;
+  podcastIndexApiSecret: string | null;
+  podcastQueueMax: number;
+  podcastSubscriptionsMax: number;
+  podcastEpisodesPageSize: number;
+  podcastOpmlMaxFeeds: number;
+  podcastMaxEpisodesPerFeed: number;
   staticDir: string | null;
 }
 
@@ -121,6 +148,21 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     statsFlushIntervalMs: parsed.STATS_FLUSH_INTERVAL_MS,
     statsPulseCapMs: parsed.STATS_PULSE_CAP_MS,
     statsHlsIdleMs: parsed.STATS_HLS_IDLE_MS,
+    podcastsEnabled: parsed.PODCASTS_ENABLED,
+    podcastDiscoveryProvider: parsed.PODCAST_DISCOVERY_PROVIDER,
+    podcastStreamMode: parsed.PODCAST_STREAM_MODE,
+    podcastFeedMaxBytes: parsed.PODCAST_FEED_MAX_BYTES,
+    podcastRefreshIntervalMs: parsed.PODCAST_REFRESH_INTERVAL_MS,
+    podcastPlaybackTokenTtl: parsed.PODCAST_PLAYBACK_TOKEN_TTL,
+    podcastPlaybackTokenTtlMs: parseDuration(parsed.PODCAST_PLAYBACK_TOKEN_TTL),
+    podcastStatsRetentionDays: parsed.PODCAST_STATS_RETENTION_DAYS,
+    podcastIndexApiKey: parsed.PODCASTINDEX_API_KEY?.trim() || null,
+    podcastIndexApiSecret: parsed.PODCASTINDEX_API_SECRET?.trim() || null,
+    podcastQueueMax: 200,
+    podcastSubscriptionsMax: 200,
+    podcastEpisodesPageSize: 50,
+    podcastOpmlMaxFeeds: 200,
+    podcastMaxEpisodesPerFeed: 500,
     staticDir: parsed.STATIC_DIR || null,
   };
 }
@@ -129,11 +171,14 @@ export type UserTheme = "light" | "dark";
 
 export type UserDefaultView = "explorar" | "favoritos" | "historial";
 
+export type UserDefaultSection = "radio" | "podcasts";
+
 export interface PublicUser {
   id: number;
   email: string;
   name: string | null;
   theme: UserTheme;
   defaultView: UserDefaultView;
+  defaultSection: UserDefaultSection;
   createdAt: number;
 }

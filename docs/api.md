@@ -39,5 +39,34 @@ Resumen de endpoints (todos bajo `/api/v1`):
 | `GET` | `/stats/me/genres` | autenticado | Tiempo por género (from/to/limit) |
 | `GET` | `/stats/me/countries` | autenticado | Tiempo por país (from/to) |
 | `GET` | `/stats/me/recent` | autenticado | Escuchas recientes con duración (limit) |
+| `GET` | `/podcasts/search` | autenticado | Búsqueda de podcasts en directorio (q, limit) |
+| `POST` | `/podcasts/resolve` | autenticado | Resuelve e ingiere un feed RSS/Atom (`feedUrl`) |
+| `GET` | `/podcasts/subscriptions` | autenticado | Lista de suscripciones de podcasts |
+| `POST` | `/podcasts/subscriptions` | autenticado | Suscripción por `podcastId` o `feedUrl` |
+| `POST` | `/podcasts/subscriptions/bulk` | autenticado | Importación en lote de feeds (OPML) |
+| `GET` | `/podcasts/subscriptions/opml` | autenticado | Exportación OPML 2.0 de suscripciones |
+| `DELETE` | `/podcasts/subscriptions/:podcastId` | autenticado | Baja de suscripción a un podcast |
+| `GET` | `/podcasts/home` | autenticado | Portada agregada (continuar, novedades, suscripciones, cola) |
+| `GET` | `/podcasts/queue` | autenticado | Cola de reproducción con su `revision` |
+| `POST` | `/podcasts/queue` | autenticado | Añade un episodio al final o como siguiente (`position`) |
+| `PUT` | `/podcasts/queue/order` | autenticado | Reordena la cola con `baseRevision` (`409` si obsoleta) |
+| `DELETE` | `/podcasts/queue/:episodeId` | autenticado | Quita un episodio de la cola |
+| `GET` | `/podcasts/favorites` | autenticado | Lista episodios favoritos de podcasts |
+| `POST` | `/podcasts/favorites` | autenticado | Marca un episodio como favorito |
+| `DELETE` | `/podcasts/favorites/:episodeId` | autenticado | Quita un episodio de favoritos |
+| `GET` | `/podcasts/:podcastId` | autenticado | Ficha de un podcast |
+| `GET` | `/podcasts/:podcastId/episodes` | autenticado | Episodios paginados (sort, filter, offset, limit) |
+| `POST` | `/podcasts/episodes/:episodeId/playback` | autenticado | Emite URL firmada de reproducción (`6h` TTL) |
+| `GET` | `/podcasts/episodes/:episodeId/stream` | firma HMAC | Stream de audio del episodio (`Range`, `206`/`416`) |
+| `GET` | `/podcasts/episodes/:episodeId/progress` | autenticado | Consulta el progreso guardado del episodio |
+| `PUT` | `/podcasts/episodes/:episodeId/progress` | autenticado | Registra progreso y sesión de escucha (idempotente) |
+| `POST` | `/podcasts/episodes/:episodeId/progress` | autenticado | Alias de progreso para `keepalive`/`sendBeacon` |
+| `GET` | `/podcasts/stats/summary` | autenticado | Resumen de tiempo, episodios empezados/completados y tasa de finalización |
+| `GET` | `/podcasts/stats/top-podcasts` | autenticado | Ranking de podcasts por tiempo escuchado (`limit`) |
+| `GET` | `/podcasts/stats/top-episodes` | autenticado | Ranking de episodios por tiempo escuchado (`limit`) |
+| `GET` | `/podcasts/stats/timeline` | autenticado | Serie temporal (`granularity=day\|week\|month`) |
+| `GET` | `/podcasts/stats/habits` | autenticado | Tiempo por día de la semana y hora |
+| `GET` | `/podcasts/stats/categories` | autenticado | Tiempo por categoría (`limit`) |
+| `GET` | `/podcasts/stats/recent` | autenticado | Sesiones de escucha recientes (`limit`) |
 
 Errores en formato `{ "error": { "code", "message", "status", "details?" } }`.

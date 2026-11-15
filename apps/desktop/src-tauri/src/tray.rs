@@ -119,10 +119,10 @@ fn build_player_submenu(
     player: &PlayerUpdate,
     shortcuts: ShortcutLabels,
 ) -> tauri::Result<Submenu<Wry>> {
-    let has_station = player.has_station();
+    let has_media = player.has_media();
     let title = match player.name.as_deref().filter(|name| !name.trim().is_empty()) {
-        Some(name) if has_station => name.to_string(),
-        _ if has_station => "Emisora en reproducción".to_string(),
+        Some(name) if has_media => name.to_string(),
+        _ if has_media => "Reproduciendo".to_string(),
         _ => NO_STATION_TEXT.to_string(),
     };
 
@@ -131,14 +131,14 @@ fn build_player_submenu(
         app,
         "player_toggle",
         with_shortcut(play_text, "Ctrl+Alt+P", shortcuts.play_pause),
-        has_station,
+        has_media,
         None::<&str>,
     )?;
     let stop = MenuItem::with_id(
         app,
         "player_stop",
         with_shortcut("Detener", "Ctrl+Alt+S", shortcuts.stop),
-        has_station,
+        has_media,
         None::<&str>,
     )?;
     let separator = PredefinedMenuItem::separator(app)?;
@@ -146,14 +146,14 @@ fn build_player_submenu(
         app,
         "player_volume_up",
         with_shortcut("Subir volumen", "Ctrl+Alt+↑", shortcuts.volume_up),
-        has_station,
+        has_media,
         None::<&str>,
     )?;
     let volume_down = MenuItem::with_id(
         app,
         "player_volume_down",
         with_shortcut("Bajar volumen", "Ctrl+Alt+↓", shortcuts.volume_down),
-        has_station,
+        has_media,
         None::<&str>,
     )?;
     let mute_text = if player.muted {
@@ -165,7 +165,7 @@ fn build_player_submenu(
         app,
         "player_mute",
         with_shortcut(mute_text, "Ctrl+Alt+M", shortcuts.mute),
-        has_station,
+        has_media,
         None::<&str>,
     )?;
     let volume_percent = (player.volume * 100.0).round();
@@ -185,7 +185,7 @@ fn build_player_submenu(
         &mute,
         &volume_info,
     ];
-    Submenu::with_id_and_items(app, "player_menu", title, has_station, &items)
+    Submenu::with_id_and_items(app, "player_menu", title, has_media, &items)
 }
 
 /// Submenú de favoritos: acceso a la sección y una entrada por emisora.

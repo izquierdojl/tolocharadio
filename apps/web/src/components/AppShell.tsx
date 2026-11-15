@@ -1,20 +1,101 @@
 import { useEffect, useRef, useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { ChartColumn, ChevronDown, Heart, History, Home, LogOut, Menu, Radio, UserRound, X } from "lucide-react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import {
+  ChartColumn,
+  ChevronDown,
+  Compass,
+  Heart,
+  History,
+  Home,
+  ListMusic,
+  LogOut,
+  Menu,
+  Mic,
+  Radio,
+  Rss,
+  UserRound,
+  X,
+} from "lucide-react";
+import { fetchPublicConfig } from "../lib/api.js";
 import { useAuthStore } from "../stores/auth.js";
 import { AboutSection } from "./AboutSection.js";
+import { PodcastAutoAdvance } from "./podcasts/PodcastAutoAdvance.js";
 import { SierraEmblem } from "./SierraEmblem.js";
 import { PlayerBar } from "./PlayerBar.js";
 import { ThemeToggle } from "./ThemeToggle.js";
 import { ViewModeToggle } from "./ViewModeToggle.js";
 
-const NAV_ITEMS = [
+interface NavItem {
+  to: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  auth: boolean;
+  end?: boolean;
+}
+
+const NAV_ITEMS: NavItem[] = [
   { to: "/explorar", label: "Explorar", icon: Home, auth: true },
   { to: "/favoritos", label: "Favoritos", icon: Heart, auth: true },
   { to: "/historial", label: "Historial", icon: History, auth: true },
   { to: "/estadisticas", label: "Estadísticas", icon: ChartColumn, auth: true },
   { to: "/mis-emisoras", label: "Mis emisoras", icon: Radio, auth: true },
 ];
+
+const PODCAST_NAV_ITEMS: NavItem[] = [
+  { to: "/podcasts", label: "Inicio", icon: Home, auth: true, end: true },
+  { to: "/podcasts/descubrir", label: "Descubrir", icon: Compass, auth: true },
+  { to: "/podcasts/suscripciones", label: "Suscripciones", icon: Rss, auth: true },
+  { to: "/podcasts/cola", label: "Cola", icon: ListMusic, auth: true },
+  { to: "/podcasts/favoritos", label: "Favoritos", icon: Heart, auth: true },
+  { to: "/podcasts/estadisticas", label: "Estadísticas", icon: ChartColumn, auth: true },
+];
+
+type Section = "radio" | "podcasts";
+
+function SectionSwitch({
+  current,
+  onChange,
+  fullWidth = false,
+}: {
+  current: Section;
+  onChange: (section: Section) => void;
+  fullWidth?: boolean;
+}) {
+  const base = "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition";
+  return (
+    <div
+      role="group"
+      aria-label="Sección"
+      className={`flex items-center gap-0.5 rounded-lg border border-line bg-surface p-0.5 ${
+        fullWidth ? "w-full" : ""
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => onChange("radio")}
+        aria-pressed={current === "radio"}
+        className={`${base} ${
+          current === "radio" ? "bg-surface-soft text-foreground" : "text-muted hover:text-foreground"
+        }`}
+      >
+        <Radio className="size-3.5" />
+        Radio
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange("podcasts")}
+        aria-pressed={current === "podcasts"}
+        className={`${base} ${
+          current === "podcasts" ? "bg-surface-soft text-foreground" : "text-muted hover:text-foreground"
+        }`}
+      >
+        <Mic className="size-3.5" />
+        Podcasts
+      </button>
+    </div>
+  );
+}
 
 const GITHUB_URL = "https://www.github.com/izquierdojl/tolocharadio";
 
@@ -133,8 +214,24 @@ function UserMenu() {
 function Header() {
   const status = useAuthStore((s) => s.status);
   const location = useLocation();
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { data: config } = useQuery({
+    queryKey: ["config"],
+    queryFn: fetchPublicConfig,
+    staleTime: Infinity,
+  });
+
+  const podcastsEnabled = status === "authenticated" && Boolean(config?.features?.podcasts);
+  const inPodcasts =
+    location.pathname === "/podcasts" || location.pathname.startsWith("/podcasts/");
+  const section: Section = inPodcasts && podcastsEnabled ? "podcasts" : "radio";
+  const navItems = section === "podcasts" ? PODCAST_NAV_ITEMS : NAV_ITEMS;
+  const changeSection = (next: Section): void => {
+    setMenuOpen(false);
+    navigate(next === "podcasts" ? "/podcasts" : "/explorar");
+  };
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -158,14 +255,20 @@ function Header() {
     <header className="sticky top-0 z-30 border-b border-line bg-surface-raised/80 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
         <Logo />
+        {podcastsEnabled ? (
+          <div className="hidden w-44 shrink-0 md:block">
+            <SectionSwitch current={section} onChange={changeSection} />
+          </div>
+        ) : null}
         <nav className="hidden items-center gap-1 sm:flex">
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             if (item.auth && status !== "authenticated") return null;
             const Icon = item.icon;
             return (
               <NavLink
                 key={item.to}
                 to={item.to}
+                end={item.end}
                 className={({ isActive }) =>
                   `flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors ${
                     isActive
@@ -175,7 +278,7 @@ function Header() {
                 }
               >
                 <Icon className="size-4" />
-                <span className="hidden sm:inline">{item.label}</span>
+                <span className="hidden lg:inline">{item.label}</span>
               </NavLink>
             );
           })}
@@ -213,13 +316,19 @@ function Header() {
               role="menu"
               className="absolute right-0 z-40 mt-2 w-56 overflow-hidden rounded-xl border border-line bg-surface-raised p-1.5 shadow-xl shadow-black/30"
             >
-              {NAV_ITEMS.map((item) => {
+              {podcastsEnabled ? (
+                <div className="mb-1 px-1 py-1">
+                  <SectionSwitch current={section} onChange={changeSection} fullWidth />
+                </div>
+              ) : null}
+              {navItems.map((item) => {
                 if (item.auth && status !== "authenticated") return null;
                 const Icon = item.icon;
                 return (
                   <NavLink
                     key={item.to}
                     to={item.to}
+                    end={item.end}
                     role="menuitem"
                     onClick={() => setMenuOpen(false)}
                     className={({ isActive }) =>
@@ -305,6 +414,7 @@ function Header() {
 export function AppShell() {
   return (
     <div className="flex min-h-dvh flex-col bg-surface">
+      <PodcastAutoAdvance />
       <Header />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-44 pt-6">
         <Outlet />

@@ -1,11 +1,12 @@
 import type { Request, Response } from "express";
+import type { PublicUser } from "../config/env.js";
 import { AppError, unauthorized } from "../errors.js";
 
 export const ACCESS_COOKIE = "tolocha-access";
 
 export function requireAuth(ctx: {
   jwt: { verifyAccessToken(token: string): Promise<{ userId: number }> };
-  auth: { publicUser(userId: number): Promise<{ id: number; email: string; name: string | null; theme: "light" | "dark"; defaultView: "explorar" | "favoritos" | "historial"; createdAt: number } | null> };
+  auth: { publicUser(userId: number): Promise<PublicUser | null> };
 }) {
   return async (req: Request, res: Response, next: (err?: unknown) => void) => {
     try {

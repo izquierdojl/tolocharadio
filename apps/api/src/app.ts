@@ -9,10 +9,12 @@ import { AppError } from "./errors.js";
 import { swaggerUiDistPath, swaggerUiHtml } from "./lib/swagger.js";
 import { buildOpenApi } from "./openapi.js";
 import { authRouter } from "./routes/auth.js";
+import { configRouter } from "./routes/config.js";
 import { customStationsRouter } from "./routes/customStations.js";
 import { favoritesRouter } from "./routes/favorites.js";
 import { historyRouter } from "./routes/history.js";
 import { playbackRouter } from "./routes/playback.js";
+import { podcastsRouter } from "./routes/podcasts.js";
 import { stationsRouter } from "./routes/stations.js";
 import { statsRouter } from "./routes/stats.js";
 import { suggestionsRouter } from "./routes/suggestions.js";
@@ -77,10 +79,7 @@ export function createApp(ctx: AppContext): express.Express {
     res.json({ status: "ok", uptime: process.uptime(), timestamp: Date.now() });
   });
 
-  app.get("/api/v1/config", (req, res) => {
-    res.json({ appName: "TolochaRadio", registrationEnabled: ctx.config.registrationEnabled });
-  });
-
+  app.use("/api/v1", configRouter(ctx));
   app.use("/api/v1", authRouter(ctx));
   app.use("/api/v1", usersRouter(ctx));
   app.use("/api/v1", stationsRouter(ctx));
@@ -90,6 +89,7 @@ export function createApp(ctx: AppContext): express.Express {
   app.use("/api/v1", suggestionsRouter(ctx));
   app.use("/api/v1", statsRouter(ctx));
   app.use("/api/v1", playbackRouter(ctx));
+  app.use("/api/v1", podcastsRouter(ctx));
 
   app.get("/api/v1/openapi.json", (req, res) => {
     res.json(buildOpenApi());

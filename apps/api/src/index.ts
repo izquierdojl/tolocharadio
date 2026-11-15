@@ -11,6 +11,8 @@ const { db, sqlite } = createDb(config.databasePath);
 applyMigrations(db, migrationsFolderPath());
 const ctx = createContext(config, db);
 ctx.stats.start();
+ctx.podcastRefresh.start();
+ctx.podcastStats.start();
 const app = createApp(ctx);
 
 const server = app.listen(config.port, () => {
@@ -20,6 +22,8 @@ const server = app.listen(config.port, () => {
 
 function shutdown(): void {
   server.close(() => {
+    ctx.podcastRefresh.stop();
+    ctx.podcastStats.stop();
     ctx.stats.stop();
     sqlite.close();
     process.exit(0);

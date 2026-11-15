@@ -33,6 +33,54 @@ export interface StatsRecentEntry {
   durationMs: number;
 }
 
+export interface PodcastStatsSummary {
+  totalMs: number;
+  episodesStarted: number;
+  episodesCompleted: number;
+  completionRate: number;
+  podcastsCount: number;
+  averageEpisodeMs: number;
+}
+
+export interface PodcastStatsTopPodcast {
+  podcastId: number;
+  title: string;
+  author: string | null;
+  imageUrl: string | null;
+  totalMs: number;
+  episodesStarted: number;
+  episodesCompleted: number;
+}
+
+export interface PodcastStatsTopEpisode {
+  episodeId: number;
+  podcastId: number;
+  title: string;
+  podcastTitle: string;
+  imageUrl: string | null;
+  totalMs: number;
+  completed: boolean;
+}
+
+export interface PodcastStatsCategory {
+  category: string;
+  totalMs: number;
+}
+
+export interface PodcastStatsRecent {
+  episodeId: number;
+  podcastId: number;
+  episodeTitle: string;
+  podcastTitle: string;
+  imageUrl: string | null;
+  startedAt: number;
+  endedAt: number;
+  listenedMs: number;
+  positionSec: number | null;
+  durationSec: number | null;
+  completed: boolean;
+}
+
 export type StatsPreset = "7d" | "30d" | "90d" | "all" | "custom";
 export type TimelineGranularity = "day" | "week" | "month";
 
@@ -82,6 +130,11 @@ export function formatAxisDuration(ms: number): string {
   const h = Math.floor(totalMin / 60);
   if (h < 24) return `${h}h`;
   return `${Math.floor(h / 24)}d ${h % 24}h`;
+}
+
+/// Tasa de finalizacion como porcentaje entero acotado a [0, 100].
+export function formatCompletionRate(rate: number): string {
+  return `${Math.round(Math.min(1, Math.max(0, rate)) * 100)} %`;
 }
 
 function pad2(n: number): string {

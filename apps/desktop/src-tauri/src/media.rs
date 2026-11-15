@@ -2,8 +2,12 @@
 mod imp {
     use std::sync::mpsc::{self, Receiver, Sender};
     use std::sync::Mutex;
+    use std::time::Duration;
 
-    use souvlaki::{MediaControlEvent, MediaControls, MediaMetadata, MediaPlayback, PlatformConfig};
+    use souvlaki::{
+        MediaControlEvent, MediaControls, MediaMetadata, MediaPlayback, MediaPosition,
+        PlatformConfig,
+    };
     use tauri::AppHandle;
 
     use crate::bridge::{self, PlayerUpdate};
@@ -73,8 +77,13 @@ mod imp {
             MediaControlEvent::Stop => {
                 bridge::emit_command(app, bridge::action_command("stop"));
             }
-            // Las emisoras no tienen cola: siguiente y anterior no tienen acción.
-            MediaControlEvent::Next | MediaControlEvent::Previous => {}
+            // La interfaz decide si hay cola de podcasts que avanzar o retroceder.
+            MediaControlEvent::Next => {
+                bridge::emit_command(app, bridge::action_command("next"));
+            }
+            MediaControlEvent::Previous => {
+                bridge::emit_command(app, bridge::action_command("previous"));
+            }
             _ => {}
         }
     }
@@ -85,19 +94,28 @@ mod imp {
             .favicon
             .as_deref()
             .filter(|url| url.starts_with("http://") || url.starts_with("https://"));
+        let duration = update
+            .duration_sec
+            .filter(|sec| *sec > 0.0)
+            .map(Duration::from_secs_f64);
 
         let _ = controls.set_metadata(MediaMetadata {
             title: Some(title),
-            artist: Some("TolochaRadio"),
+            artist: Some(update.artist.as_deref().unwrap_or("TolochaRadio")),
             album: None,
             cover_url: cover,
-            duration: None,
+            duration,
         });
 
+        let progress = update
+            .position_sec
+            .filter(|sec| *sec >= 0.0)
+            .map(|sec| MediaPosition(Duration::from_secs_f64(sec)));
+
         let playback = if update.is_playing {
-            MediaPlayback::Playing { progress: None }
-        } else if update.has_station() {
-            MediaPlayback::Paused { progress: None }
+            MediaPlayback::Playing { progress }
+        } else if update.has_media() {
+            MediaPlayback::Paused { progress }
         } else {
             MediaPlayback::Stopped
         };
