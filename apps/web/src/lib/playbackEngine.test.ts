@@ -8,6 +8,9 @@ class FakeAudio extends EventTarget {
   volume = 1;
   muted = false;
   preload = "";
+  currentTime = 0;
+  duration = 0;
+  playbackRate = 1;
   canPlayType = vi.fn(() => "");
 
   play = vi.fn(async () => {
@@ -180,5 +183,54 @@ describe("PlaybackEngine", () => {
     expect(latest().status).toBe("idle");
     expect(audio.src).toBe("");
     expect(audio.pause).toHaveBeenCalled();
+  });
+
+  it("reproduce un episodio de podcast con posicion inicial, seek, skip, playbackRate y ended sin reconectar", async () => {
+    const onEpisodeEnded = vi.fn();
+    engine = new PlaybackEngine({
+      audio: audio as unknown as HTMLAudioElement,
+      prepareSession: prepareSession as unknown as () => Promise<boolean>,
+      sourceUrl: (stationId, attempt, mode) => `${mode}:${stationId}:${attempt}`,
+      supportsNativeHls: () => nativeSupport,
+      onChange: (snapshot) => snapshots.push(snapshot),
+      onEpisodeEnded,
+    });
+
+    engine.playPodcast({
+      episodeId: 42,
+      resolveUrl: async () => "/api/v1/podcasts/episodes/42/stream?sig=abc",
+      initialPositionSec: 120,
+      durationSec: 600,
+    });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(audio.src).toBe("/api/v1/podcasts/episodes/42/stream?sig=abc");
+    expect(audio.currentTime).toBe(120);
+    expect(latest().status).toBe("playing");
+    expect(latest().currentTime).toBe(120);
+
+    // Simular avance continuo de 2 segundos
+    audio.currentTime = 122;
+    audio.dispatchEvent(new Event("timeupdate"));
+    expect(latest().listenedMs).toBe(2000);
+
+    // Un salto seek de +30s no infla listenedMs
+    engine.skip(30);
+    expect(audio.currentTime).toBe(152);
+    audio.dispatchEvent(new Event("timeupdate"));
+    expect(latest().listenedMs).toBe(2000);
+
+    // Cambio de velocidad
+    engine.setPlaybackRate(1.5);
+    expect(audio.playbackRate).toBe(1.5);
+    expect(latest().playbackRate).toBe(1.5);
+
+    // Al llegar a ended no reconecta sino que notifica onEpisodeEnded
+    audio.dispatchEvent(new Event("ended"));
+    expect(latest().status).toBe("paused");
+    expect(onEpisodeEnded).toHaveBeenCalledWith(
+      42,
+      expect.objectContaining({ currentTime: 600, listenedMs: 2000 }),
+    );
   });
 });

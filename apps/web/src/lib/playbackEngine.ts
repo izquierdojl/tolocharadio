@@ -20,11 +20,22 @@ export interface PlaybackStationRef {
   url: string;
 }
 
+export interface PlaybackPodcastRef {
+  episodeId: number;
+  resolveUrl: () => Promise<string>;
+  initialPositionSec?: number;
+  durationSec?: number | null;
+}
+
 export interface PlaybackSnapshot {
   status: PlaybackStatus;
   error: string | null;
   buffering: boolean;
   attempt: number;
+  currentTime: number;
+  duration: number;
+  playbackRate: number;
+  listenedMs: number;
 }
 
 export interface PlaybackEngineDeps {
@@ -33,6 +44,7 @@ export interface PlaybackEngineDeps {
   sourceUrl: (stationId: string, attempt: number, mode: "live" | "native") => string;
   supportsNativeHls: () => boolean;
   onChange: (snapshot: PlaybackSnapshot) => void;
+  onEpisodeEnded?: (episodeId: number, snapshot: PlaybackSnapshot) => void;
   now?: () => number;
   setTimeoutFn?: (fn: () => void, ms: number) => ReturnType<typeof setTimeout>;
   clearTimeoutFn?: (id: ReturnType<typeof setTimeout>) => void;
@@ -60,7 +72,9 @@ export class PlaybackEngine {
   private readonly every: (fn: () => void, ms: number) => ReturnType<typeof setInterval>;
   private readonly cancelEvery: (id: ReturnType<typeof setInterval>) => void;
 
+  private kind: "radio" | "podcast" | null = null;
   private station: PlaybackStationRef | null = null;
+  private podcast: PlaybackPodcastRef | null = null;
   private status: PlaybackStatus = "idle";
   private error: string | null = null;
   private buffering = false;
@@ -68,6 +82,13 @@ export class PlaybackEngine {
   private generation = 0;
   private mode: "live" | "native" = "live";
   private lastProgressAt = 0;
+
+  private currentTime = 0;
+  private duration = 0;
+  private playbackRate = 1;
+  private listenedMs = 0;
+  private lastAudioTime: number | null = null;
+  private pendingSeekSec: number | null = null;
 
   private connectTimer: ReturnType<typeof setTimeout> | null = null;
   private stableTimer: ReturnType<typeof setTimeout> | null = null;
@@ -85,8 +106,10 @@ export class PlaybackEngine {
     const audio = deps.audio;
     audio.addEventListener("playing", this.onPlaying);
     audio.addEventListener("pause", this.onPause);
-    audio.addEventListener("timeupdate", this.onProgress);
+    audio.addEventListener("timeupdate", this.onTimeUpdate);
     audio.addEventListener("progress", this.onProgress);
+    audio.addEventListener("loadedmetadata", this.onLoadedMetadata);
+    audio.addEventListener("durationchange", this.onLoadedMetadata);
     audio.addEventListener("ended", this.onEnded);
     audio.addEventListener("error", this.onError);
     audio.addEventListener("waiting", this.onWaiting);
@@ -94,7 +117,7 @@ export class PlaybackEngine {
   }
 
   play(station: PlaybackStationRef): void {
-    const same = this.station?.id === station.id;
+    const same = this.kind === "radio" && this.station?.id === station.id;
     if (same && (this.status === "playing" || this.status === "connecting")) return;
     if (same && this.status === "reconnecting") return;
     if (same && this.status === "paused") {
@@ -102,8 +125,15 @@ export class PlaybackEngine {
       return;
     }
 
+    this.kind = "radio";
+    this.podcast = null;
     this.station = { id: station.id, url: station.url };
     this.mode = "live";
+    this.currentTime = 0;
+    this.duration = 0;
+    this.listenedMs = 0;
+    this.lastAudioTime = null;
+    this.pendingSeekSec = null;
     this.policy.reset();
     this.attempt = 0;
     this.error = null;
@@ -113,8 +143,65 @@ export class PlaybackEngine {
     this.beginConnect();
   }
 
+  playPodcast(target: PlaybackPodcastRef): void {
+    const same = this.kind === "podcast" && this.podcast?.episodeId === target.episodeId;
+    if (same && (this.status === "playing" || this.status === "connecting")) return;
+    if (same && this.status === "reconnecting") return;
+    if (same && this.status === "paused") {
+      this.resume();
+      return;
+    }
+
+    this.kind = "podcast";
+    this.station = null;
+    this.podcast = target;
+    this.currentTime = Math.max(0, target.initialPositionSec ?? 0);
+    this.duration = Math.max(0, target.durationSec ?? 0);
+    this.listenedMs = 0;
+    this.lastAudioTime = null;
+    this.pendingSeekSec = this.currentTime > 0 ? this.currentTime : null;
+    this.policy.reset();
+    this.attempt = 0;
+    this.error = null;
+    this.buffering = false;
+    this.status = "connecting";
+    this.emit();
+    this.beginConnect();
+  }
+
+  seek(positionSec: number): void {
+    if (this.kind !== "podcast") return;
+    const maxSec = this.duration > 0 ? this.duration : Number.MAX_SAFE_INTEGER;
+    const clamped = Math.max(0, Math.min(positionSec, maxSec));
+    this.currentTime = clamped;
+    this.lastAudioTime = clamped;
+    this.pendingSeekSec = clamped;
+    try {
+      this.deps.audio.currentTime = clamped;
+    } catch {
+      // Si el elemento aún no ha cargado metadatos, se aplicará en loadedmetadata
+    }
+    this.emit();
+  }
+
+  skip(deltaSec: number): void {
+    if (this.kind !== "podcast") return;
+    this.seek(this.currentTime + deltaSec);
+  }
+
+  setPlaybackRate(rate: number): void {
+    const validRate = Number.isFinite(rate) && rate >= 0.5 && rate <= 3 ? rate : 1;
+    this.playbackRate = validRate;
+    try {
+      this.deps.audio.playbackRate = validRate;
+    } catch {
+      // Ignorar en entornos mockeados sin setter
+    }
+    this.emit();
+  }
+
   toggle(): void {
-    if (!this.station) return;
+    if (!this.station && !this.podcast) return;
     if (this.status === "playing") {
       this.deps.audio.pause();
       return;
@@ -127,7 +214,10 @@ export class PlaybackEngine {
   }
 
   retry(): void {
-    if (!this.station) return;
+    if (!this.station && !this.podcast) return;
+    if (this.kind === "podcast" && this.currentTime > 0) {
+      this.pendingSeekSec = this.currentTime;
+    }
     this.policy.reset();
     this.attempt = 0;
     this.error = null;
@@ -141,11 +231,18 @@ export class PlaybackEngine {
     this.generation += 1;
     this.clearTimers();
     this.policy.reset();
+    this.kind = null;
     this.station = null;
+    this.podcast = null;
     this.status = "idle";
     this.error = null;
     this.buffering = false;
     this.attempt = 0;
+    this.currentTime = 0;
+    this.duration = 0;
+    this.listenedMs = 0;
+    this.lastAudioTime = null;
+    this.pendingSeekSec = null;
 
     const audio = this.deps.audio;
     audio.pause();
@@ -155,7 +252,7 @@ export class PlaybackEngine {
   }
 
   private resume(): void {
-    if (!this.station) return;
+    if (!this.station && !this.podcast) return;
     const audio = this.deps.audio;
     if (!audio.src || audio.error) {
       this.status = "connecting";
@@ -171,8 +268,10 @@ export class PlaybackEngine {
   }
 
   private beginConnect(): void {
+    const kind = this.kind;
     const station = this.station;
-    if (!station) return;
+    const podcast = this.podcast;
+    if (!kind || (kind === "radio" && !station) || (kind === "podcast" && !podcast)) return;
     const generation = ++this.generation;
     this.clearTimers();
 
@@ -184,10 +283,33 @@ export class PlaybackEngine {
         return;
       }
 
-      const source = this.deps.sourceUrl(station.id, this.attempt, this.mode);
+      let source: string;
+      if (kind === "podcast" && podcast) {
+        try {
+          source = await podcast.resolveUrl();
+        } catch {
+          if (generation !== this.generation) return;
+          this.recover();
+          return;
+        }
+        if (generation !== this.generation) return;
+      } else if (station) {
+        source = this.deps.sourceUrl(station.id, this.attempt, this.mode);
+      } else {
+        return;
+      }
+
       this.lastProgressAt = this.now();
       try {
         this.deps.audio.src = source;
+        if (kind === "podcast") {
+          this.deps.audio.playbackRate = this.playbackRate;
+          if (this.pendingSeekSec !== null && this.pendingSeekSec > 0) {
+            this.deps.audio.currentTime = this.pendingSeekSec;
+          }
+        } else {
+          this.deps.audio.playbackRate = 1;
+        }
       } catch {
         this.recover();
         return;
@@ -198,13 +320,17 @@ export class PlaybackEngine {
   }
 
   private recover(): void {
-    if (!this.station) return;
+    if (!this.station && !this.podcast) return;
     if (this.status === "reconnecting" || this.status === "failed") return;
 
     const delay = this.policy.nextDelay();
     if (delay === null) {
       this.fail(MESSAGES.exhausted);
       return;
+    }
+
+    if (this.kind === "podcast" && this.currentTime > 0) {
+      this.pendingSeekSec = this.currentTime;
     }
 
     this.attempt += 1;
@@ -214,7 +340,7 @@ export class PlaybackEngine {
     this.emit();
     this.clearTimers();
     this.connectTimer = this.later(() => {
-      if (this.station) this.beginConnect();
+      if (this.station || this.podcast) this.beginConnect();
     }, delay);
   }
 
@@ -226,12 +352,39 @@ export class PlaybackEngine {
     this.emit();
   }
 
+  private readonly onLoadedMetadata = (): void => {
+    if (this.kind !== "podcast") return;
+    const rawDur = this.deps.audio.duration;
+    if (typeof rawDur === "number" && Number.isFinite(rawDur) && rawDur > 0) {
+      this.duration = rawDur;
+    }
+    if (this.pendingSeekSec !== null && this.pendingSeekSec > 0) {
+      const target = this.pendingSeekSec;
+      this.pendingSeekSec = null;
+      try {
+        this.deps.audio.currentTime = target;
+        this.currentTime = target;
+        this.lastAudioTime = target;
+      } catch {
+        // Ignorar
+      }
+    }
+    this.emit();
+  };
+
   private readonly onPlaying = (): void => {
     if (this.status === "idle") return;
     this.status = "playing";
     this.buffering = false;
     this.error = null;
     this.lastProgressAt = this.now();
+    if (this.kind === "podcast") {
+      this.deps.audio.playbackRate = this.playbackRate;
+      const audioTime = this.deps.audio.currentTime;
+      if (typeof audioTime === "number" && Number.isFinite(audioTime)) {
+        this.lastAudioTime = audioTime;
+      }
+    }
     this.emit();
 
     if (this.stableTimer) this.cancelLater(this.stableTimer);
@@ -245,7 +398,30 @@ export class PlaybackEngine {
     if (this.status !== "playing") return;
     this.status = "paused";
     this.buffering = false;
+    this.lastAudioTime = null;
     this.clearTimers();
+    this.emit();
+  };
+
+  private readonly onTimeUpdate = (): void => {
+    this.lastProgressAt = this.now();
+    if (this.kind !== "podcast") return;
+    const audioTime = this.deps.audio.currentTime;
+    if (typeof audioTime === "number" && Number.isFinite(audioTime) && audioTime >= 0) {
+      if (this.status === "playing" && this.lastAudioTime !== null) {
+        const deltaSec = audioTime - this.lastAudioTime;
+        // Solo acumulamos avance continuo de reproduccion (descartamos saltos seek hacia delante)
+        if (deltaSec > 0 && deltaSec <= 5) {
+          this.listenedMs += Math.round(deltaSec * 1000);
+        }
+      }
+      this.lastAudioTime = audioTime;
+      this.currentTime = audioTime;
+    }
+    const rawDur = this.deps.audio.duration;
+    if (typeof rawDur === "number" && Number.isFinite(rawDur) && rawDur > 0) {
+      this.duration = rawDur;
+    }
     this.emit();
   };
 
@@ -261,6 +437,19 @@ export class PlaybackEngine {
   };
 
   private readonly onEnded = (): void => {
+    if (this.kind === "podcast" && this.podcast) {
+      const episodeId = this.podcast.episodeId;
+      if (this.duration > 0) {
+        this.currentTime = this.duration;
+      }
+      this.status = "paused";
+      this.buffering = false;
+      this.lastAudioTime = null;
+      this.clearTimers();
+      this.emit();
+      this.deps.onEpisodeEnded?.(episodeId, this.snapshot());
+      return;
+    }
     this.recover();
   };
 
@@ -275,6 +464,7 @@ export class PlaybackEngine {
 
     if (kind === "unsupported") {
       if (
+        this.kind === "radio" &&
         this.mode === "live" &&
         this.station &&
         this.deps.supportsNativeHls() &&
@@ -323,12 +513,20 @@ export class PlaybackEngine {
     return this.deps.now?.() ?? Date.now();
   }
 
-  private emit(): void {
-    this.deps.onChange({
+  private snapshot(): PlaybackSnapshot {
+    return {
       status: this.status,
       error: this.error,
       buffering: this.buffering,
       attempt: this.attempt,
-    });
+      currentTime: this.currentTime,
+      duration: this.duration,
+      playbackRate: this.playbackRate,
+      listenedMs: this.listenedMs,
+    };
+  }
+
+  private emit(): void {
+    this.deps.onChange(this.snapshot());
   }
 }

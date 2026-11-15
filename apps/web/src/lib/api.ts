@@ -1,4 +1,19 @@
-import type { ApiErrorBody, AuthResponse, PublicConfig, Station, StringListPage, Suggestion } from "./types.js";
+import type {
+  ApiErrorBody,
+  AuthResponse,
+  BulkSubscriptionResult,
+  PodcastEpisode,
+  PodcastEpisodePage,
+  PodcastEpisodeProgress,
+  PodcastHome,
+  PodcastQueue,
+  PodcastSearchResult,
+  PodcastSummary,
+  PublicConfig,
+  Station,
+  StringListPage,
+  Suggestion,
+} from "./types.js";
 
 const API_PREFIX = "/api/v1";
 
@@ -197,4 +212,147 @@ export function createSuggestion(genre: string): Promise<{ suggestion: Suggestio
 
 export function deleteSuggestion(id: number): Promise<{ ok: true }> {
   return api.delete<{ ok: true }>(`/suggestions/${id}`);
+}
+
+export interface IssuedPlaybackToken {
+  url: string;
+  expiresAt: number;
+}
+
+export function issueEpisodePlaybackToken(episodeId: number): Promise<IssuedPlaybackToken> {
+  return api.post<IssuedPlaybackToken>(`/podcasts/episodes/${episodeId}/playback`);
+}
+
+export interface UpsertEpisodeProgressPayload {
+  sessionId: string;
+  sequence: number;
+  positionSec: number;
+  durationSec?: number | null;
+  listenedMs: number;
+  completed?: boolean;
+  occurredAt?: number;
+  source?: "web" | "android" | "desktop";
+}
+
+export function saveEpisodeProgress(
+  episodeId: number,
+  payload: UpsertEpisodeProgressPayload,
+  keepalive = false,
+): Promise<{ progress: PodcastEpisodeProgress }> {
+  return request<{ progress: PodcastEpisodeProgress }>(
+    `/podcasts/episodes/${episodeId}/progress`,
+    {
+      method: keepalive ? "POST" : "PUT",
+      body: JSON.stringify(payload),
+      keepalive,
+    },
+  );
+}
+
+async function requestText(path: string, retried = false): Promise<string> {
+  const headers = new Headers();
+  if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+  const res = await fetch(`${API_PREFIX}${path}`, { headers, credentials: "same-origin" });
+  if (!res.ok) {
+    if (!retried && res.status === 401) {
+      const token = await refreshSession();
+      if (token) return requestText(path, true);
+    }
+    throw await parseError(res);
+  }
+  return res.text();
+}
+
+export function searchPodcasts(q: string, limit = 20): Promise<{ items: PodcastSearchResult[] }> {
+  const params = new URLSearchParams({ q, limit: String(limit) });
+  return api.get<{ items: PodcastSearchResult[] }>(`/podcasts/search?${params.toString()}`);
+}
+
+export function resolvePodcastFeed(
+  feedUrl: string,
+): Promise<{ podcast: PodcastSummary; episodes: PodcastEpisodePage }> {
+  return api.post<{ podcast: PodcastSummary; episodes: PodcastEpisodePage }>("/podcasts/resolve", {
+    feedUrl,
+  });
+}
+
+export function fetchPodcast(podcastId: number): Promise<{ podcast: PodcastSummary }> {
+  return api.get<{ podcast: PodcastSummary }>(`/podcasts/${podcastId}`);
+}
+
+export function fetchPodcastEpisodes(
+  podcastId: number,
+  params: { sort?: string; filter?: string; offset?: number; limit?: number } = {},
+): Promise<PodcastEpisodePage> {
+  const q = new URLSearchParams();
+  if (params.sort) q.set("sort", params.sort);
+  if (params.filter) q.set("filter", params.filter);
+  if (params.offset !== undefined) q.set("offset", String(params.offset));
+  if (params.limit !== undefined) q.set("limit", String(params.limit));
+  const suffix = q.toString() ? `?${q.toString()}` : "";
+  return api.get<PodcastEpisodePage>(`/podcasts/${podcastId}/episodes${suffix}`);
+}
+
+export function fetchPodcastSubscriptions(): Promise<{ items: PodcastSummary[] }> {
+  return api.get<{ items: PodcastSummary[] }>("/podcasts/subscriptions");
+}
+
+export function subscribePodcast(input: {
+  podcastId?: number;
+  feedUrl?: string;
+}): Promise<{ podcast: PodcastSummary }> {
+  return api.post<{ podcast: PodcastSummary }>("/podcasts/subscriptions", input);
+}
+
+export function unsubscribePodcast(podcastId: number): Promise<{ ok: true }> {
+  return api.delete<{ ok: true }>(`/podcasts/subscriptions/${podcastId}`);
+}
+
+export function bulkSubscribePodcasts(feedUrls: string[]): Promise<BulkSubscriptionResult> {
+  return api.post<BulkSubscriptionResult>("/podcasts/subscriptions/bulk", { feedUrls });
+}
+
+export function fetchPodcastOpml(): Promise<string> {
+  return requestText("/podcasts/subscriptions/opml");
+}
+
+export function fetchPodcastHome(): Promise<PodcastHome> {
+  return api.get<PodcastHome>("/podcasts/home");
+}
+
+export function fetchPodcastQueue(): Promise<{ queue: PodcastQueue }> {
+  return api.get<{ queue: PodcastQueue }>("/podcasts/queue");
+}
+
+export function addEpisodeToQueue(
+  episodeId: number,
+  position: "end" | "next" = "end",
+): Promise<{ queue: PodcastQueue }> {
+  return api.post<{ queue: PodcastQueue }>("/podcasts/queue", { episodeId, position });
+}
+
+export function removeEpisodeFromQueue(episodeId: number): Promise<{ queue: PodcastQueue }> {
+  return api.delete<{ queue: PodcastQueue }>(`/podcasts/queue/${episodeId}`);
+}
+
+export function reorderPodcastQueue(
+  baseRevision: number,
+  episodeIds: number[],
+): Promise<{ queue: PodcastQueue }> {
+  return api.put<{ queue: PodcastQueue }>("/podcasts/queue/order", {
+    baseRevision,
+    episodeIds,
+  });
+}
+
+export function fetchPodcastFavorites(): Promise<{ items: PodcastEpisode[] }> {
+  return api.get<{ items: PodcastEpisode[] }>("/podcasts/favorites");
+}
+
+export function addPodcastFavorite(episodeId: number): Promise<{ episode: PodcastEpisode }> {
+  return api.post<{ episode: PodcastEpisode }>("/podcasts/favorites", { episodeId });
+}
+
+export function removePodcastFavorite(episodeId: number): Promise<{ ok: true }> {
+  return api.delete<{ ok: true }>(`/podcasts/favorites/${episodeId}`);
 }

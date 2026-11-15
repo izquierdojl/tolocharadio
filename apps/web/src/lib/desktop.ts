@@ -1,8 +1,18 @@
-import { usePlayerStore } from "../stores/player.js";
+import { usePlayerStore, dispatchPodcastQueueAction } from "../stores/player.js";
 import type { FavoriteEntry, Station } from "./types.js";
 
 /// Secciones de la interfaz a las que puede navegar el shell de escritorio.
-export const DESKTOP_SECTIONS = ["/explorar", "/favoritos", "/historial", "/estadisticas"] as const;
+export const DESKTOP_SECTIONS = [
+  "/explorar",
+  "/favoritos",
+  "/historial",
+  "/estadisticas",
+  "/podcasts",
+  "/podcasts/descubrir",
+  "/podcasts/suscripciones",
+  "/podcasts/cola",
+  "/podcasts/favoritos",
+] as const;
 
 /// Paso de volumen para las órdenes volume_up / volume_down.
 const VOLUME_STEP = 0.05;
@@ -28,8 +38,12 @@ interface TauriGlobal {
 
 interface PlayerSnapshot {
   stationId: string | null;
+  kind: "radio" | "podcast" | null;
   name: string | null;
+  artist: string | null;
   favicon: string | null;
+  durationSec: number | null;
+  positionSec: number | null;
   isPlaying: boolean;
   isBuffering: boolean;
   volume: number;
@@ -102,16 +116,28 @@ function setShellVersion(version: string | null): void {
 }
 
 function snapshot(state: {
+  kind: "radio" | "podcast" | null;
   station: Station | null;
+  episode: { title: string; imageUrl: string | null; durationSec: number | null } | null;
+  podcast: { title: string; imageUrl: string | null } | null;
+  currentTime: number;
+  duration: number;
   isPlaying: boolean;
   isBuffering: boolean;
   volume: number;
   muted: boolean;
 }): PlayerSnapshot {
+  const isPodcast = state.kind === "podcast";
   return {
     stationId: state.station?.id ?? null,
-    name: state.station?.name ?? null,
-    favicon: state.station?.favicon ?? null,
+    kind: state.kind,
+    name: isPodcast ? (state.episode?.title ?? null) : (state.station?.name ?? null),
+    artist: isPodcast ? (state.podcast?.title ?? null) : null,
+    favicon: isPodcast
+      ? (state.episode?.imageUrl ?? state.podcast?.imageUrl ?? null)
+      : (state.station?.favicon ?? null),
+    durationSec: isPodcast ? Math.round(state.duration) || state.episode?.durationSec || null : null,
+    positionSec: isPodcast ? Math.round(state.currentTime) : null,
     isPlaying: state.isPlaying,
     isBuffering: state.isBuffering,
     volume: state.volume,
@@ -168,6 +194,12 @@ export async function initDesktopBridge(): Promise<void> {
         }
         case "mute_toggle":
           store.toggleMute();
+          break;
+        case "next":
+          dispatchPodcastQueueAction("next");
+          break;
+        case "previous":
+          dispatchPodcastQueueAction("previous");
           break;
         case "play": {
           const stationId = command.stationId;

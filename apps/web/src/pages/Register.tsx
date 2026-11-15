@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { fetchPublicConfig } from "../lib/api.js";
-import { defaultViewPath } from "../lib/defaultView.js";
+import { defaultEntryPath } from "../lib/defaultView.js";
 import { useAuthStore } from "../stores/auth.js";
 
 const inputClass =
@@ -33,7 +33,7 @@ export function Register() {
       await register(email, password, name || undefined);
       toast.success(`Bienvenido, ${(name || email).split("@")[0]}`);
       void queryClient.invalidateQueries();
-      navigate(defaultViewPath(useAuthStore.getState().user?.defaultView));
+      navigate(defaultEntryPath(useAuthStore.getState().user));
     } catch (err) {
       const msg = err instanceof Error ? err.message : "No se pudo completar el registro";
       toast.error(msg);

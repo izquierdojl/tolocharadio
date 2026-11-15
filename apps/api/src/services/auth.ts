@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import type { Config, PublicUser, UserDefaultView, UserTheme } from "../config/env.js";
+import type { Config, PublicUser, UserDefaultSection, UserDefaultView, UserTheme } from "../config/env.js";
 import type { DB } from "../db/client.js";
 import { passwordResetTokens, refreshTokens, users } from "../db/schema.js";
 import { badRequest, conflict, forbidden, unauthorized, validationError } from "../errors.js";
@@ -42,6 +42,7 @@ function toPublicUser(user: UserRow): PublicUser {
     name: user.name,
     theme: user.theme as UserTheme,
     defaultView: (user.defaultView as UserDefaultView) ?? "explorar",
+    defaultSection: (user.defaultSection as UserDefaultSection) ?? "radio",
     createdAt: user.createdAt,
   };
 }
@@ -202,7 +203,12 @@ export class AuthService {
 
   async updateProfile(
     userId: number,
-    input: { name?: string; theme?: UserTheme; defaultView?: UserDefaultView },
+    input: {
+      name?: string;
+      theme?: UserTheme;
+      defaultView?: UserDefaultView;
+      defaultSection?: UserDefaultSection;
+    },
   ): Promise<PublicUser> {
     const { db } = this.deps;
 
@@ -226,6 +232,13 @@ export class AuthService {
         throw validationError([{ field: "defaultView", message: "La vista por defecto debe ser 'explorar', 'favoritos' o 'historial'" }]);
       }
       patch.defaultView = input.defaultView;
+    }
+
+    if (input.defaultSection !== undefined) {
+      if (input.defaultSection !== "radio" && input.defaultSection !== "podcasts") {
+        throw validationError([{ field: "defaultSection", message: "La seccion por defecto debe ser 'radio' o 'podcasts'" }]);
+      }
+      patch.defaultSection = input.defaultSection;
     }
 
     if (Object.keys(patch).length === 0) {

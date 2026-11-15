@@ -1,46 +1,13 @@
 import { Router } from "express";
 import type { AppContext } from "../context.js";
-import { badRequest, unauthorized } from "../errors.js";
-import { daysBetween, isValidDay } from "../lib/time.js";
+import { unauthorized } from "../errors.js";
+import {
+  ensureTimelineRange,
+  parseGranularity,
+  parseLimit,
+  parseRange,
+} from "../lib/statsQuery.js";
 import { requireAuth } from "../middleware/auth.js";
-import type { StatsRange, TimelineGranularity } from "../services/stats.js";
-
-const MAX_TIMELINE_DAYS = 1830;
-const GRANULARITIES: readonly TimelineGranularity[] = ["day", "week", "month"];
-
-function parseDay(value: unknown, name: string): string | null {
-  if (value === undefined) return null;
-  if (typeof value !== "string" || !isValidDay(value)) {
-    throw badRequest("INVALID_PARAMS", `${name} invalido (usa YYYY-MM-DD)`);
-  }
-  return value;
-}
-
-function parseRange(query: Record<string, unknown>): StatsRange {
-  const from = parseDay(query.from, "from");
-  const to = parseDay(query.to, "to");
-  if (from && to && from > to) {
-    throw badRequest("INVALID_PARAMS", "from no puede ser posterior a to");
-  }
-  return { from, to };
-}
-
-function parseLimit(value: unknown, fallback: number, max: number): number {
-  if (value === undefined) return fallback;
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > max) {
-    throw badRequest("INVALID_PARAMS", `limit invalido (1..${max})`);
-  }
-  return parsed;
-}
-
-function parseGranularity(value: unknown): TimelineGranularity {
-  if (value === undefined) return "day";
-  if (typeof value !== "string" || !GRANULARITIES.includes(value as TimelineGranularity)) {
-    throw badRequest("INVALID_PARAMS", "granularity invalida (day, week o month)");
-  }
-  return value as TimelineGranularity;
-}
 
 export function statsRouter(ctx: AppContext): Router {
   const router = Router();
@@ -64,9 +31,7 @@ export function statsRouter(ctx: AppContext): Router {
       if (!user) throw unauthorized();
       const range = parseRange(req.query);
       const granularity = parseGranularity(req.query.granularity);
-      if (range.from && range.to && daysBetween(range.from, range.to) > MAX_TIMELINE_DAYS) {
-        throw badRequest("INVALID_PARAMS", `El rango no puede superar ${MAX_TIMELINE_DAYS} dias`);
-      }
+      ensureTimelineRange(range);
       res.json({ granularity, items: ctx.stats.timeline(user.id, range, granularity) });
     } catch (err) {
       next(err);

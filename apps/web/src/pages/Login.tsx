@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { fetchPublicConfig } from "../lib/api.js";
-import { defaultViewPath } from "../lib/defaultView.js";
+import { defaultEntryPath } from "../lib/defaultView.js";
 import { useAuthStore } from "../stores/auth.js";
 
 async function handleAuth(
@@ -23,7 +23,7 @@ async function handleAuth(
     await fn(email, password, name);
     toast.success(userGreeting(name ?? email));
     invalidate();
-    navigate(defaultViewPath(useAuthStore.getState().user?.defaultView));
+    navigate(defaultEntryPath(useAuthStore.getState().user));
   } catch (err) {
     toast.error(err instanceof Error ? err.message : "No se pudo completar la operación");
   }

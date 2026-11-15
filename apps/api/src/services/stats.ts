@@ -2,25 +2,27 @@ import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import type { Config } from "../config/env.js";
 import type { DB } from "../db/client.js";
 import { playbackSessions, userStationStatsHourly } from "../db/schema.js";
-import { addDays, isoWeekday, startOfIsoWeek, zonedBucket, zonedDayBounds } from "../lib/time.js";
+import {
+  bucketKey,
+  sortEntries,
+  zeroFill,
+  type StatsRange,
+  type TimelineEntry,
+  type TimelineGranularity,
+} from "../lib/statsQuery.js";
+import { isoWeekday, zonedBucket, zonedDayBounds } from "../lib/time.js";
 import type { Station } from "./normalize.js";
+
+export type {
+  StatsRange,
+  TimelineEntry,
+  TimelineGranularity,
+} from "../lib/statsQuery.js";
 
 export type StatsSource = "direct" | "playlist" | "hls";
 
-export type TimelineGranularity = "day" | "week" | "month";
-
-export interface StatsRange {
-  from: string | null;
-  to: string | null;
-}
-
 export interface TopStationEntry {
   station: Station;
-  totalMs: number;
-}
-
-export interface TimelineEntry {
-  bucket: string;
   totalMs: number;
 }
 
@@ -71,33 +73,12 @@ function sessionKey(userId: number, stationId: string): string {
   return `${userId}:${stationId}`;
 }
 
-function pad(value: number): string {
-  return String(value).padStart(2, "0");
-}
-
-function addMonths(day: string, months: number): string {
-  const [year, month] = day.split("-").map(Number);
-  const date = new Date(Date.UTC(year!, month! - 1 + months, 1));
-  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-01`;
-}
-
 function parseSnapshot(snapshot: string): Station | null {
   try {
     return JSON.parse(snapshot) as Station;
   } catch {
     return null;
   }
-}
-
-function bucketKey(bucket: string, granularity: TimelineGranularity): string {
-  const day = bucket.slice(0, 10);
-  if (granularity === "month") return `${day.slice(0, 7)}-01`;
-  if (granularity === "week") return startOfIsoWeek(day);
-  return day;
-}
-
-function sortEntries<T extends { totalMs: number }>(entries: T[]): T[] {
-  return entries.sort((a, b) => b.totalMs - a.totalMs);
 }
 
 export class StatsService {
@@ -236,7 +217,7 @@ export class StatsService {
     const startDay = range.from ?? firstDay;
     const endDay = range.to ?? lastDay;
     if (!startDay || !endDay) return [];
-    return this.zeroFill(startDay, endDay, granularity, totals);
+    return zeroFill(startDay, endDay, granularity, totals);
   }
 
   habits(userId: number, range: StatsRange): HabitsEntry[] {
@@ -429,38 +410,5 @@ export class StatsService {
       if (station) snapshots.set(row.stationId, station);
     }
     return snapshots;
-  }
-
-  private zeroFill(
-    startDay: string,
-    endDay: string,
-    granularity: TimelineGranularity,
-    totals: Map<string, number>,
-  ): TimelineEntry[] {
-    const entries: TimelineEntry[] = [];
-    if (granularity === "month") {
-      const endMonth = `${endDay.slice(0, 7)}-01`;
-      let cursor = `${startDay.slice(0, 7)}-01`;
-      while (cursor <= endMonth) {
-        entries.push({ bucket: cursor, totalMs: totals.get(cursor) ?? 0 });
-        cursor = addMonths(cursor, 1);
-      }
-      return entries;
-    }
-    if (granularity === "week") {
-      const endWeek = startOfIsoWeek(endDay);
-      let cursor = startOfIsoWeek(startDay);
-      while (cursor <= endWeek) {
-        entries.push({ bucket: cursor, totalMs: totals.get(cursor) ?? 0 });
-        cursor = addDays(cursor, 7);
-      }
-      return entries;
-    }
-    let cursor = startDay;
-    while (cursor <= endDay) {
-      entries.push({ bucket: cursor, totalMs: totals.get(cursor) ?? 0 });
-      cursor = addDays(cursor, 1);
-    }
-    return entries;
   }
 }

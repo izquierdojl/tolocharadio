@@ -6,18 +6,37 @@ import {
   formatDurationMs,
   formatFullDay,
   type StatsRange,
+  type StatsTimelineEntry,
   type TimelineGranularity,
 } from "../../lib/stats.js";
 import { SectionCard } from "./SectionCard.js";
 
-interface TimelineChartProps {
-  range: StatsRange;
+interface TimelineChartViewProps {
+  items: StatsTimelineEntry[];
   granularity: TimelineGranularity;
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
+  title?: string;
+  description?: string;
+  emptyTitle?: string;
+  emptyDescription?: string;
+  seriesName?: string;
 }
 
-export function TimelineChart({ range, granularity }: TimelineChartProps) {
-  const { data, isLoading, isError, refetch } = useStatsTimeline(range, granularity);
-  const items = data?.items ?? [];
+/// Grafico de evolucion temporal compartido por radio y podcasts.
+export function TimelineChartView({
+  items,
+  granularity,
+  isLoading,
+  isError,
+  onRetry,
+  title = "Evolución",
+  description = "Tiempo escuchado por día, semana o mes.",
+  emptyTitle = "Sin actividad en este periodo",
+  emptyDescription = "Cuando escuches alguna emisora, aquí verás tu evolución.",
+  seriesName = "Escucha",
+}: TimelineChartViewProps) {
   const chartData = items.map((item) => ({
     ...item,
     label: formatBucketLabel(item.bucket, granularity),
@@ -26,14 +45,14 @@ export function TimelineChart({ range, granularity }: TimelineChartProps) {
 
   return (
     <SectionCard
-      title="Evolución"
-      description="Tiempo escuchado por día, semana o mes."
+      title={title}
+      description={description}
       isLoading={isLoading}
       isError={isError}
       isEmpty={isEmpty}
-      emptyTitle="Sin actividad en este periodo"
-      emptyDescription="Cuando escuches alguna emisora, aquí verás tu evolución."
-      onRetry={() => void refetch()}
+      emptyTitle={emptyTitle}
+      emptyDescription={emptyDescription}
+      onRetry={onRetry}
     >
       <div className="h-64 w-full" role="img" aria-label={`Evolución por ${granularity}`}>
         <ResponsiveContainer width="100%" height="100%">
@@ -65,12 +84,12 @@ export function TimelineChart({ range, granularity }: TimelineChartProps) {
                 const bucket = (payload?.[0]?.payload as { bucket?: string } | undefined)?.bucket;
                 return bucket ? formatFullDay(bucket) : String(_label);
               }}
-              formatter={(value) => [formatDurationMs(Number(value)), "Escucha"]}
+              formatter={(value) => [formatDurationMs(Number(value)), seriesName]}
             />
             <Area
               type="monotone"
               dataKey="totalMs"
-              name="Escucha"
+              name={seriesName}
               stroke="#c0883e"
               fill="#c0883e"
               fillOpacity={0.28}
@@ -81,5 +100,23 @@ export function TimelineChart({ range, granularity }: TimelineChartProps) {
         </ResponsiveContainer>
       </div>
     </SectionCard>
+  );
+}
+
+interface TimelineChartProps {
+  range: StatsRange;
+  granularity: TimelineGranularity;
+}
+
+export function TimelineChart({ range, granularity }: TimelineChartProps) {
+  const { data, isLoading, isError, refetch } = useStatsTimeline(range, granularity);
+  return (
+    <TimelineChartView
+      items={data?.items ?? []}
+      granularity={granularity}
+      isLoading={isLoading}
+      isError={isError}
+      onRetry={() => void refetch()}
+    />
   );
 }

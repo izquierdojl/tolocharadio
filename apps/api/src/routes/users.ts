@@ -9,6 +9,7 @@ const updateProfileSchema = z.object({
   name: z.string().optional(),
   theme: z.enum(["light", "dark"]).optional(),
   defaultView: z.enum(["explorar", "favoritos", "historial"]).optional(),
+  defaultSection: z.enum(["radio", "podcasts"]).optional(),
 });
 const updatePasswordSchema = z.object({ currentPassword: z.string(), newPassword: z.string() });
 

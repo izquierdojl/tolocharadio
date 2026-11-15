@@ -5,6 +5,7 @@ import {
   formatDurationMs,
   WEEKDAY_LABELS,
   WEEKDAY_SHORT,
+  type StatsHabitEntry,
   type StatsRange,
 } from "../../lib/stats.js";
 import { SectionCard } from "./SectionCard.js";
@@ -17,23 +18,42 @@ function cellBackground(intensity: number): string {
   return "var(--color-ochre-400)";
 }
 
-export function HabitsHeatmap({ range }: { range: StatsRange }) {
-  const { data, isLoading, isError, refetch } = useStatsHabits(range);
-  const items = data?.items ?? [];
+interface HabitsHeatmapViewProps {
+  items: StatsHabitEntry[];
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
+  title?: string;
+  description?: string;
+  emptyTitle?: string;
+  emptyDescription?: string;
+}
+
+/// Mapa de calor semanal compartido por radio y podcasts.
+export function HabitsHeatmapView({
+  items,
+  isLoading,
+  isError,
+  onRetry,
+  title = "Hábitos",
+  description = "Cuándo escuchas: día de la semana y hora local.",
+  emptyTitle = "Sin hábitos todavía",
+  emptyDescription = "Escucha en distintos momentos y aquí verás tu mapa semanal.",
+}: HabitsHeatmapViewProps) {
   const isEmpty = !isLoading && !isError && items.length === 0;
   const matrix = buildHabitsMatrix(items);
   const max = Math.max(1, ...matrix.flat());
 
   return (
     <SectionCard
-      title="Hábitos"
-      description="Cuándo escuchas: día de la semana y hora local."
+      title={title}
+      description={description}
       isLoading={isLoading}
       isError={isError}
       isEmpty={isEmpty}
-      emptyTitle="Sin hábitos todavía"
-      emptyDescription="Escucha en distintos momentos y aquí verás tu mapa semanal."
-      onRetry={() => void refetch()}
+      emptyTitle={emptyTitle}
+      emptyDescription={emptyDescription}
+      onRetry={onRetry}
     >
       <div className="overflow-x-auto">
         <div className="grid min-w-[560px] grid-cols-[2.5rem_repeat(24,minmax(0,1fr))] gap-1" role="grid" aria-label="Mapa de hábitos por hora y día">
@@ -69,5 +89,17 @@ export function HabitsHeatmap({ range }: { range: StatsRange }) {
       </div>
       <p className="text-xs text-faint">Lunes arriba · horas en local · intensidad según tu máximo.</p>
     </SectionCard>
+  );
+}
+
+export function HabitsHeatmap({ range }: { range: StatsRange }) {
+  const { data, isLoading, isError, refetch } = useStatsHabits(range);
+  return (
+    <HabitsHeatmapView
+      items={data?.items ?? []}
+      isLoading={isLoading}
+      isError={isError}
+      onRetry={() => void refetch()}
+    />
   );
 }
