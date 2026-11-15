@@ -29,7 +29,7 @@
 
 ### D1. Lector ID3v2 puro (`lib/id3.ts`)
 `readId3TextFrames(bytes): { title: string | null; artist: string | null } | null`:
-- `null` si los bytes no empiezan por `ID3`. Admite las versiones 2.3 y 2.4. El tamaño del tag es syncsafe; el de cada marco es syncsafe en 2.4 y de 32 bits normales en 2.3.
+- `null` si los bytes no empiezan por `ID3`. Recorre las **etiquetas ID3 consecutivas** del inicio: en Cadena100 HLS una primera etiqueta solo lleva `PRIV` y la siguiente, el `TIT2`, igual que contempla `stripId3Tags`. Gana el primer valor no vacío de cada marco. Admite las versiones 2.3 y 2.4. El tamaño del tag es syncsafe; el de cada marco es syncsafe en 2.4 y de 32 bits normales en 2.3.
 - Si el tag tiene cabecera extendida (bit 6 de los flags), se salta usando su tamaño. Si el tag tiene unsynchronisation (bit 7) o un marco está comprimido o cifrado, ese marco se ignora: es raro en directo y no compensa.
 - Codificación por el primer byte del marco: 0 → `latin1`, 1 → UTF-16 con BOM, 2 → UTF-16BE, 3 → UTF-8. Se quitan los NUL y se toma el primer valor si hay varios separados por NUL.
 - Recorrido acotado al tamaño del tag y a los bytes disponibles. Un marco truncado termina el recorrido sin lanzar excepción.

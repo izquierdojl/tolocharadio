@@ -76,6 +76,11 @@ describe("normalizeNowPlaying", () => {
     ["programa", "con Antonio San José - FIKA CAFE ", "Radio España", "con Antonio San José - FIKA CAFE"],
     ["artista de una palabra", "Rosalía", "Radio X", "Rosalía"],
     ["con punto no dominio", "Mercer feat. Ron Carroll - Satisfy", "ElectroDanceWorld Radio", "Mercer feat. Ron Carroll - Satisfy"],
+    ["marcador Triton", "Advertisement", "Onda Cero Gijón", null],
+    ["marcador en mayúsculas", "ADVERT", "Radio X", null],
+    ["publicidad en español", "Publicidad", "Radio X", null],
+    ["cuña con tilde", "Cuña", "Radio X", null],
+    ["canción con palabra de anuncio", "Advertising Space - Robbie Williams", "Radio X", "Advertising Space - Robbie Williams"],
   ];
 
   it.each(cases)("%s", (_desc, raw, stationName, expected) => {

@@ -118,3 +118,53 @@ describe("GET /playback/:stationId/now-playing", () => {
     expect(recent.body.items).toEqual([]);
   });
 });
+
+describe("GET /playback/:stationId/now-playing (HLS)", () => {
+  const HLS_UUID = "33333333-4444-5555-6666-777777777777";
+  const hlsStation = {
+    ...RAW_STATION,
+    stationuuid: HLS_UUID,
+    name: "Cadena100",
+    url: "https://cdn.example.org/live/playlist.m3u8",
+    url_resolved: "https://cdn.example.org/live/playlist.m3u8",
+    codec: "AAC",
+  };
+
+  function id3Segment(title: string): Uint8Array {
+    const data = [3, ...Buffer.from(title, "utf8")];
+    const frame = [...Buffer.from("TIT2"), 0, 0, 0, data.length, 0, 0, ...data];
+    return Uint8Array.from([0x49, 0x44, 0x33, 4, 0, 0, 0, 0, 0, frame.length, ...frame, 0xff, 0xf1]);
+  }
+
+  it("devuelve el título ID3 del último segmento y no registra historial", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: unknown) => {
+        const url = new URL(String(input));
+        if (url.pathname.includes("/stations/byuuid/")) return Response.json([hlsStation]);
+        if (url.pathname.endsWith("playlist.m3u8")) {
+          return new Response("#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=64000\nchunks.m3u8\n");
+        }
+        if (url.pathname.endsWith("chunks.m3u8")) {
+          return new Response("#EXTM3U\n#EXT-X-TARGETDURATION:6\n#EXTINF:6.0,\nseg_1.aac\n#EXTINF:6.0,\nseg_2.aac\n");
+        }
+        if (url.pathname.endsWith("seg_2.aac")) {
+          return new Response(id3Segment("Teddy Swims - Mr. know it all"), { status: 206 });
+        }
+        throw new Error(`fetch sin stub para ${url.toString()}`);
+      }),
+    );
+    const token = await registerUser();
+    const res = await request(server.app)
+      .get(`/api/v1/playback/${HLS_UUID}/now-playing`)
+      .set("Authorization", `Bearer ${token}`)
+      .expect(200);
+    expect(res.body).toEqual({ id: HLS_UUID, title: "Teddy Swims - Mr. know it all" });
+
+    const history = await request(server.app)
+      .get("/api/v1/history")
+      .set("Authorization", `Bearer ${token}`)
+      .expect(200);
+    expect(history.body.items).toEqual([]);
+  });
+});

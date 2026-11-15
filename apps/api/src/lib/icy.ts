@@ -26,6 +26,19 @@ const FILLER_WORDS = new Set([
 const DOMAIN_PATTERN = /\b[\p{L}\d-]+\.(com|net|org|es|fm|info|io|tv|radio|eu|cat)\b/iu;
 const SEPARATORS_ONLY = /^[\s\-|·.:/_~*]*$/u;
 
+/** Marcadores de cuña publicitaria (título completo, normalizado). */
+const AD_MARKERS = new Set([
+  "advertisement",
+  "advert",
+  "ad",
+  "ads",
+  "commercial",
+  "publicidad",
+  "anuncio",
+  "anuncios",
+  "cuna",
+]);
+
 /** Decodifica bytes de metadatos como UTF-8 estricto o, si no lo son, como Latin-1. */
 export function decodeIcyText(bytes: Uint8Array): string {
   let end = bytes.length;
@@ -105,6 +118,8 @@ export function normalizeNowPlaying(
   if (raw == null) return null;
   const title = cleanText(raw);
   if (!title || SEPARATORS_ONLY.test(title)) return null;
+
+  if (AD_MARKERS.has(tokens(title).join(" "))) return null;
 
   if (/:\/\//.test(title) || /\bwww\./i.test(title) || DOMAIN_PATTERN.test(title)) return null;
 

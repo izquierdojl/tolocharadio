@@ -1,13 +1,27 @@
 import { extractStreamTitle, normalizeNowPlaying } from "../lib/icy.js";
+import { composeId3Title, readId3TextFrames } from "../lib/id3.js";
+import {
+  isMasterPlaylist,
+  lastSegment,
+  parseMasterPlaylist,
+  parseMediaPlaylist,
+} from "../lib/mediaPlaylist.js";
 import { fetchFollowingRedirects } from "../lib/upstream.js";
 import { Cache } from "./cache.js";
-import { detectPlaylistFormat, fetchPlaylist, type PlaylistFormat } from "./playlist.js";
+import {
+  detectPlaylistFormat,
+  fetchHlsManifest,
+  fetchPlaylist,
+  type PlaylistFormat,
+} from "./playlist.js";
 
 export const NOW_PLAYING_PROBE_TIMEOUT_MS = 5_000;
 export const NOW_PLAYING_TTL_MS = 25_000;
 export const NOW_PLAYING_UNSUPPORTED_TTL_MS = 10 * 60_000;
 export const NOW_PLAYING_MAX_ENTRIES = 500;
 export const ICY_MAX_METAINT = 65_536;
+/** Bytes que se leen del comienzo de un segmento HLS para buscar ID3. */
+export const HLS_ID3_PROBE_BYTES = 16 * 1024;
 
 export type IcyProbeResult =
   | { kind: "title"; raw: string; icyName: string | null }
@@ -125,6 +139,89 @@ export async function probeIcy(url: string, options: IcyProbeOptions): Promise<I
   }
 }
 
+/** Lee como mucho `maxBytes` del cuerpo y corta, aunque el origen envíe más. */
+async function readPrefix(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  maxBytes: number,
+  aborted: Promise<never>,
+): Promise<Uint8Array> {
+  const out = new Uint8Array(maxBytes);
+  let length = 0;
+  while (length < maxBytes) {
+    const { done, value } = await Promise.race([reader.read(), aborted]);
+    if (done) break;
+    if (!value) continue;
+    const take = Math.min(value.byteLength, maxBytes - length);
+    out.set(value.subarray(0, take), length);
+    length += take;
+  }
+  return out.subarray(0, length);
+}
+
+/**
+ * Obtiene el título de una emisora HLS leyendo las etiquetas ID3 (`TIT2`,
+ * `TPE1`) del comienzo del último segmento de su playlist de medios. Usa la
+ * primera variante de la maestra, como la reproducción. Nunca lanza.
+ */
+export async function probeHlsId3(url: string, options: IcyProbeOptions): Promise<IcyProbeResult> {
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(new Error("HLS ID3 probe timeout")),
+    options.timeoutMs ?? NOW_PLAYING_PROBE_TIMEOUT_MS,
+  );
+  const aborted = abortPromise(controller.signal);
+  aborted.catch(() => {});
+  const fetchOptions = { userAgent: options.userAgent, signal: controller.signal };
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+
+  try {
+    let manifest = await Promise.race([fetchHlsManifest(url, fetchOptions), aborted]);
+    if (isMasterPlaylist(manifest.text)) {
+      const variant = parseMasterPlaylist(manifest.text, manifest.finalUrl)[0];
+      if (!variant) return { kind: "error" };
+      manifest = await Promise.race([fetchHlsManifest(variant.url, fetchOptions), aborted]);
+      if (isMasterPlaylist(manifest.text)) return { kind: "error" };
+    }
+
+    const playlist = parseMediaPlaylist(manifest.text, manifest.finalUrl);
+    if (playlist.encrypted || playlist.hasMap) return { kind: "unsupported" };
+    const segment = lastSegment(playlist);
+    if (!segment) return { kind: "error" };
+
+    const { response } = await Promise.race([
+      fetchFollowingRedirects(
+        segment.url,
+        {
+          "User-Agent": options.userAgent,
+          Accept: "*/*",
+          "Accept-Encoding": "identity",
+          Range: `bytes=0-${HLS_ID3_PROBE_BYTES - 1}`,
+        },
+        { signal: controller.signal },
+      ),
+      aborted,
+    ]);
+    if (!response.ok) {
+      response.body?.cancel().catch(() => {});
+      return { kind: "error" };
+    }
+    reader = response.body?.getReader() as ReadableStreamDefaultReader<Uint8Array> | undefined;
+    if (!reader) return { kind: "error" };
+
+    const bytes = await readPrefix(reader, HLS_ID3_PROBE_BYTES, aborted);
+    const frames = readId3TextFrames(bytes);
+    if (!frames) return { kind: "unsupported" };
+    const title = composeId3Title(frames);
+    return title ? { kind: "title", raw: title, icyName: null } : { kind: "empty" };
+  } catch {
+    return { kind: "error" };
+  } finally {
+    clearTimeout(timer);
+    controller.abort();
+    reader?.cancel().catch(() => {});
+  }
+}
+
 export interface NowPlayingStation {
   name: string;
   url: string;
@@ -140,7 +237,8 @@ export interface NowPlayingServiceOptions {
 
 /**
  * Obtiene el título que suena ahora en una emisora a partir de sus metadatos
- * ICY, con caché compartida por URL y deduplicación de sondas simultáneas.
+ * ICY (directos y M3U/PLS) o de las etiquetas ID3 de sus segmentos (HLS), con
+ * caché compartida por URL y deduplicación de sondas simultáneas.
  */
 export class NowPlayingService {
   private readonly cache: Cache<IcyProbeResult>;
@@ -156,8 +254,6 @@ export class NowPlayingService {
 
   async getTitle(station: NowPlayingStation): Promise<string | null> {
     const format = detectPlaylistFormat(station.url);
-    if (format === "hls") return null;
-
     const result = await this.resolve(station.url, format);
     if (result.kind !== "title") return null;
     return normalizeNowPlaying(result.raw, { stationName: station.name, icyName: result.icyName });
@@ -185,6 +281,7 @@ export class NowPlayingService {
 
   private async lookup(url: string, format: PlaylistFormat | null): Promise<IcyProbeResult> {
     const probeOptions = { userAgent: this.options.userAgent, timeoutMs: this.options.probeTimeoutMs };
+    if (format === "hls") return probeHlsId3(url, probeOptions);
     if (format !== "m3u" && format !== "pls") return probeIcy(url, probeOptions);
 
     let candidates: string[];
