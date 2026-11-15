@@ -1031,6 +1031,35 @@ export function buildOpenApi(): Record<string, unknown> {
           },
         },
       },
+      "/playback/{stationId}/now-playing": {
+        get: {
+          tags: ["Reproduccion"],
+          summary: "Titulo que suena ahora (metadatos ICY)",
+          description:
+            "Devuelve el titulo actual (StreamTitle) de las emisoras de stream directo o lista M3U/PLS. Se obtiene con una sonda independiente del audio, cacheada ~25 s por emisora y filtrada (se descartan textos vacios, el nombre de la emisora, avisos de directo, URLs y codigos internos). Para emisoras HLS, sin metadatos o inaccesibles responde `title: null`. No registra historial ni estadisticas.",
+          ...requireAuth,
+          parameters: [{ name: "stationId", in: "path", required: true, schema: { type: "string" } }],
+          responses: {
+            "200": {
+              description: "Titulo actual o null",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["id", "title"],
+                    properties: {
+                      id: { type: "string" },
+                      title: { type: ["string", "null"], maxLength: 200 },
+                    },
+                  },
+                },
+              },
+            },
+            "401": errorResponses["401"],
+            "404": errorResponses["404"],
+          },
+        },
+      },
     },
     components: {
       securitySchemes: bearer,

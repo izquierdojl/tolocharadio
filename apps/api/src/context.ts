@@ -5,6 +5,7 @@ import type { AuthService } from "./services/auth.js";
 import type { CustomStationsService } from "./services/customStations.js";
 import type { FavoritesService } from "./services/favorites.js";
 import type { HistoryService } from "./services/history.js";
+import type { NowPlayingService } from "./services/nowPlaying.js";
 import type { StationsService } from "./services/stations.js";
 import type { StatsService } from "./services/stats.js";
 import type { SuggestionsService } from "./services/suggestions.js";
@@ -29,6 +30,7 @@ export interface AppContext {
   history: HistoryService;
   stats: StatsService;
   suggestions: SuggestionsService;
+  nowPlaying: NowPlayingService;
 }
 
 export function toPublicUser(user: UserIdentity): PublicUser {

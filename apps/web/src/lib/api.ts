@@ -154,6 +154,15 @@ export function fetchPlaybackStatus(stationId: string): Promise<PlaybackStatus> 
   return api.get<PlaybackStatus>(`/playback/${encodeURIComponent(stationId)}/status`);
 }
 
+export interface NowPlaying {
+  id: string;
+  title: string | null;
+}
+
+export function fetchNowPlaying(stationId: string): Promise<NowPlaying> {
+  return api.get<NowPlaying>(`/playback/${encodeURIComponent(stationId)}/now-playing`);
+}
+
 export function fetchCatalogCountries(): Promise<StringListPage> {
   return api.get<StringListPage>("/stations/countries");
 }

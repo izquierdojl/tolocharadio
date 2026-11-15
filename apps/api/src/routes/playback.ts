@@ -587,5 +587,20 @@ export function playbackRouter(ctx: AppContext): Router {
     }
   });
 
+  // Título que suena ahora (metadatos ICY). Sonda independiente del stream de
+  // audio: no registra historial ni estadísticas y nunca falla por falta de
+  // metadatos (responde `title: null`).
+  router.get("/playback/:stationId/now-playing", auth, async (req, res, next) => {
+    try {
+      const user = req.authUser;
+      if (!user) throw unauthorized();
+      const station = await ctx.stations.getStation(routeParam(req, "stationId"), user.id);
+      const title = await ctx.nowPlaying.getTitle({ name: station.name, url: station.url });
+      res.json({ id: station.id, title });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   return router;
 }
