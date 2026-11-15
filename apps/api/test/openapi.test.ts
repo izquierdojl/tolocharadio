@@ -44,6 +44,7 @@ describe("OpenAPI spec", () => {
       "/playback/{stationId}/live",
       "/playback/{stationId}/hls",
       "/playback/{stationId}/status",
+      "/playback/{stationId}/now-playing",
     ];
     for (const path of expected) {
       expect(spec.paths).toHaveProperty(path);

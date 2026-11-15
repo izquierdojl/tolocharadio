@@ -6,6 +6,7 @@ import { AuthService } from "./services/auth.js";
 import { CustomStationsService } from "./services/customStations.js";
 import { FavoritesService } from "./services/favorites.js";
 import { HistoryService } from "./services/history.js";
+import { NowPlayingService } from "./services/nowPlaying.js";
 import { StationsService } from "./services/stations.js";
 import { StatsService } from "./services/stats.js";
 import { SuggestionsService } from "./services/suggestions.js";
@@ -19,5 +20,18 @@ export function createContext(config: Config, db: DB): AppContext {
   const history = new HistoryService(db, config, stations);
   const stats = new StatsService(db, config);
   const suggestions = new SuggestionsService(db);
-  return { config, db, jwt, auth, stations, customStations, favorites, history, stats, suggestions };
+  const nowPlaying = new NowPlayingService({ userAgent: config.radioBrowserAppName });
+  return {
+    config,
+    db,
+    jwt,
+    auth,
+    stations,
+    customStations,
+    favorites,
+    history,
+    stats,
+    suggestions,
+    nowPlaying,
+  };
 }

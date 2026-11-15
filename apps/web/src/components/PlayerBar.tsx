@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Check, Copy, Loader2, Pause, Play, RotateCcw, Volume2, VolumeX, X } from "lucide-react";
+import { useNowPlaying } from "../hooks/useNowPlaying.js";
 import { usePlayerStore } from "../stores/player.js";
 
 export function PlayerBar() {
@@ -16,7 +17,9 @@ export function PlayerBar() {
     muted,
     setVolume,
     toggleMute,
+    nowPlaying,
   } = usePlayerStore();
+  useNowPlaying();
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -70,15 +73,17 @@ export function PlayerBar() {
         />
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate font-medium text-pine-100">{station.name}</span>
-          <span
-            className={`truncate text-xs ${
-              statusText ? "text-ochre-300" : "text-pine-400"
-            }`}
-          >
-            {statusText ??
-              ([station.country, station.language].filter(Boolean).join(" · ") ||
-                "Emisora de radio")}
-          </span>
+          {statusText ? (
+            <span className="truncate text-xs text-ochre-300">{statusText}</span>
+          ) : nowPlaying ? (
+            <span className="truncate text-xs text-pine-300" title={nowPlaying} aria-live="polite">
+              <span className="font-medium text-ochre-400">Ahora suena</span> · {nowPlaying}
+            </span>
+          ) : (
+            <span className="truncate text-xs text-pine-400">
+              {[station.country, station.language].filter(Boolean).join(" · ") || "Emisora de radio"}
+            </span>
+          )}
           {!statusText && technicalBits.length > 0 && (
             <span className="hidden truncate text-xs text-pine-500 sm:block">{technicalBits.join(" · ")}</span>
           )}

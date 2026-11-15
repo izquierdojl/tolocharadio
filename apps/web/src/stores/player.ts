@@ -18,12 +18,16 @@ interface PlayerState {
   error: string | null;
   volume: number;
   muted: boolean;
+  /** Título que suena ahora en la emisora actual (metadatos ICY), si lo hay. */
+  nowPlaying: string | null;
   play: (station: Station) => void;
   toggle: () => void;
   stop: () => void;
   retry: () => void;
   setVolume: (volume: number) => void;
   toggleMute: () => void;
+  /** Guarda el título solo si sigue sonando la misma emisora. */
+  setNowPlaying: (stationId: string, title: string | null) => void;
 }
 
 const VOLUME_KEY = "tolocha:volume";
@@ -74,10 +78,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     error: null,
     volume: loadVolume(),
     muted: loadMuted(),
+    nowPlaying: null,
 
     play(station) {
       const isNew = get().station?.id !== station.id;
-      set({ station });
+      set(isNew ? { station, nowPlaying: null } : { station });
       engine.play({ id: station.id, url: station.url });
 
       if (!isNew) return;
@@ -96,7 +101,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
     stop() {
       engine.stop();
-      set({ station: null });
+      set({ station: null, nowPlaying: null });
     },
 
     retry() {
@@ -114,6 +119,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       audio!.muted = muted;
       window.localStorage.setItem(MUTED_KEY, String(muted));
       set({ muted });
+    },
+
+    setNowPlaying(stationId, title) {
+      if (get().station?.id !== stationId) return;
+      if (get().nowPlaying === title) return;
+      set({ nowPlaying: title });
     },
   };
 });
