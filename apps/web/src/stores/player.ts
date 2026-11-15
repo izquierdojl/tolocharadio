@@ -182,7 +182,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       mode === "native" ? playbackUrl(stationId, attempt) : livePlaybackUrl(stationId, attempt),
     supportsNativeHls: () => supportsNativeHls(audio!),
     onChange: (snapshot) => {
-      const prevPlaying = get().isPlaying;
+      const state = get();
+      if (!state) return;
+      const prevPlaying = state.isPlaying;
       const nowPlayingState = snapshot.status === "playing";
       set({
         status: snapshot.status,
@@ -217,7 +219,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
   });
 
   const initialRate = loadPlaybackRate();
-  engine.setPlaybackRate(initialRate);
+  // Evita emitir durante la inicialización del store (get() aún no tiene estado).
+  (engine as unknown as { playbackRate: number }).playbackRate = initialRate;
+  audio.playbackRate = initialRate;
 
   return {
     kind: null,
