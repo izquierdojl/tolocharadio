@@ -111,7 +111,7 @@ El sistema SHALL ofrecer en la interfaz una barra de búsqueda por nombre y filt
 - **THEN** no se le muestra la barra de búsqueda, los filtros de emisoras ni la fila de sugerencias
 
 ### Requirement: Reproductor flotante persistente
-La interfaz SHALL mostrar un reproductor fijo en la parte inferior, visible en todas las vistas mientras haya una sesión abierta, que muestre la emisora en reproducción (o la última seleccionada) con controles de reproducir/pausar, volumen y eliminar/cambiar emisora. Cuando haya una emisora seleccionada, el reproductor SHALL mostrar la información técnica de la emisora (bitrate y formato/códec de audio, cuando estén disponibles) y SHALL ofrecer un botón para copiar el enlace de emisión al portapapeles. La reproducción SHALL continuar al cambiar de vista. En pantallas de smartphones (menores de 640px), el reproductor SHALL simplificarse: se oculta el botón de copiar enlace y la información técnica (bitrate/codec), mostrando únicamente la miniatura, el nombre de la emisora, país/idioma, y los controles de play/pause y stop. El control de volumen ya se oculta en este rango de pantalla.
+La interfaz SHALL mostrar un reproductor fijo en la parte inferior, visible en todas las vistas mientras haya una sesión abierta, que muestre la emisora en reproducción (o la última seleccionada) con controles de reproducir/pausar, volumen y eliminar/cambiar emisora. Cuando haya una emisora seleccionada, el reproductor SHALL mostrar la información técnica de la emisora (bitrate y formato/códec de audio, cuando estén disponibles) y SHALL ofrecer un botón para copiar el enlace de emisión al portapapeles. La reproducción SHALL continuar al cambiar de vista. Cuando exista un título actual de la emisora en reproducción, el reproductor SHALL mostrarlo bajo el nombre de la emisora precedido de "Ahora suena", en lugar de país/idioma; los mensajes de estado (reconexión o error) SHALL tener prioridad sobre él. En pantallas de smartphones (menores de 640px), el reproductor SHALL simplificarse: se oculta el botón de copiar enlace y la información técnica (bitrate/codec), mostrando únicamente la miniatura, el nombre de la emisora, país/idioma (o el título actual cuando exista), y los controles de play/pause y stop. El control de volumen ya se oculta en este rango de pantalla.
 
 #### Scenario: Reproductor siempre disponible
 - **WHEN** un usuario navega entre secciones con el reproductor activo
@@ -139,11 +139,23 @@ La interfaz SHALL mostrar un reproductor fijo en la parte inferior, visible en t
 
 #### Scenario: Reproductor simplificado en móvil
 - **WHEN** un usuario ve el reproductor en una pantalla menor a 640px de ancho
-- **THEN** el reproductor muestra únicamente la miniatura de la emisora, el nombre, país/idioma, y los controles play/pause y stop, sin botón de copiar enlace ni información técnica (bitrate/codec)
+- **THEN** el reproductor muestra únicamente la miniatura de la emisora, el nombre, país/idioma (o el título actual cuando exista), y los controles play/pause y stop, sin botón de copiar enlace ni información técnica (bitrate/codec)
 
 #### Scenario: Estado vacío del reproductor en móvil
 - **WHEN** el usuario no ha seleccionado ninguna emisora y ve la aplicación en una pantalla menor a 640px
 - **THEN** el reproductor muestra un mensaje conciso de una línea invitando a elegir una emisora
+
+#### Scenario: Título actual disponible
+- **WHEN** la emisora en reproducción tiene un título actual válido
+- **THEN** el reproductor muestra bajo el nombre "Ahora suena" seguido del título, recortado con puntos suspensivos si no cabe y con el texto completo accesible al pasar el ratón
+
+#### Scenario: Sin título actual
+- **WHEN** la emisora en reproducción no tiene título actual
+- **THEN** el reproductor muestra país/idioma como hasta ahora
+
+#### Scenario: Estado prioritario sobre el título
+- **WHEN** el reproductor está reconectando o ha fallado y existe un título actual
+- **THEN** el reproductor muestra el mensaje de estado en lugar del título
 
 ### Requirement: Autenticación desde la interfaz
 La interfaz SHALL ofrecer pantallas de registro e inicio de sesión, gestionar la persistencia de la sesión con tokens (acceso y refresco) y permitir cerrar sesión y ver el perfil. Cuando el registro esté deshabilitado en el servidor, la interfaz SHALL ocultar o indicar la indisponibilidad del registro.
