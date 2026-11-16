@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Compass, Download, Rss } from "lucide-react";
@@ -8,10 +9,21 @@ import {
   unsubscribePodcast,
 } from "../../lib/api.js";
 import { PodcastList } from "../../components/podcasts/PodcastList.js";
+import { ConfirmDialog } from "../../components/ConfirmDialog.js";
 import { EmptyState } from "../../components/EmptyState.js";
+import type { PodcastSummary } from "../../lib/types.js";
+import {
+  SUBSCRIPTION_SORT_OPTIONS,
+  isSubscriptionSortOrder,
+  sortSubscriptions,
+} from "../../lib/subscriptionSort.js";
+import { useSubscriptionSortStore } from "../../stores/subscriptionSort.js";
 
 export function PodcastSubscriptions() {
   const queryClient = useQueryClient();
+  const sortOrder = useSubscriptionSortStore((s) => s.order);
+  const setSortOrder = useSubscriptionSortStore((s) => s.setOrder);
+  const [pendingUnsubscribe, setPendingUnsubscribe] = useState<PodcastSummary | null>(null);
   const subscriptionsQuery = useQuery({
     queryKey: ["podcast-subscriptions"],
     queryFn: fetchPodcastSubscriptions,
@@ -27,6 +39,7 @@ export function PodcastSubscriptions() {
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : "No se pudo cancelar la suscripción");
     },
+    onSettled: () => setPendingUnsubscribe(null),
   });
 
   const exportMutation = useMutation({
@@ -45,7 +58,11 @@ export function PodcastSubscriptions() {
     },
   });
 
-  const items = subscriptionsQuery.data?.items ?? [];
+  const rawItems = subscriptionsQuery.data?.items;
+  const items = useMemo(
+    () => sortSubscriptions(rawItems ?? [], sortOrder),
+    [rawItems, sortOrder],
+  );
 
   return (
     <section className="flex flex-col gap-6">
@@ -56,7 +73,24 @@ export function PodcastSubscriptions() {
             {items.length} {items.length === 1 ? "suscripción" : "suscripciones"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-1.5 text-sm text-muted">
+            <span className="sr-only sm:not-sr-only">Ordenar por</span>
+            <select
+              value={sortOrder}
+              onChange={(event) => {
+                if (isSubscriptionSortOrder(event.target.value)) setSortOrder(event.target.value);
+              }}
+              aria-label="Ordenar por"
+              className="rounded-lg border border-line-strong bg-surface-raised px-2 py-1.5 text-sm text-foreground transition hover:border-pine-500"
+            >
+              {SUBSCRIPTION_SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <Link
             to="/podcasts/descubrir"
             className="inline-flex items-center gap-1.5 rounded-lg bg-pine-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-pine-500"
@@ -105,7 +139,7 @@ export function PodcastSubscriptions() {
           renderAction={(podcast) => (
             <button
               type="button"
-              onClick={() => unsubscribeMutation.mutate(podcast.id)}
+              onClick={() => setPendingUnsubscribe(podcast)}
               disabled={unsubscribeMutation.isPending}
               className="rounded-lg px-2 py-1 text-[10px] uppercase tracking-wide text-muted transition hover:bg-surface-soft hover:text-rose-400 disabled:opacity-50"
             >
@@ -114,6 +148,20 @@ export function PodcastSubscriptions() {
           )}
         />
       )}
+
+      <ConfirmDialog
+        open={pendingUnsubscribe !== null}
+        title="¿Cancelar la suscripción?"
+        description={`Dejarás de seguir «${pendingUnsubscribe?.title ?? ""}». Podrás volver a suscribirte cuando quieras.`}
+        confirmLabel="Cancelar suscripción"
+        cancelLabel="Mantener"
+        pending={unsubscribeMutation.isPending}
+        destructive
+        onConfirm={() => {
+          if (pendingUnsubscribe) unsubscribeMutation.mutate(pendingUnsubscribe.id);
+        }}
+        onCancel={() => setPendingUnsubscribe(null)}
+      />
     </section>
   );
 }

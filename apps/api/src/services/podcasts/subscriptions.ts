@@ -1,7 +1,12 @@
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, isNotNull, isNull, max } from "drizzle-orm";
 import type { Config } from "../../config/env.js";
 import type { DB } from "../../db/client.js";
-import { podcasts, podcastSubscriptions } from "../../db/schema.js";
+import {
+  podcastEpisodes,
+  podcastProgress,
+  podcasts,
+  podcastSubscriptions,
+} from "../../db/schema.js";
 import { badRequest } from "../../errors.js";
 import type { PodcastCatalogService, PodcastSummary } from "./catalog.js";
 import { resolveSafeHttpUrl } from "./feedParser.js";
@@ -42,12 +47,57 @@ export class PodcastSubscriptionsService {
       .orderBy(desc(podcastSubscriptions.subscribedAt))
       .all();
 
-    return rows.map((r) =>
-      this.catalog.toSummary(r.podcast, {
+    const pendingByPodcast = this.latestPendingByPodcast(userId);
+
+    return rows.map((r) => ({
+      ...this.catalog.toSummary(r.podcast, {
         isSubscribed: true,
         subscribedAt: r.subscribedAt,
       }),
-    );
+      latestPendingEpisodeAt: pendingByPodcast.get(r.podcast.id) ?? null,
+    }));
+  }
+
+  /**
+   * Publicación del episodio pendiente más reciente por podcast suscrito: activo,
+   * con fecha y no completado por el usuario (los empezados a medias cuentan).
+   */
+  private latestPendingByPodcast(userId: number): Map<number, number> {
+    const rows = this.db
+      .select({
+        podcastId: podcastEpisodes.podcastId,
+        latest: max(podcastEpisodes.publishedAt),
+      })
+      .from(podcastEpisodes)
+      .innerJoin(
+        podcastSubscriptions,
+        and(
+          eq(podcastSubscriptions.podcastId, podcastEpisodes.podcastId),
+          eq(podcastSubscriptions.userId, userId),
+        ),
+      )
+      .leftJoin(
+        podcastProgress,
+        and(
+          eq(podcastProgress.episodeId, podcastEpisodes.id),
+          eq(podcastProgress.userId, userId),
+        ),
+      )
+      .where(
+        and(
+          isNull(podcastEpisodes.removedAt),
+          isNotNull(podcastEpisodes.publishedAt),
+          isNull(podcastProgress.completedAt),
+        ),
+      )
+      .groupBy(podcastEpisodes.podcastId)
+      .all();
+
+    const map = new Map<number, number>();
+    for (const row of rows) {
+      if (row.latest !== null) map.set(row.podcastId, row.latest);
+    }
+    return map;
   }
 
   countForUser(userId: number): number {

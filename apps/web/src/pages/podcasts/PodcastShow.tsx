@@ -9,6 +9,7 @@ import {
   subscribePodcast,
   unsubscribePodcast,
 } from "../../lib/api.js";
+import { ConfirmDialog } from "../../components/ConfirmDialog.js";
 import { EpisodeRow } from "../../components/podcasts/EpisodeRow.js";
 import { PodcastCover } from "../../components/podcasts/PodcastCover.js";
 
@@ -35,6 +36,7 @@ export function PodcastShow() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["value"]>("all");
   const [sort, setSort] = useState<(typeof SORTS)[number]["value"]>("recent");
   const [offset, setOffset] = useState(0);
+  const [confirmUnsubscribeOpen, setConfirmUnsubscribeOpen] = useState(false);
 
   const podcastQuery = useQuery({
     queryKey: ["podcast", podcastId],
@@ -67,6 +69,7 @@ export function PodcastShow() {
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : "No se pudo actualizar la suscripción");
     },
+    onSettled: () => setConfirmUnsubscribeOpen(false),
   });
 
   if (!Number.isSafeInteger(podcastId) || podcastId <= 0) {
@@ -131,7 +134,10 @@ export function PodcastShow() {
           <div className="mt-auto flex items-center gap-2 pt-2">
             <button
               type="button"
-              onClick={() => subscribeMutation.mutate(podcast.isSubscribed)}
+              onClick={() => {
+                if (podcast.isSubscribed) setConfirmUnsubscribeOpen(true);
+                else subscribeMutation.mutate(false);
+              }}
               disabled={subscribeMutation.isPending}
               className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition disabled:opacity-50 ${
                 podcast.isSubscribed
@@ -237,6 +243,18 @@ export function PodcastShow() {
           </>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmUnsubscribeOpen}
+        title="¿Cancelar la suscripción?"
+        description={`Dejarás de seguir «${podcast.title}». Podrás volver a suscribirte cuando quieras.`}
+        confirmLabel="Cancelar suscripción"
+        cancelLabel="Mantener"
+        pending={subscribeMutation.isPending}
+        destructive
+        onConfirm={() => subscribeMutation.mutate(true)}
+        onCancel={() => setConfirmUnsubscribeOpen(false)}
+      />
     </section>
   );
 }

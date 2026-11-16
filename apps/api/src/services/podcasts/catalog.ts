@@ -25,6 +25,8 @@ export interface PodcastSummary {
   episodeCount: number;
   isSubscribed: boolean;
   subscribedAt?: number | null;
+  /** Solo en el listado de suscripciones: publicación del episodio pendiente más reciente. */
+  latestPendingEpisodeAt?: number | null;
 }
 
 export interface PodcastEpisodeProgressView {

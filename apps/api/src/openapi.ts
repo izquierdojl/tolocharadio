@@ -215,6 +215,11 @@ const podcastSummarySchema = {
     episodeCount: { type: "integer" },
     isSubscribed: { type: "boolean" },
     subscribedAt: { type: ["integer", "null"] },
+    latestPendingEpisodeAt: {
+      type: ["integer", "null"],
+      description:
+        "Solo en el listado de suscripciones: publicación (ms) del episodio activo no completado más reciente; null si no hay pendientes.",
+    },
   },
 } as const;
 
