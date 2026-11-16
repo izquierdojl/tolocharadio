@@ -245,6 +245,33 @@ export function podcastsRouter(ctx: AppContext): Router {
     }
   });
 
+  router.delete("/podcasts/queue", auth, (req, res, next) => {
+    try {
+      const user = req.authUser;
+      if (!user) throw unauthorized();
+      const rawKeep = req.query.keepEpisodeId;
+      let keepEpisodeId: number | undefined;
+      if (rawKeep !== undefined) {
+        if (typeof rawKeep !== "string" || !/^\d+$/.test(rawKeep)) {
+          throw badRequest(
+            "VALIDATION_ERROR",
+            "El parametro keepEpisodeId debe ser un entero positivo",
+          );
+        }
+        keepEpisodeId = Number(rawKeep);
+        if (!Number.isSafeInteger(keepEpisodeId) || keepEpisodeId <= 0) {
+          throw badRequest(
+            "VALIDATION_ERROR",
+            "El parametro keepEpisodeId debe ser un entero positivo",
+          );
+        }
+      }
+      res.json({ queue: ctx.podcastQueue.clear(user.id, keepEpisodeId) });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   router.delete("/podcasts/queue/:episodeId", auth, (req, res, next) => {
     try {
       const user = req.authUser;

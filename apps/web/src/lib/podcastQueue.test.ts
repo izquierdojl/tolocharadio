@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { nextQueueEpisode, parseOpmlFeedUrls } from "./podcastQueue.js";
+import {
+  isQueueEpisodeActive,
+  mergeQueueOrder,
+  nextQueueEpisode,
+  parseOpmlFeedUrls,
+} from "./podcastQueue.js";
 import type { PodcastEpisode } from "./types.js";
 
 function episode(id: number): PodcastEpisode {
@@ -26,6 +31,43 @@ describe("nextQueueEpisode", () => {
   it("devuelve null cuando la cola solo contiene el episodio terminado", () => {
     expect(nextQueueEpisode([episode(1)], 1)).toBeNull();
     expect(nextQueueEpisode([], 1)).toBeNull();
+  });
+});
+
+describe("isQueueEpisodeActive", () => {
+  it("marca como activos solo los estados de conexión y reproducción", () => {
+    expect(isQueueEpisodeActive("connecting")).toBe(true);
+    expect(isQueueEpisodeActive("playing")).toBe(true);
+    expect(isQueueEpisodeActive("reconnecting")).toBe(true);
+    expect(isQueueEpisodeActive("paused")).toBe(false);
+    expect(isQueueEpisodeActive("failed")).toBe(false);
+    expect(isQueueEpisodeActive("idle")).toBe(false);
+  });
+});
+
+describe("mergeQueueOrder", () => {
+  const items = [episode(1), episode(2), episode(3), episode(4)];
+
+  it("devuelve el orden visible cuando no hay episodio oculto", () => {
+    expect(mergeQueueOrder(items, [4, 1, 3])).toEqual([4, 1, 3]);
+    expect(mergeQueueOrder(items, [4, 1, 3], null)).toEqual([4, 1, 3]);
+  });
+
+  it("conserva el hueco del oculto al principio", () => {
+    expect(mergeQueueOrder(items, [2, 3, 4], 1)).toEqual([1, 2, 3, 4]);
+  });
+
+  it("conserva el hueco del oculto en medio tras reordenar los visibles", () => {
+    expect(mergeQueueOrder(items, [1, 3, 4], 2)).toEqual([1, 2, 3, 4]);
+    expect(mergeQueueOrder(items, [4, 1, 3], 2)).toEqual([4, 2, 1, 3]);
+  });
+
+  it("conserva el hueco del oculto al final", () => {
+    expect(mergeQueueOrder(items, [1, 2, 3], 4)).toEqual([1, 2, 3, 4]);
+  });
+
+  it("devuelve el orden visible cuando el oculto no pertenece a la cola", () => {
+    expect(mergeQueueOrder(items, [2, 3], 99)).toEqual([2, 3]);
   });
 });
 

@@ -343,6 +343,11 @@ export function removeEpisodeFromQueue(episodeId: number): Promise<{ queue: Podc
   return api.delete<{ queue: PodcastQueue }>(`/podcasts/queue/${episodeId}`);
 }
 
+export function clearPodcastQueue(keepEpisodeId?: number): Promise<{ queue: PodcastQueue }> {
+  const query = keepEpisodeId === undefined ? "" : `?keepEpisodeId=${keepEpisodeId}`;
+  return api.delete<{ queue: PodcastQueue }>(`/podcasts/queue${query}`);
+}
+
 export function reorderPodcastQueue(
   baseRevision: number,
   episodeIds: number[],

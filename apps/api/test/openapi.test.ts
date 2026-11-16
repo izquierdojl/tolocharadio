@@ -57,7 +57,10 @@ describe("OpenAPI spec", () => {
       "/podcasts/episodes/{episodeId}/stream",
       "/podcasts/episodes/{episodeId}/progress",
       "/podcasts/episodes/{episodeId}/dismiss",
+      "/podcasts/queue",
       "/podcasts/queue/count",
+      "/podcasts/queue/order",
+      "/podcasts/queue/{episodeId}",
     ];
     for (const path of expected) {
       expect(spec.paths).toHaveProperty(path);
@@ -123,5 +126,16 @@ describe("OpenAPI spec", () => {
     );
     expect(granularity?.schema?.enum).toEqual(["day", "week", "month"]);
     expect(granularity?.schema?.default).toBe("day");
+  });
+
+  it("documenta el vaciado de la cola con keepEpisodeId", () => {
+    const queueDelete = spec.paths["/podcasts/queue"]!.delete! as {
+      parameters?: Array<{ name: string; in: string; schema?: { type?: string } }>;
+    };
+    const keep = (queueDelete.parameters ?? []).find(
+      (parameter) => parameter.name === "keepEpisodeId",
+    );
+    expect(keep?.in).toBe("query");
+    expect(keep?.schema?.type).toBe("integer");
   });
 });

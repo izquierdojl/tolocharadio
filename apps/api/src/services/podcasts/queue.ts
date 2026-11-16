@@ -1,4 +1,4 @@
-import { and, asc, eq, max, sql } from "drizzle-orm";
+import { and, asc, eq, max, ne, sql } from "drizzle-orm";
 import type { Config } from "../../config/env.js";
 import type { DB } from "../../db/client.js";
 import { podcastEpisodes, podcastQueueItems, podcastQueueState } from "../../db/schema.js";
@@ -103,7 +103,7 @@ export class PodcastQueueService {
       const state = this.ensureState(userId);
 
       const existing = tx
-        .select({ episodeId: podcastQueueItems.episodeId })
+        .select({ position: podcastQueueItems.position })
         .from(podcastQueueItems)
         .where(
           and(
@@ -113,6 +113,52 @@ export class PodcastQueueService {
         )
         .get();
       if (existing) {
+        const now = this.now();
+        let moved = false;
+
+        if (position === "next" && existing.position !== 0) {
+          tx.update(podcastQueueItems)
+            .set({ position: sql`${podcastQueueItems.position} + 1` })
+            .where(eq(podcastQueueItems.userId, userId))
+            .run();
+          tx.update(podcastQueueItems)
+            .set({ position: 0 })
+            .where(
+              and(
+                eq(podcastQueueItems.userId, userId),
+                eq(podcastQueueItems.episodeId, episodeId),
+              ),
+            )
+            .run();
+          moved = true;
+        } else if (position === "end") {
+          const maxRow = tx
+            .select({ value: max(podcastQueueItems.position) })
+            .from(podcastQueueItems)
+            .where(eq(podcastQueueItems.userId, userId))
+            .get();
+          const lastPosition = Number(maxRow?.value ?? -1);
+          if (existing.position !== lastPosition) {
+            tx.update(podcastQueueItems)
+              .set({ position: lastPosition + 1 })
+              .where(
+                and(
+                  eq(podcastQueueItems.userId, userId),
+                  eq(podcastQueueItems.episodeId, episodeId),
+                ),
+              )
+              .run();
+            moved = true;
+          }
+        }
+
+        if (moved) {
+          tx.update(podcastQueueState)
+            .set({ revision: sql`${podcastQueueState.revision} + 1`, updatedAt: now })
+            .where(eq(podcastQueueState.userId, state.userId))
+            .run();
+        }
+
         return this.get(userId);
       }
 
@@ -157,6 +203,58 @@ export class PodcastQueueService {
 
       return this.get(userId);
     });
+  }
+
+  clear(userId: number, keepEpisodeId?: number): PodcastQueueView {
+    const state = this.ensureState(userId);
+    const now = this.now();
+
+    this.db.transaction((tx) => {
+      const kept =
+        keepEpisodeId === undefined
+          ? undefined
+          : tx
+              .select({ episodeId: podcastQueueItems.episodeId })
+              .from(podcastQueueItems)
+              .where(
+                and(
+                  eq(podcastQueueItems.userId, userId),
+                  eq(podcastQueueItems.episodeId, keepEpisodeId),
+                ),
+              )
+              .get();
+
+      if (!kept || keepEpisodeId === undefined) {
+        tx.delete(podcastQueueItems)
+          .where(eq(podcastQueueItems.userId, userId))
+          .run();
+      } else {
+        tx.delete(podcastQueueItems)
+          .where(
+            and(
+              eq(podcastQueueItems.userId, userId),
+              ne(podcastQueueItems.episodeId, keepEpisodeId),
+            ),
+          )
+          .run();
+        tx.update(podcastQueueItems)
+          .set({ position: 0 })
+          .where(
+            and(
+              eq(podcastQueueItems.userId, userId),
+              eq(podcastQueueItems.episodeId, keepEpisodeId),
+            ),
+          )
+          .run();
+      }
+
+      tx.update(podcastQueueState)
+        .set({ revision: sql`${podcastQueueState.revision} + 1`, updatedAt: now })
+        .where(eq(podcastQueueState.userId, state.userId))
+        .run();
+    });
+
+    return this.get(userId);
   }
 
   remove(userId: number, episodeId: number): PodcastQueueView {

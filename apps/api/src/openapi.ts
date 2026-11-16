@@ -1610,7 +1610,7 @@ export function buildOpenApi(): Record<string, unknown> {
         },
         post: {
           tags: ["Podcasts"],
-          summary: "Anadir un episodio al final o como siguiente en la cola",
+          summary: "Anadir o mover un episodio al final o como siguiente en la cola",
           ...requireAuth,
           requestBody: {
             required: true,
@@ -1645,6 +1645,36 @@ export function buildOpenApi(): Record<string, unknown> {
             "403": errorResponses["403"],
             "404": errorResponses["404"],
             "422": errorResponses["422"],
+          },
+        },
+        delete: {
+          tags: ["Podcasts"],
+          summary: "Vaciar la cola conservando opcionalmente el episodio cargado",
+          ...requireAuth,
+          parameters: [
+            {
+              name: "keepEpisodeId",
+              in: "query",
+              required: false,
+              schema: { type: "integer", minimum: 1 },
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Cola vaciada, con el episodio conservado en primer lugar si se indico",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["queue"],
+                    properties: { queue: { $ref: "#/components/schemas/PodcastQueue" } },
+                  },
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
           },
         },
       },

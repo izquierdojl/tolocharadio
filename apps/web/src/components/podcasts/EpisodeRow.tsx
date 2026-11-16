@@ -1,14 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Check, Heart, ListPlus, Pause, Play, X } from "lucide-react";
+import { Check, Heart, Pause, Play, RotateCcw, X } from "lucide-react";
 import { toast } from "sonner";
-import {
-  addEpisodeToQueue,
-  addPodcastFavorite,
-  removePodcastFavorite,
-} from "../../lib/api.js";
+import { addPodcastFavorite, removePodcastFavorite } from "../../lib/api.js";
 import type { PodcastEpisode, PodcastSummary } from "../../lib/types.js";
 import { usePlayerStore } from "../../stores/player.js";
+import { EpisodeQueueMenu } from "./EpisodeQueueMenu.js";
 import { PodcastCover } from "./PodcastCover.js";
 
 function formatDuration(rawSec: number | null | undefined): string | null {
@@ -42,8 +39,25 @@ interface EpisodeRowProps {
 export function EpisodeRow({ episode, podcast, showPodcast = false, onDismiss }: EpisodeRowProps) {
   const queryClient = useQueryClient();
   const playEpisode = usePlayerStore((s) => s.playEpisode);
+  const togglePlayback = usePlayerStore((s) => s.toggle);
+  const retryPlayback = usePlayerStore((s) => s.retry);
   const isCurrent = usePlayerStore((s) => s.kind === "podcast" && s.episode?.id === episode.id);
   const isPlaying = usePlayerStore((s) => s.isPlaying && isCurrent);
+  const status = usePlayerStore((s) => (s.episode?.id === episode.id ? s.status : null));
+  const isFailed = isCurrent && status === "failed";
+
+  const playTitle = isFailed ? "Reintentar" : isPlaying ? "Pausar" : "Reproducir";
+  const handlePlay = (): void => {
+    if (isCurrent) {
+      if (isFailed) {
+        retryPlayback();
+      } else {
+        togglePlayback();
+      }
+      return;
+    }
+    playEpisode(episode, podcast);
+  };
 
   const invalidate = (): void => {
     void queryClient.invalidateQueries({ queryKey: ["podcast-home"] });
@@ -52,17 +66,6 @@ export function EpisodeRow({ episode, podcast, showPodcast = false, onDismiss }:
     void queryClient.invalidateQueries({ queryKey: ["podcast-queue-count"] });
     void queryClient.invalidateQueries({ queryKey: ["podcast-episodes", podcast.id] });
   };
-
-  const queueMutation = useMutation({
-    mutationFn: () => addEpisodeToQueue(episode.id, "end"),
-    onSuccess: () => {
-      toast.success("Añadido a la cola");
-      invalidate();
-    },
-    onError: (err) => {
-      toast.error(err instanceof Error ? err.message : "No se pudo añadir a la cola");
-    },
-  });
 
   const favoriteMutation = useMutation({
     mutationFn: async () => {
@@ -99,11 +102,18 @@ export function EpisodeRow({ episode, podcast, showPodcast = false, onDismiss }:
         />
         <button
           type="button"
-          onClick={() => playEpisode(episode, podcast, { startPositionSec: 0 })}
-          title={isPlaying ? "Pausar" : "Reproducir episodio"}
+          onClick={handlePlay}
+          title={isFailed ? "Reintentar episodio" : isPlaying ? "Pausar episodio" : "Reproducir episodio"}
+          aria-label={isFailed ? "Reintentar episodio" : isPlaying ? "Pausar episodio" : "Reproducir episodio"}
           className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 transition hover:opacity-100 focus:opacity-100"
         >
-          {isPlaying ? <Pause className="size-5" /> : <Play className="ml-0.5 size-5" />}
+          {isFailed ? (
+            <RotateCcw className="size-5" />
+          ) : isPlaying ? (
+            <Pause className="size-5" />
+          ) : (
+            <Play className="ml-0.5 size-5" />
+          )}
         </button>
       </div>
 
@@ -157,23 +167,21 @@ export function EpisodeRow({ episode, podcast, showPodcast = false, onDismiss }:
         <div className="mt-1 flex items-center gap-1">
           <button
             type="button"
-            onClick={() => playEpisode(episode, podcast, { startPositionSec: 0 })}
-            className="inline-flex items-center gap-1 rounded-lg bg-pine-700 px-2.5 py-1 text-xs font-medium text-pine-100 transition hover:bg-pine-600 sm:hidden"
+            onClick={handlePlay}
+            title={playTitle}
+            aria-label={playTitle}
+            className="inline-flex items-center gap-1 rounded-lg bg-pine-700 px-2.5 py-1 text-xs font-medium text-pine-100 transition hover:bg-pine-600"
           >
-            {isPlaying ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
-            {isPlaying ? "Pausar" : "Reproducir"}
+            {isFailed ? (
+              <RotateCcw className="size-3.5" />
+            ) : isPlaying ? (
+              <Pause className="size-3.5" />
+            ) : (
+              <Play className="size-3.5" />
+            )}
+            {isFailed ? "Reintentar" : isPlaying ? "Pausar" : "Reproducir"}
           </button>
-          <button
-            type="button"
-            onClick={() => queueMutation.mutate()}
-            disabled={queueMutation.isPending}
-            title="Añadir a la cola"
-            aria-label="Añadir a la cola"
-            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted transition hover:bg-surface-soft hover:text-foreground disabled:opacity-50"
-          >
-            <ListPlus className="size-4" />
-            <span className="hidden sm:inline">A la cola</span>
-          </button>
+          <EpisodeQueueMenu episodeId={episode.id} />
           <button
             type="button"
             onClick={() => favoriteMutation.mutate()}

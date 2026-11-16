@@ -48,8 +48,9 @@ Resumen de endpoints (todos bajo `/api/v1`):
 | `DELETE` | `/podcasts/subscriptions/:podcastId` | autenticado | Baja de suscripción a un podcast |
 | `GET` | `/podcasts/home` | autenticado | Portada agregada (continuar, novedades, suscripciones, cola) |
 | `GET` | `/podcasts/queue` | autenticado | Cola de reproducción con su `revision` |
-| `POST` | `/podcasts/queue` | autenticado | Añade un episodio al final o como siguiente (`position`) |
+| `POST` | `/podcasts/queue` | autenticado | Añade o mueve un episodio al final o como siguiente (`position`) |
 | `PUT` | `/podcasts/queue/order` | autenticado | Reordena la cola con `baseRevision` (`409` si obsoleta) |
+| `DELETE` | `/podcasts/queue` | autenticado | Vacía la cola y conserva opcionalmente `keepEpisodeId` |
 | `DELETE` | `/podcasts/queue/:episodeId` | autenticado | Quita un episodio de la cola |
 | `GET` | `/podcasts/favorites` | autenticado | Lista episodios favoritos de podcasts |
 | `POST` | `/podcasts/favorites` | autenticado | Marca un episodio como favorito |
@@ -68,5 +69,7 @@ Resumen de endpoints (todos bajo `/api/v1`):
 | `GET` | `/podcasts/stats/habits` | autenticado | Tiempo por día de la semana y hora |
 | `GET` | `/podcasts/stats/categories` | autenticado | Tiempo por categoría (`limit`) |
 | `GET` | `/podcasts/stats/recent` | autenticado | Sesiones de escucha recientes (`limit`) |
+
+`DELETE /podcasts/queue?keepEpisodeId=42` vacía los episodios pendientes y conserva el episodio 42 en la primera posición; sin el parámetro, vacía la cola completa. En ambos casos incrementa `revision` y no detiene la reproducción en curso.
 
 Errores en formato `{ "error": { "code", "message", "status", "details?" } }`.

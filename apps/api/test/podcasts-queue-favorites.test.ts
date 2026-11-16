@@ -166,6 +166,204 @@ describe("Cola sincronizada de podcasts", () => {
       srv.db.sqlite.close();
     }
   });
+
+  it("mueve un episodio ya encolado a continuación o al final sin duplicarlo", async () => {
+    const { srv, token, episodes } = await setupFeed();
+    try {
+      const first = episodes.find((e) => e.title === "Episodio Uno")!;
+      const second = episodes.find((e) => e.title === "Episodio Dos")!;
+      const third = episodes.find((e) => e.title === "Episodio Tres")!;
+
+      for (const episode of [first, second, third]) {
+        await request(srv.app)
+          .post("/api/v1/podcasts/queue")
+          .set("Authorization", `Bearer ${token}`)
+          .send({ episodeId: episode.id })
+          .expect(201);
+      }
+
+      const base = await request(srv.app)
+        .get("/api/v1/podcasts/queue")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(base.body.queue.items.map((i: { id: number }) => i.id)).toEqual([
+        first.id,
+        second.id,
+        third.id,
+      ]);
+      const baseRevision = base.body.queue.revision as number;
+
+      const moveNext = await request(srv.app)
+        .post("/api/v1/podcasts/queue")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ episodeId: third.id, position: "next" })
+        .expect(201);
+      expect(moveNext.body.queue.items.map((i: { id: number }) => i.id)).toEqual([
+        third.id,
+        first.id,
+        second.id,
+      ]);
+      expect(moveNext.body.queue.items).toHaveLength(3);
+      expect(moveNext.body.queue.revision).toBe(baseRevision + 1);
+
+      const nextNoop = await request(srv.app)
+        .post("/api/v1/podcasts/queue")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ episodeId: third.id, position: "next" })
+        .expect(201);
+      expect(nextNoop.body.queue.items.map((i: { id: number }) => i.id)).toEqual([
+        third.id,
+        first.id,
+        second.id,
+      ]);
+      expect(nextNoop.body.queue.revision).toBe(baseRevision + 1);
+
+      const moveEnd = await request(srv.app)
+        .post("/api/v1/podcasts/queue")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ episodeId: third.id, position: "end" })
+        .expect(201);
+      expect(moveEnd.body.queue.items.map((i: { id: number }) => i.id)).toEqual([
+        first.id,
+        second.id,
+        third.id,
+      ]);
+      expect(moveEnd.body.queue.items).toHaveLength(3);
+      expect(moveEnd.body.queue.revision).toBe(baseRevision + 2);
+
+      const endNoop = await request(srv.app)
+        .post("/api/v1/podcasts/queue")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ episodeId: third.id, position: "end" })
+        .expect(201);
+      expect(endNoop.body.queue.items.map((i: { id: number }) => i.id)).toEqual([
+        first.id,
+        second.id,
+        third.id,
+      ]);
+      expect(endNoop.body.queue.revision).toBe(baseRevision + 2);
+    } finally {
+      srv.db.sqlite.close();
+    }
+  });
+
+  it("vacía la cola, conserva opcionalmente un episodio y se aísla por usuario", async () => {
+    const { srv, token, episodes } = await setupFeed();
+    try {
+      const first = episodes.find((e) => e.title === "Episodio Uno")!;
+      const second = episodes.find((e) => e.title === "Episodio Dos")!;
+      const third = episodes.find((e) => e.title === "Episodio Tres")!;
+
+      for (const episode of [first, second, third]) {
+        await request(srv.app)
+          .post("/api/v1/podcasts/queue")
+          .set("Authorization", `Bearer ${token}`)
+          .send({ episodeId: episode.id })
+          .expect(201);
+      }
+
+      const cleared = await request(srv.app)
+        .delete("/api/v1/podcasts/queue")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(cleared.body.queue.items).toHaveLength(0);
+      expect(cleared.body.queue.revision).toBe(4);
+
+      for (const episode of [first, second]) {
+        await request(srv.app)
+          .post("/api/v1/podcasts/queue")
+          .set("Authorization", `Bearer ${token}`)
+          .send({ episodeId: episode.id })
+          .expect(201);
+      }
+
+      const kept = await request(srv.app)
+        .delete(`/api/v1/podcasts/queue?keepEpisodeId=${second.id}`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(kept.body.queue.items.map((i: { id: number }) => i.id)).toEqual([second.id]);
+      expect(kept.body.queue.revision).toBe(7);
+
+      const keptAgain = await request(srv.app)
+        .delete(`/api/v1/podcasts/queue?keepEpisodeId=${second.id}`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(keptAgain.body.queue.items.map((i: { id: number }) => i.id)).toEqual([second.id]);
+      expect(keptAgain.body.queue.revision).toBe(8);
+
+      const unknownKeep = await request(srv.app)
+        .delete("/api/v1/podcasts/queue?keepEpisodeId=999999")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(unknownKeep.body.queue.items).toHaveLength(0);
+      expect(unknownKeep.body.queue.revision).toBe(9);
+
+      const invalidKeep = await request(srv.app)
+        .delete("/api/v1/podcasts/queue?keepEpisodeId=abc")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(400);
+      expect(invalidKeep.body.error.code).toBe("VALIDATION_ERROR");
+
+      await request(srv.app)
+        .post("/api/v1/podcasts/queue")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ episodeId: first.id })
+        .expect(201);
+
+      const reg = await request(srv.app)
+        .post("/api/v1/auth/register")
+        .send({ email: "queue-other@example.com", password: "Password123!", name: "Queue Other" })
+        .expect(201);
+      const otherToken = reg.body.accessToken as string;
+
+      await request(srv.app)
+        .post("/api/v1/podcasts/queue")
+        .set("Authorization", `Bearer ${otherToken}`)
+        .send({ episodeId: first.id })
+        .expect(201);
+
+      const otherBefore = await request(srv.app)
+        .get("/api/v1/podcasts/queue")
+        .set("Authorization", `Bearer ${otherToken}`)
+        .expect(200);
+      expect(otherBefore.body.queue.items.map((i: { id: number }) => i.id)).toEqual([first.id]);
+
+      const isolated = await request(srv.app)
+        .delete(`/api/v1/podcasts/queue?keepEpisodeId=${first.id}`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(isolated.body.queue.items.map((i: { id: number }) => i.id)).toEqual([first.id]);
+      expect(isolated.body.queue.revision).toBe(11);
+
+      const otherAfter = await request(srv.app)
+        .get("/api/v1/podcasts/queue")
+        .set("Authorization", `Bearer ${otherToken}`)
+        .expect(200);
+      expect(otherAfter.body.queue.items.map((i: { id: number }) => i.id)).toEqual([first.id]);
+
+      const empty = await request(srv.app)
+        .delete("/api/v1/podcasts/queue")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(empty.body.queue.items).toHaveLength(0);
+      expect(empty.body.queue.revision).toBe(12);
+
+      const emptyAgain = await request(srv.app)
+        .delete("/api/v1/podcasts/queue")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(emptyAgain.body.queue.items).toHaveLength(0);
+      expect(emptyAgain.body.queue.revision).toBe(13);
+
+      const otherFinal = await request(srv.app)
+        .get("/api/v1/podcasts/queue")
+        .set("Authorization", `Bearer ${otherToken}`)
+        .expect(200);
+      expect(otherFinal.body.queue.items.map((i: { id: number }) => i.id)).toEqual([first.id]);
+    } finally {
+      srv.db.sqlite.close();
+    }
+  });
 });
 
 describe("Episodios favoritos de podcasts", () => {

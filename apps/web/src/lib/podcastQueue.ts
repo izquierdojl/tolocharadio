@@ -1,4 +1,27 @@
+import type { PlaybackStatus } from "./playbackEngine.js";
 import type { PodcastEpisode } from "./types.js";
+
+/// Indica si el reproductor está en un estado en el que el episodio debe ocultarse de la cola.
+export function isQueueEpisodeActive(status: PlaybackStatus): boolean {
+  return status === "connecting" || status === "playing" || status === "reconnecting";
+}
+
+/// Reconstruye el orden completo de la cola conservando el hueco del episodio oculto.
+export function mergeQueueOrder(
+  allItems: PodcastEpisode[],
+  visibleOrder: number[],
+  hiddenEpisodeId?: number | null,
+): number[] {
+  if (hiddenEpisodeId === undefined || hiddenEpisodeId === null) return visibleOrder;
+
+  const hiddenIndex = allItems.findIndex((item) => item.id === hiddenEpisodeId);
+  if (hiddenIndex === -1) return visibleOrder;
+
+  const withoutHidden = visibleOrder.filter((id) => id !== hiddenEpisodeId);
+  const merged = [...withoutHidden];
+  merged.splice(Math.min(hiddenIndex, merged.length), 0, hiddenEpisodeId);
+  return merged;
+}
 
 /// Escoge el siguiente episodio de la cola tras terminar `endedEpisodeId`.
 export function nextQueueEpisode(

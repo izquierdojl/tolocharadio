@@ -17,7 +17,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, ListMusic, Pause, Play, Trash2 } from "lucide-react";
+import { GripVertical, ListMusic, Pause, Play, RotateCcw, Trash2 } from "lucide-react";
+import { mergeQueueOrder } from "../../lib/podcastQueue.js";
 import type { PodcastEpisode, PodcastQueue, PodcastSummary } from "../../lib/types.js";
 import { usePlayerStore } from "../../stores/player.js";
 import { PodcastCover } from "./PodcastCover.js";
@@ -46,9 +47,27 @@ function SortableQueueItem({ episode, podcast, index, onRemove }: SortableQueueI
     id: episode.id,
   });
   const playEpisode = usePlayerStore((s) => s.playEpisode);
+  const togglePlayback = usePlayerStore((s) => s.toggle);
+  const retryPlayback = usePlayerStore((s) => s.retry);
   const isCurrent = usePlayerStore((s) => s.kind === "podcast" && s.episode?.id === episode.id);
   const isPlaying = usePlayerStore((s) => s.isPlaying && isCurrent);
+  const status = usePlayerStore((s) => (s.episode?.id === episode.id ? s.status : null));
+  const isFailed = isCurrent && status === "failed";
+  const playTitle = isFailed ? "Reintentar" : isPlaying ? "Pausar" : "Reproducir";
   const duration = formatDuration(episode.durationSec);
+
+  const handlePlay = (): void => {
+    if (!podcast) return;
+    if (isCurrent) {
+      if (isFailed) {
+        retryPlayback();
+      } else {
+        togglePlayback();
+      }
+      return;
+    }
+    playEpisode(episode, podcast);
+  };
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -88,15 +107,19 @@ function SortableQueueItem({ episode, podcast, index, onRemove }: SortableQueueI
       </div>
       <button
         type="button"
-        onClick={() => {
-          if (podcast) playEpisode(episode, podcast, { startPositionSec: 0 });
-        }}
+        onClick={handlePlay}
         disabled={!podcast}
-        title={isPlaying ? "Pausar" : "Reproducir"}
-        aria-label={isPlaying ? "Pausar" : "Reproducir"}
+        title={playTitle}
+        aria-label={playTitle}
         className="inline-flex size-8 items-center justify-center rounded-lg text-muted transition hover:bg-surface-soft hover:text-foreground disabled:opacity-40"
       >
-        {isPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
+        {isFailed ? (
+          <RotateCcw className="size-4" />
+        ) : isPlaying ? (
+          <Pause className="size-4" />
+        ) : (
+          <Play className="size-4" />
+        )}
       </button>
       <button
         type="button"
@@ -116,9 +139,18 @@ interface QueuePanelProps {
   podcasts: Map<number, PodcastSummary>;
   onReorder: (episodeIds: number[]) => void;
   onRemove: (episodeId: number) => void;
+  hiddenEpisodeId?: number | null;
+  hasActiveEpisode?: boolean;
 }
 
-export function QueuePanel({ queue, podcasts, onReorder, onRemove }: QueuePanelProps) {
+export function QueuePanel({
+  queue,
+  podcasts,
+  onReorder,
+  onRemove,
+  hiddenEpisodeId = null,
+  hasActiveEpisode = false,
+}: QueuePanelProps) {
   // La clave por revisión reinicia el orden local cuando el servidor confirma cambios.
   return (
     <QueuePanelList
@@ -127,12 +159,25 @@ export function QueuePanel({ queue, podcasts, onReorder, onRemove }: QueuePanelP
       podcasts={podcasts}
       onReorder={onReorder}
       onRemove={onRemove}
+      hiddenEpisodeId={hiddenEpisodeId}
+      hasActiveEpisode={hasActiveEpisode}
     />
   );
 }
 
-function QueuePanelList({ queue, podcasts, onReorder, onRemove }: QueuePanelProps) {
+function QueuePanelList({
+  queue,
+  podcasts,
+  onReorder,
+  onRemove,
+  hiddenEpisodeId,
+  hasActiveEpisode,
+}: QueuePanelProps) {
   const [items, setItems] = useState(queue.items);
+  const visibleItems =
+    hiddenEpisodeId === null ? items : items.filter((item) => item.id !== hiddenEpisodeId);
+  const hiddenInQueue =
+    hiddenEpisodeId !== null && items.some((item) => item.id === hiddenEpisodeId);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -143,31 +188,47 @@ function QueuePanelList({ queue, podcasts, onReorder, onRemove }: QueuePanelProp
   const handleDragEnd = (event: DragEndEvent): void => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = items.findIndex((item) => item.id === active.id);
-    const newIndex = items.findIndex((item) => item.id === over.id);
+    const oldIndex = visibleItems.findIndex((item) => item.id === active.id);
+    const newIndex = visibleItems.findIndex((item) => item.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
-    const next = arrayMove(items, oldIndex, newIndex);
-    setItems(next);
-    onReorder(next.map((item) => item.id));
+    const nextVisible = arrayMove(visibleItems, oldIndex, newIndex);
+    const nextOrder = mergeQueueOrder(
+      items,
+      nextVisible.map((item) => item.id),
+      hiddenEpisodeId,
+    );
+    const byId = new Map(items.map((item) => [item.id, item]));
+    const nextItems = nextOrder
+      .map((id) => byId.get(id))
+      .filter((item): item is PodcastEpisode => item !== undefined);
+    setItems(nextItems);
+    onReorder(nextOrder);
   };
 
-  if (items.length === 0) {
+  if (visibleItems.length === 0) {
+    const title = hasActiveEpisode ? "No hay más episodios en cola" : "Tu cola está vacía";
+    const description = hasActiveEpisode
+      ? hiddenInQueue
+        ? "El episodio en reproducción está arriba."
+        : "El episodio en reproducción se muestra arriba."
+      : "Añade episodios desde cualquier podcast para escucharlos seguidos.";
     return (
       <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-line-strong px-6 py-10 text-center">
         <ListMusic className="size-8 text-faint" />
-        <p className="font-medium text-foreground">Tu cola está vacía</p>
-        <p className="text-sm text-muted">
-          Añade episodios desde cualquier podcast para escucharlos seguidos.
-        </p>
+        <p className="font-medium text-foreground">{title}</p>
+        <p className="text-sm text-muted">{description}</p>
       </div>
     );
   }
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
+      <SortableContext
+        items={visibleItems.map((item) => item.id)}
+        strategy={verticalListSortingStrategy}
+      >
         <ul className="flex flex-col gap-2">
-          {items.map((episode, index) => (
+          {visibleItems.map((episode, index) => (
             <SortableQueueItem
               key={episode.id}
               episode={episode}
