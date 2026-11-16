@@ -30,10 +30,10 @@ Restricción principal: **solo podcasts**. El reproductor de radio, el proxy y e
 
 La cola del servidor sigue conteniendo todos los episodios pendientes, incluido el que suena. El cliente calcula si el episodio actual está activo:
 
-- Activo (se oculta de la lista y se muestra en “En reproducción”): `kind === "podcast"` y estado `connecting`, `playing` o `reconnecting`.
+- Activo (se oculta de la lista; el reproductor persistente lo sigue mostrando): `kind === "podcast"` y estado `connecting`, `playing` o `reconnecting`.
 - No activo (vuelve a la lista): `paused`, `failed` o `idle`, o cuando el reproductor cambia a radio.
 
-No se elimina nada de la cola al reproducir. Al pausar, fallar o detener, el episodio nunca se fue: simplemente vuelve a mostrarse en su posición original. Al reproducir otro, el anterior deja de estar activo y reaparece solo. Si el episodio activo no estaba en la cola (se inició desde la ficha), se muestra igualmente en “En reproducción” pero no se añade a la cola.
+No se elimina nada de la cola al reproducir. Al pausar, fallar o detener, el episodio nunca se fue: simplemente vuelve a mostrarse en su posición original. Al reproducir otro, el anterior deja de estar activo y reaparece solo. Si el episodio activo no estaba en la cola (se inició desde la ficha), se controla desde el reproductor persistente pero no se añade a la cola.
 
 **Alternativas descartadas:**
 
@@ -41,21 +41,21 @@ No se elimina nada de la cola al reproducir. Al pausar, fallar o detener, el epi
 - **Guardar `current_episode_id` en `podcast_queue_state`:** resuelve la recarga, pero sincroniza el “en reproducción” entre dispositivos cuando la reproducción es local, y complica el vaciado y el avance automático.
 - **No ocultarlo:** no cumple el requisito de “un episodio en reproducción y el resto en cola”.
 
-**Consecuencia aceptada:** el contador de la cola (badge y cabecera) incluye el episodio activo. La página lo hace explícito mostrando la tira “En reproducción” y la lista “A continuación”; no se añade un parámetro de exclusión al contador.
+**Consecuencia aceptada:** el contador de la cola (badge y cabecera) incluye el episodio activo. La página lo hace explícito ocultándolo de la lista de pendientes; el reproductor persistente muestra el episodio activo y no se añade un parámetro de exclusión al contador.
 
-### D2. Página de cola: tira “En reproducción” + lista de pendientes
+### D2. Página de cola: lista de pendientes y reproductor persistente
 
 `PodcastQueue` compone:
 
-1. **Tira “En reproducción”** (`NowPlayingStrip` o componente equivalente), visible solo mientras el episodio está activo. Muestra portada, título enlazado a `/podcasts/:podcastId`, nombre del podcast, progreso y botón pausar/reanudar. Usa el estado del reproductor, no la cola.
+1. **Reproductor persistente** (`PlayerBar`, ya existente): única superficie del episodio activo. No se añade una tira ni otro bloque que lo duplique en la página de cola.
 2. **Lista “A continuación”**: `QueuePanel` recibe el `hiddenEpisodeId` activo y filtra ese episodio. Las posiciones visibles se renumeran 1..n.
 3. **Vaciar cola** en la cabecera, junto al contador.
 
 Estados vacíos:
 
 - Sin episodios y sin reproducción: “Tu cola está vacía”.
-- Solo el episodio activo en la cola: la tira arriba y “No hay más episodios en cola”.
-- Episodio activo que no está en la cola: la tira arriba y la lista con sus pendientes (o el mensaje de que no hay más).
+- Solo el episodio activo en la cola: “No hay más episodios en cola” y el reproductor persistente sigue abajo.
+- Episodio activo que no está en la cola: la lista con sus pendientes (o el mensaje de que no hay más) y el reproductor persistente abajo.
 
 **Reordenación con un episodio oculto:** se mantiene el índice absoluto del episodio oculto. Se añade un helper puro `mergeQueueOrder(allItems, visibleOrder, hiddenEpisodeId)` en `lib/podcastQueue.ts`:
 
@@ -113,7 +113,7 @@ El cliente pasa `keepEpisodeId` con el episodio cargado en el reproductor (sonan
 
 ### D6. Contador y badge
 
-No se cambia `GET /podcasts/queue/count`. El badge de navegación y la cabecera de la cola muestran el total (`items.length`), que incluye el episodio activo. La tira “En reproducción” y la lista “A continuación” explican la composición. Si más adelante se quiere un contador solo de pendientes, se añadirá `excludeEpisodeId` al endpoint; no forma parte de este change.
+No se cambia `GET /podcasts/queue/count`. El badge de navegación y la cabecera de la cola muestran el total (`items.length`), que incluye el episodio activo. El reproductor persistente y la lista “A continuación” explican la composición. Si más adelante se quiere un contador solo de pendientes, se añadirá `excludeEpisodeId` al endpoint; no forma parte de este change.
 
 ### D7. Radio y reproductor compartido
 
@@ -122,13 +122,13 @@ No se toca `play(station)` ni el motor de radio. Cuando el usuario pone una emis
 ### D8. Tests y verificación
 
 - **API:** ampliar `podcasts-queue-favorites.test.ts` con mover a continuación/al final, no-op en la posición pedida, vaciado completo, vaciado con `keepEpisodeId` (miembro y no miembro), cola vacía, incremento de revisión y aislamiento entre usuarios. `openapi.test.ts` debe listar la nueva ruta.
-- **Web:** tests de `mergeQueueOrder` y de la selección del episodio activo (`isQueueItemHidden` o equivalente). Los componentes se validan con `renderToStaticMarkup` donde aporte valor (estado vacío y tira en reproducción).
+- **Web:** tests de `mergeQueueOrder` y de la selección del episodio activo (`isQueueItemHidden` o equivalente). Los componentes se validan con `renderToStaticMarkup` donde aporte valor (estado vacío de la lista).
 - **Manual/Docker:** reproducir desde lista, encolar a continuación/al final, reproducir otro episodio y ver que el anterior vuelve, pausar y ver que reaparece, vaciar con y sin reproducción, y comprobar que la radio sigue igual.
 
 ## Risks / Trade-offs
 
 - **Reordenar con un episodio oculto puede descolocar el orden** → helper puro con tests y reconstrucción por índice absoluto; el episodio oculto mantiene su hueco.
-- **El contador incluye el activo** → la UI separa “En reproducción” y “A continuación”; se documenta. Si molesta, se añade después `excludeEpisodeId` sin romper contratos.
+- **El contador incluye el activo** → la UI oculta el activo de la lista y el reproductor persistente lo muestra; se documenta. Si molesta, se añade después `excludeEpisodeId` sin romper contratos.
 - **`keepEpisodeId` lo envía el cliente** → el servidor solo conserva el id si pertenece a la cola del usuario; no hay fuga entre usuarios.
 - **Vaciado sin `baseRevision`** → es una acción destructiva explícita con confirmación; usar revisión obligaría a recargar y complicaría el flujo. El límite de una cola personal hace aceptable el last-write-wins.
 - **Mover un episodio existente desplaza posiciones** → máximo 200 filas y transacción; coste despreciable.

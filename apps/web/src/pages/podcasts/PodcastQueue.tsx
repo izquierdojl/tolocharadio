@@ -12,7 +12,6 @@ import {
 } from "../../lib/api.js";
 import { isQueueEpisodeActive } from "../../lib/podcastQueue.js";
 import { ConfirmDialog } from "../../components/ConfirmDialog.js";
-import { ActiveNowPlayingStrip } from "../../components/podcasts/ActiveNowPlayingStrip.js";
 import { QueuePanel } from "../../components/podcasts/QueuePanel.js";
 import { usePodcastSummaries } from "../../components/podcasts/usePodcastSummaries.js";
 import { usePlayerStore } from "../../stores/player.js";
@@ -121,8 +120,6 @@ export function PodcastQueue() {
           </button>
         </div>
       </div>
-
-      <ActiveNowPlayingStrip />
 
       {queueQuery.isLoading ? (
         <p className="py-10 text-center text-faint">Cargando cola…</p>

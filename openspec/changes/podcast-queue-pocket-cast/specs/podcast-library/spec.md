@@ -26,23 +26,23 @@ En las listas de episodios de podcasts (inicio, ficha de podcast y favoritos), c
 - **THEN** se muestra el error de límite devuelto por la API y la cola no cambia
 
 ### Requirement: Episodio activo separado de la cola en la vista de cola
-Mientras un episodio de podcast está activo (conectando, reproduciendo o reconectando), la vista de cola SHALL ocultarlo de la lista de pendientes y mostrarlo en un área distinta **En reproducción** con sus controles básicos. Al pausarlo, fallar o detenerlo, SHALL volver a su posición original en la lista; al iniciar otro episodio, el anterior SHALL reaparecer automáticamente. La cola persistida en el servidor NO SHALL modificarse por este comportamiento.
+Mientras un episodio de podcast está activo (conectando, reproduciendo o reconectando), la vista de cola SHALL ocultarlo de la lista de pendientes y NO SHALL duplicarlo en un área adicional; el reproductor persistente SHALL seguir mostrándolo. Al pausarlo, fallar o detenerlo, SHALL volver a su posición original en la lista; al iniciar otro episodio, el anterior SHALL reaparecer automáticamente. La cola persistida en el servidor NO SHALL modificarse por este comportamiento.
 
 #### Scenario: Episodio en reproducción oculto de la lista
 - **WHEN** un episodio de la cola está sonando
-- **THEN** no aparece en la lista de pendientes y se muestra en el área “En reproducción”
+- **THEN** no aparece en la lista de pendientes y sigue visible únicamente en el reproductor persistente
 
 #### Scenario: Pausa devuelve el episodio a la cola
 - **WHEN** el usuario pausa el episodio activo
-- **THEN** el área “En reproducción” desaparece y el episodio vuelve a su posición original en la lista de pendientes
+- **THEN** el episodio vuelve a su posición original en la lista de pendientes y el reproductor persistente sigue mostrándolo
 
 #### Scenario: Cambio de episodio en reproducción
 - **WHEN** el usuario inicia otro episodio de la cola mientras el anterior sigue activo
-- **THEN** el anterior reaparece en la cola y el nuevo se muestra como “En reproducción”
+- **THEN** el anterior reaparece en la cola y el nuevo pasa a controlarse desde el reproductor persistente
 
 #### Scenario: Episodio activo que no estaba en la cola
 - **WHEN** el episodio activo se inició desde la ficha del podcast y no pertenece a la cola
-- **THEN** se muestra en “En reproducción” y al pausarlo no se añade automáticamente a la cola
+- **THEN** se controla desde el reproductor persistente y al pausarlo no se añade automáticamente a la cola
 
 #### Scenario: Recarga de la página durante la reproducción
 - **WHEN** la página se recarga mientras un episodio de la cola está sonando

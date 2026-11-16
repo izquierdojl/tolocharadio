@@ -176,8 +176,6 @@ function QueuePanelList({
   const [items, setItems] = useState(queue.items);
   const visibleItems =
     hiddenEpisodeId === null ? items : items.filter((item) => item.id !== hiddenEpisodeId);
-  const hiddenInQueue =
-    hiddenEpisodeId !== null && items.some((item) => item.id === hiddenEpisodeId);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -208,9 +206,7 @@ function QueuePanelList({
   if (visibleItems.length === 0) {
     const title = hasActiveEpisode ? "No hay más episodios en cola" : "Tu cola está vacía";
     const description = hasActiveEpisode
-      ? hiddenInQueue
-        ? "El episodio en reproducción está arriba."
-        : "El episodio en reproducción se muestra arriba."
+      ? "El episodio en reproducción está en el reproductor."
       : "Añade episodios desde cualquier podcast para escucharlos seguidos.";
     return (
       <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-line-strong px-6 py-10 text-center">

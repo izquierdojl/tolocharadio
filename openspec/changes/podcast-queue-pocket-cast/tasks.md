@@ -19,7 +19,7 @@
 
 ## 4. Página de cola y vaciado
 
-- [x] 4.1 Crear la tira “En reproducción” en `apps/web/src/components/podcasts/` y componerla en `PodcastQueue.tsx` solo mientras el episodio esté activo, con portada, título enlazado, podcast, progreso y pausa/reanudar; verificar los estados vacíos y la tira con `renderToStaticMarkup` y prueba manual.
+- [x] 4.1 Mantener el episodio activo únicamente en el reproductor persistente y ocultarlo de la lista de pendientes en la página de cola, con estados vacíos diferenciados; verificar con typecheck/build y prueba manual.
 - [x] 4.2 Integrar el filtrado del episodio activo en `QueuePanel.tsx` y la reconstrucción del orden con `mergeQueueOrder` al arrastrar, renumerando la lista visible y manteniendo el hueco del episodio oculto; verificar con los tests del helper y prueba manual de arrastre con un episodio sonando.
 - [x] 4.3 Añadir el botón “Vaciar cola” con diálogo de confirmación accesible, mutación `clearPodcastQueue` pasando `keepEpisodeId` cuando el episodio cargado está en la cola, estado pendiente, toast y actualización de caché; verificar con typecheck/build y prueba manual de vaciado con reproducción activa y en pausa.
 - [x] 4.4 Actualizar `docs/uso.md` y `docs/arquitectura.md` con el modelo de cola (episodio activo separado, retorno al pausar/detener, acciones por fila y vaciado); verificar que los pasos descritos coinciden con la interfaz real.
