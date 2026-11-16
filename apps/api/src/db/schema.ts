@@ -210,6 +210,7 @@ export const podcastProgress = sqliteTable(
     positionSec: integer("position_sec").notNull(),
     durationSec: integer("duration_sec"),
     completedAt: integer("completed_at"),
+    dismissedAt: integer("dismissed_at"),
     updatedAt: integer("updated_at").notNull(),
   },
   (t) => [

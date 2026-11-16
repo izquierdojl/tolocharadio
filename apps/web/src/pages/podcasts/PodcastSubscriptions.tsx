@@ -7,7 +7,7 @@ import {
   fetchPodcastSubscriptions,
   unsubscribePodcast,
 } from "../../lib/api.js";
-import { PodcastCard } from "../../components/podcasts/PodcastCard.js";
+import { PodcastList } from "../../components/podcasts/PodcastList.js";
 import { EmptyState } from "../../components/EmptyState.js";
 
 export function PodcastSubscriptions() {
@@ -100,24 +100,19 @@ export function PodcastSubscriptions() {
           }
         />
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {items.map((podcast) => (
-            <PodcastCard
-              key={podcast.id}
-              podcast={podcast}
-              action={
-                <button
-                  type="button"
-                  onClick={() => unsubscribeMutation.mutate(podcast.id)}
-                  disabled={unsubscribeMutation.isPending}
-                  className="rounded-lg px-2 py-1 text-[10px] uppercase tracking-wide text-muted transition hover:bg-surface-soft hover:text-rose-400 disabled:opacity-50"
-                >
-                  Cancelar
-                </button>
-              }
-            />
-          ))}
-        </div>
+        <PodcastList
+          podcasts={items}
+          renderAction={(podcast) => (
+            <button
+              type="button"
+              onClick={() => unsubscribeMutation.mutate(podcast.id)}
+              disabled={unsubscribeMutation.isPending}
+              className="rounded-lg px-2 py-1 text-[10px] uppercase tracking-wide text-muted transition hover:bg-surface-soft hover:text-rose-400 disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+          )}
+        />
       )}
     </section>
   );

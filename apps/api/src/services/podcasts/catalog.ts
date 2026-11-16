@@ -439,6 +439,7 @@ export class PodcastCatalogService {
               and(
                 eq(podcastProgress.userId, userId),
                 isNull(podcastProgress.completedAt),
+                isNull(podcastProgress.dismissedAt),
                 gt(podcastProgress.positionSec, 0),
                 isNull(podcastEpisodes.removedAt),
               ),

@@ -27,6 +27,7 @@ export function PodcastQueue() {
     onSuccess: ({ queue: updated }) => {
       queryClient.setQueryData(["podcast-queue"], { queue: updated });
       void queryClient.invalidateQueries({ queryKey: ["podcast-home"] });
+      void queryClient.invalidateQueries({ queryKey: ["podcast-queue-count"] });
     },
     onError: (err) => {
       if (err instanceof ApiError && err.code === "QUEUE_CONFLICT") {
@@ -43,6 +44,7 @@ export function PodcastQueue() {
     onSuccess: ({ queue: updated }) => {
       queryClient.setQueryData(["podcast-queue"], { queue: updated });
       void queryClient.invalidateQueries({ queryKey: ["podcast-home"] });
+      void queryClient.invalidateQueries({ queryKey: ["podcast-queue-count"] });
       toast.success("Episodio quitado de la cola");
     },
     onError: (err) => {

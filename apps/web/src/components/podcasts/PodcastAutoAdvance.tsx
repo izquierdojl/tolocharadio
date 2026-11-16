@@ -34,6 +34,7 @@ export function PodcastAutoAdvance() {
       }
 
       void queryClient.invalidateQueries({ queryKey: ["podcast-queue"] });
+      void queryClient.invalidateQueries({ queryKey: ["podcast-queue-count"] });
       void queryClient.invalidateQueries({ queryKey: ["podcast-home"] });
 
       if (!next) {

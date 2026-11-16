@@ -17,7 +17,7 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import { fetchPublicConfig } from "../lib/api.js";
+import { fetchPodcastQueueCount, fetchPublicConfig } from "../lib/api.js";
 import { useAuthStore } from "../stores/auth.js";
 import { AboutSection } from "./AboutSection.js";
 import { PodcastAutoAdvance } from "./podcasts/PodcastAutoAdvance.js";
@@ -94,6 +94,18 @@ function SectionSwitch({
         Podcasts
       </button>
     </div>
+  );
+}
+
+function QueueCountBadge({ count, className = "" }: { count: number; className?: string }) {
+  if (count <= 0) return null;
+  return (
+    <span
+      aria-label={`${count} ${count === 1 ? "episodio" : "episodios"} en cola`}
+      className={`inline-flex min-w-4 items-center justify-center rounded-full bg-ochre-500 px-1 text-[10px] font-semibold leading-4 text-pine-950 ${className}`}
+    >
+      {count}
+    </span>
   );
 }
 
@@ -228,6 +240,12 @@ function Header() {
     location.pathname === "/podcasts" || location.pathname.startsWith("/podcasts/");
   const section: Section = inPodcasts && podcastsEnabled ? "podcasts" : "radio";
   const navItems = section === "podcasts" ? PODCAST_NAV_ITEMS : NAV_ITEMS;
+  const { data: queueCount } = useQuery({
+    queryKey: ["podcast-queue-count"],
+    queryFn: fetchPodcastQueueCount,
+    enabled: podcastsEnabled && section === "podcasts",
+  });
+  const queueCountValue = queueCount?.count ?? 0;
   const changeSection = (next: Section): void => {
     setMenuOpen(false);
     navigate(next === "podcasts" ? "/podcasts" : "/explorar");
@@ -279,6 +297,9 @@ function Header() {
               >
                 <Icon className="size-4" />
                 <span className="hidden lg:inline">{item.label}</span>
+                {item.to === "/podcasts/cola" ? (
+                  <QueueCountBadge count={queueCountValue} className="ml-1" />
+                ) : null}
               </NavLink>
             );
           })}
@@ -341,6 +362,9 @@ function Header() {
                   >
                     <Icon className="size-4" />
                     {item.label}
+                    {item.to === "/podcasts/cola" ? (
+                      <QueueCountBadge count={queueCountValue} className="ml-auto" />
+                    ) : null}
                   </NavLink>
                 );
               })}

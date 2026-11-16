@@ -56,6 +56,8 @@ describe("OpenAPI spec", () => {
       "/podcasts/episodes/{episodeId}/playback",
       "/podcasts/episodes/{episodeId}/stream",
       "/podcasts/episodes/{episodeId}/progress",
+      "/podcasts/episodes/{episodeId}/dismiss",
+      "/podcasts/queue/count",
     ];
     for (const path of expected) {
       expect(spec.paths).toHaveProperty(path);

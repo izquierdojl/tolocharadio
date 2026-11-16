@@ -321,3 +321,185 @@ describe("Portada agregada /podcasts/home", () => {
     }
   });
 });
+
+describe("Descarte de Continuar escuchando", () => {
+  it("descarta con progreso, lo excluye del home, no crea progreso sin datos y reaparece con nuevo progreso", async () => {
+    const { srv, token, episodes } = await setupFeed();
+    try {
+      const first = episodes.find((e) => e.title === "Episodio Uno")!;
+      const second = episodes.find((e) => e.title === "Episodio Dos")!;
+
+      const dismissWithoutProgress = await request(srv.app)
+        .post(`/api/v1/podcasts/episodes/${second.id}/dismiss`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(dismissWithoutProgress.body.dismissed).toBe(false);
+
+      const secondProgress = await request(srv.app)
+        .get(`/api/v1/podcasts/episodes/${second.id}/progress`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(secondProgress.body.progress).toBeNull();
+
+      await request(srv.app)
+        .put(`/api/v1/podcasts/episodes/${first.id}/progress`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          sessionId: "dismiss-sess-1",
+          sequence: 1,
+          positionSec: 120,
+          durationSec: 600,
+          listenedMs: 120_000,
+          source: "web",
+        })
+        .expect(200);
+
+      const before = await request(srv.app)
+        .get("/api/v1/podcasts/home")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(before.body.continueListening.map((e: { id: number }) => e.id)).toEqual([first.id]);
+
+      const dismissed = await request(srv.app)
+        .post(`/api/v1/podcasts/episodes/${first.id}/dismiss`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(dismissed.body).toEqual({ dismissed: true });
+
+      const after = await request(srv.app)
+        .get("/api/v1/podcasts/home")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(after.body.continueListening).toHaveLength(0);
+
+      await request(srv.app)
+        .post("/api/v1/podcasts/episodes/999999/dismiss")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(404);
+
+      await request(srv.app)
+        .put(`/api/v1/podcasts/episodes/${first.id}/progress`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          sessionId: "dismiss-sess-2",
+          sequence: 1,
+          positionSec: 130,
+          durationSec: 600,
+          listenedMs: 130_000,
+          source: "web",
+        })
+        .expect(200);
+
+      const restored = await request(srv.app)
+        .get("/api/v1/podcasts/home")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(restored.body.continueListening.map((e: { id: number }) => e.id)).toEqual([first.id]);
+    } finally {
+      srv.db.sqlite.close();
+    }
+  });
+
+  it("el descarte de un usuario no afecta al home de otro", async () => {
+    const { srv, token, episodes } = await setupFeed();
+    try {
+      const first = episodes.find((e) => e.title === "Episodio Uno")!;
+
+      const reg = await request(srv.app)
+        .post("/api/v1/auth/register")
+        .send({ email: "other@example.com", password: "Password123!", name: "Other" })
+        .expect(201);
+      const otherToken = reg.body.accessToken as string;
+
+      for (const [index, userToken] of [token, otherToken].entries()) {
+        await request(srv.app)
+          .put(`/api/v1/podcasts/episodes/${first.id}/progress`)
+          .set("Authorization", `Bearer ${userToken}`)
+          .send({
+            sessionId: `dismiss-user-${index + 1}`,
+            sequence: 1,
+            positionSec: 60,
+            durationSec: 600,
+            listenedMs: 60_000,
+            source: "web",
+          })
+          .expect(200);
+      }
+
+      await request(srv.app)
+        .post(`/api/v1/podcasts/episodes/${first.id}/dismiss`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      const ownerHome = await request(srv.app)
+        .get("/api/v1/podcasts/home")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(ownerHome.body.continueListening).toHaveLength(0);
+
+      const otherHome = await request(srv.app)
+        .get("/api/v1/podcasts/home")
+        .set("Authorization", `Bearer ${otherToken}`)
+        .expect(200);
+      expect(otherHome.body.continueListening.map((e: { id: number }) => e.id)).toEqual([first.id]);
+    } finally {
+      srv.db.sqlite.close();
+    }
+  });
+});
+
+describe("Conteo de cola", () => {
+  it("devuelve el numero de episodios y el limite, y se aisla por usuario", async () => {
+    const { srv, token, episodes } = await setupFeed();
+    try {
+      const first = episodes.find((e) => e.title === "Episodio Uno")!;
+      const second = episodes.find((e) => e.title === "Episodio Dos")!;
+
+      const empty = await request(srv.app)
+        .get("/api/v1/podcasts/queue/count")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(empty.body).toEqual({ count: 0, limit: 200 });
+
+      await request(srv.app)
+        .post("/api/v1/podcasts/queue")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ episodeId: first.id })
+        .expect(201);
+      await request(srv.app)
+        .post("/api/v1/podcasts/queue")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ episodeId: second.id })
+        .expect(201);
+
+      const two = await request(srv.app)
+        .get("/api/v1/podcasts/queue/count")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(two.body).toEqual({ count: 2, limit: 200 });
+
+      const reg = await request(srv.app)
+        .post("/api/v1/auth/register")
+        .send({ email: "count@example.com", password: "Password123!", name: "Count" })
+        .expect(201);
+      const otherToken = reg.body.accessToken as string;
+      const other = await request(srv.app)
+        .get("/api/v1/podcasts/queue/count")
+        .set("Authorization", `Bearer ${otherToken}`)
+        .expect(200);
+      expect(other.body.count).toBe(0);
+
+      await request(srv.app)
+        .delete(`/api/v1/podcasts/queue/${first.id}`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      const one = await request(srv.app)
+        .get("/api/v1/podcasts/queue/count")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(one.body.count).toBe(1);
+    } finally {
+      srv.db.sqlite.close();
+    }
+  });
+});

@@ -1648,6 +1648,32 @@ export function buildOpenApi(): Record<string, unknown> {
           },
         },
       },
+      "/podcasts/queue/count": {
+        get: {
+          tags: ["Podcasts"],
+          summary: "Contar los episodios en cola sin cargarlos",
+          ...requireAuth,
+          responses: {
+            "200": {
+              description: "Conteo actual de la cola",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["count", "limit"],
+                    properties: {
+                      count: { type: "integer" },
+                      limit: { type: "integer" },
+                    },
+                  },
+                },
+              },
+            },
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+          },
+        },
+      },
       "/podcasts/queue/order": {
         put: {
           tags: ["Podcasts"],
@@ -2248,6 +2274,33 @@ export function buildOpenApi(): Record<string, unknown> {
             "403": errorResponses["403"],
             "404": errorResponses["404"],
             "422": errorResponses["422"],
+          },
+        },
+      },
+      "/podcasts/episodes/{episodeId}/dismiss": {
+        post: {
+          tags: ["Podcasts"],
+          summary: "Descartar un episodio de Continuar escuchando",
+          ...requireAuth,
+          parameters: [
+            { name: "episodeId", in: "path", required: true, schema: { type: "integer" } },
+          ],
+          responses: {
+            "200": {
+              description: "Resultado del descarte",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["dismissed"],
+                    properties: { dismissed: { type: "boolean" } },
+                  },
+                },
+              },
+            },
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+            "404": errorResponses["404"],
           },
         },
       },
