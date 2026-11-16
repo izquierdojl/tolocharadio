@@ -109,3 +109,75 @@ describe("Progreso idempotente de episodios y sesiones de escucha", () => {
     }
   });
 });
+
+describe("Descarte desde Continuar escuchando", () => {
+  it("restaura el episodio al registrar nuevo progreso tras el descarte", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(FEED_XML, { status: 200 })),
+    );
+
+    const srv = setupServer({ PODCASTS_ENABLED: "true" });
+    try {
+      const reg = await request(srv.app)
+        .post("/api/v1/auth/register")
+        .send({ email: "restore@example.com", password: "Password123!", name: "Restore" })
+        .expect(201);
+      const token = reg.body.accessToken as string;
+
+      const resolved = await request(srv.app)
+        .post("/api/v1/podcasts/resolve")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ feedUrl: "https://audio.example.org/feed.xml" })
+        .expect(200);
+      const episodeId = resolved.body.episodes.items[0].id as number;
+
+      await request(srv.app)
+        .put(`/api/v1/podcasts/episodes/${episodeId}/progress`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          sessionId: "restore-sess-1",
+          sequence: 1,
+          positionSec: 40,
+          durationSec: 100,
+          listenedMs: 40_000,
+          source: "web",
+        })
+        .expect(200);
+
+      await request(srv.app)
+        .post(`/api/v1/podcasts/episodes/${episodeId}/dismiss`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      const dismissedHome = await request(srv.app)
+        .get("/api/v1/podcasts/home")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(dismissedHome.body.continueListening).toHaveLength(0);
+
+      await request(srv.app)
+        .put(`/api/v1/podcasts/episodes/${episodeId}/progress`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          sessionId: "restore-sess-2",
+          sequence: 1,
+          positionSec: 50,
+          durationSec: 100,
+          listenedMs: 50_000,
+          source: "web",
+        })
+        .expect(200);
+
+      const restoredHome = await request(srv.app)
+        .get("/api/v1/podcasts/home")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(restoredHome.body.continueListening.map((e: { id: number }) => e.id)).toEqual([
+        episodeId,
+      ]);
+    } finally {
+      srv.db.sqlite.close();
+    }
+  });
+});

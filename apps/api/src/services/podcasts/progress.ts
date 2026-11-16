@@ -54,6 +54,28 @@ export class PodcastProgressService {
     };
   }
 
+  dismissFromContinue(userId: number, episodeId: number): { dismissed: boolean } {
+    this.catalog.getEpisodeRow(episodeId);
+    const existing = this.db
+      .select({ episodeId: podcastProgress.episodeId })
+      .from(podcastProgress)
+      .where(
+        and(eq(podcastProgress.userId, userId), eq(podcastProgress.episodeId, episodeId)),
+      )
+      .get();
+
+    if (!existing) return { dismissed: false };
+
+    this.db
+      .update(podcastProgress)
+      .set({ dismissedAt: this.now() })
+      .where(
+        and(eq(podcastProgress.userId, userId), eq(podcastProgress.episodeId, episodeId)),
+      )
+      .run();
+    return { dismissed: true };
+  }
+
   recordProgress(
     userId: number,
     episodeId: number,
@@ -187,6 +209,7 @@ export class PodcastProgressService {
           positionSec: clampedPosSec,
           durationSec: effectiveDurationSec,
           completedAt,
+          dismissedAt: null,
           updatedAt: now,
         })
         .onConflictDoUpdate({
@@ -195,6 +218,7 @@ export class PodcastProgressService {
             positionSec: clampedPosSec,
             durationSec: effectiveDurationSec ?? existingProgress?.durationSec ?? null,
             completedAt,
+            dismissedAt: null,
             updatedAt: now,
           },
         })

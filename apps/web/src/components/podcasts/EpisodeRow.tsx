@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Check, Heart, ListPlus, Pause, Play } from "lucide-react";
+import { Check, Heart, ListPlus, Pause, Play, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   addEpisodeToQueue,
@@ -36,9 +36,10 @@ interface EpisodeRowProps {
   episode: PodcastEpisode;
   podcast: PodcastSummary;
   showPodcast?: boolean;
+  onDismiss?: () => void;
 }
 
-export function EpisodeRow({ episode, podcast, showPodcast = false }: EpisodeRowProps) {
+export function EpisodeRow({ episode, podcast, showPodcast = false, onDismiss }: EpisodeRowProps) {
   const queryClient = useQueryClient();
   const playEpisode = usePlayerStore((s) => s.playEpisode);
   const isCurrent = usePlayerStore((s) => s.kind === "podcast" && s.episode?.id === episode.id);
@@ -48,6 +49,7 @@ export function EpisodeRow({ episode, podcast, showPodcast = false }: EpisodeRow
     void queryClient.invalidateQueries({ queryKey: ["podcast-home"] });
     void queryClient.invalidateQueries({ queryKey: ["podcast-favorites"] });
     void queryClient.invalidateQueries({ queryKey: ["podcast-queue"] });
+    void queryClient.invalidateQueries({ queryKey: ["podcast-queue-count"] });
     void queryClient.invalidateQueries({ queryKey: ["podcast-episodes", podcast.id] });
   };
 
@@ -129,6 +131,17 @@ export function EpisodeRow({ episode, podcast, showPodcast = false }: EpisodeRow
               ) : null}
             </p>
           </div>
+          {onDismiss ? (
+            <button
+              type="button"
+              onClick={onDismiss}
+              title="Descartar de Continuar escuchando"
+              aria-label="Descartar de Continuar escuchando"
+              className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-surface-soft hover:text-rose-400"
+            >
+              <X className="size-4" />
+            </button>
+          ) : null}
         </div>
 
         {episode.description ? (

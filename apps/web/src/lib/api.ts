@@ -324,6 +324,14 @@ export function fetchPodcastQueue(): Promise<{ queue: PodcastQueue }> {
   return api.get<{ queue: PodcastQueue }>("/podcasts/queue");
 }
 
+export function fetchPodcastQueueCount(): Promise<{ count: number; limit: number }> {
+  return api.get<{ count: number; limit: number }>("/podcasts/queue/count");
+}
+
+export function dismissPodcastEpisode(episodeId: number): Promise<{ dismissed: boolean }> {
+  return api.post<{ dismissed: boolean }>(`/podcasts/episodes/${episodeId}/dismiss`);
+}
+
 export function addEpisodeToQueue(
   episodeId: number,
   position: "end" | "next" = "end",

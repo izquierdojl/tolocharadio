@@ -1,13 +1,17 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Compass, ListMusic, Podcast as PodcastIcon, Rss } from "lucide-react";
-import { fetchPodcastHome } from "../../lib/api.js";
+import { toast } from "sonner";
+import { dismissPodcastEpisode, fetchPodcastHome } from "../../lib/api.js";
 import { EpisodeRow } from "../../components/podcasts/EpisodeRow.js";
-import { PodcastCard } from "../../components/podcasts/PodcastCard.js";
+import { PodcastList } from "../../components/podcasts/PodcastList.js";
 import { usePodcastSummaries } from "../../components/podcasts/usePodcastSummaries.js";
 import { EmptyState } from "../../components/EmptyState.js";
+import { useViewModeStore } from "../../stores/viewMode.js";
 
 export function PodcastHome() {
+  const queryClient = useQueryClient();
+  const viewMode = useViewModeStore((s) => s.viewMode);
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["podcast-home"],
     queryFn: fetchPodcastHome,
@@ -16,6 +20,20 @@ export function PodcastHome() {
     data?.continueListening.map((episode) => episode.podcastId) ?? [],
     data?.subscriptions ?? [],
   );
+
+  const dismissMutation = useMutation({
+    mutationFn: (episodeId: number) => dismissPodcastEpisode(episodeId),
+    onSuccess: () => {
+      toast.success("Episodio descartado");
+      void queryClient.invalidateQueries({ queryKey: ["podcast-home"] });
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "No se pudo descartar el episodio");
+    },
+  });
+
+  const episodesContainerClass =
+    viewMode === "list" ? "flex flex-col gap-2" : "grid gap-2 xl:grid-cols-2";
 
   const linkButton =
     "inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-3 py-1.5 text-sm text-foreground transition hover:border-pine-500 hover:bg-surface-soft";
@@ -34,7 +52,7 @@ export function PodcastHome() {
           </Link>
           <Link to="/podcasts/cola" className={linkButton}>
             <ListMusic className="size-4" />
-            Cola{data?.queue.count ? ` · ${data.queue.count}` : ""}
+            Cola
           </Link>
         </div>
       </div>
@@ -69,39 +87,27 @@ export function PodcastHome() {
           {data.continueListening.length > 0 ? (
             <section className="flex flex-col gap-3">
               <h2 className="text-lg font-semibold text-foreground">Continuar escuchando</h2>
-              <div className="grid gap-2 xl:grid-cols-2">
+              <div className={episodesContainerClass}>
                 {data.continueListening.map((episode) => {
                   const podcast = podcastMap.get(episode.podcastId);
                   return podcast ? (
-                    <EpisodeRow key={episode.id} episode={episode} podcast={podcast} showPodcast />
+                    <EpisodeRow
+                      key={episode.id}
+                      episode={episode}
+                      podcast={podcast}
+                      showPodcast
+                      onDismiss={() => dismissMutation.mutate(episode.id)}
+                    />
                   ) : null;
                 })}
               </div>
             </section>
           ) : null}
 
-          {data.queue.count > 0 ? (
-            <section className="rounded-2xl border border-line bg-surface-raised p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <ListMusic className="size-5 text-ochre-400" />
-                  <h2 className="font-semibold text-foreground">Cola de reproducción</h2>
-                </div>
-                <Link to="/podcasts/cola" className="text-sm text-ochre-300 hover:underline">
-                  Ver cola
-                </Link>
-              </div>
-              <p className="mt-1 text-sm text-muted">
-                {data.queue.count} {data.queue.count === 1 ? "episodio" : "episodios"} en cola
-                {data.queue.next ? ` · siguiente: ${data.queue.next.title}` : ""}
-              </p>
-            </section>
-          ) : null}
-
           {data.latestEpisodes.length > 0 ? (
             <section className="flex flex-col gap-3">
               <h2 className="text-lg font-semibold text-foreground">Novedades de tus suscripciones</h2>
-              <div className="grid gap-2 xl:grid-cols-2">
+              <div className={episodesContainerClass}>
                 {data.latestEpisodes.map((episode) => {
                   const podcast = data.subscriptions.find((p) => p.id === episode.podcastId);
                   return podcast ? (
@@ -120,11 +126,7 @@ export function PodcastHome() {
                   Ver todos
                 </Link>
               </div>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                {data.subscriptions.slice(0, 8).map((podcast) => (
-                  <PodcastCard key={podcast.id} podcast={podcast} />
-                ))}
-              </div>
+              <PodcastList podcasts={data.subscriptions.slice(0, 8)} />
             </section>
           ) : null}
         </>

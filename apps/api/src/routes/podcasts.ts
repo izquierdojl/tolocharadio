@@ -208,6 +208,19 @@ export function podcastsRouter(ctx: AppContext): Router {
     }
   });
 
+  router.get("/podcasts/queue/count", auth, (req, res, next) => {
+    try {
+      const user = req.authUser;
+      if (!user) throw unauthorized();
+      res.json({
+        count: ctx.podcastQueue.countForUser(user.id),
+        limit: ctx.config.podcastQueueMax,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   router.post("/podcasts/queue", auth, (req, res, next) => {
     try {
       const user = req.authUser;
@@ -556,6 +569,17 @@ export function podcastsRouter(ctx: AppContext): Router {
 
   router.put("/podcasts/episodes/:episodeId/progress", auth, handleRecordProgress);
   router.post("/podcasts/episodes/:episodeId/progress", auth, handleRecordProgress);
+
+  router.post("/podcasts/episodes/:episodeId/dismiss", auth, (req, res, next) => {
+    try {
+      const user = req.authUser;
+      if (!user) throw unauthorized();
+      const episodeId = parseIdParam(req, "episodeId");
+      res.json(ctx.podcastProgress.dismissFromContinue(user.id, episodeId));
+    } catch (err) {
+      next(err);
+    }
+  });
 
   return router;
 }
