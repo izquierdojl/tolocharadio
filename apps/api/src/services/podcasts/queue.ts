@@ -170,7 +170,7 @@ export class PodcastQueueService {
       if (Number(countRow?.value ?? 0) >= this.config.podcastQueueMax) {
         throw badRequest(
           "QUEUE_LIMIT_REACHED",
-          `La cola de podcasts permite un maximo de ${this.config.podcastQueueMax} episodios`,
+          `La cola de reproducción permite un máximo de ${this.config.podcastQueueMax} episodios`,
         );
       }
 

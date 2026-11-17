@@ -21,7 +21,9 @@ import { GripVertical, ListMusic, Pause, Play, RotateCcw, Trash2 } from "lucide-
 import { mergeQueueOrder } from "../../lib/podcastQueue.js";
 import type { PodcastEpisode, PodcastQueue, PodcastSummary } from "../../lib/types.js";
 import { usePlayerStore } from "../../stores/player.js";
+import { EpisodeFavoriteButton } from "./EpisodeFavoriteButton.js";
 import { PodcastCover } from "./PodcastCover.js";
+import { useEpisodeFavorite } from "./useEpisodeFavorite.js";
 
 function formatDuration(rawSec: number | null | undefined): string | null {
   if (rawSec === null || rawSec === undefined || !Number.isFinite(rawSec) || rawSec <= 0) {
@@ -40,9 +42,16 @@ interface SortableQueueItemProps {
   podcast: PodcastSummary | undefined;
   index: number;
   onRemove: (episodeId: number) => void;
+  onFavoriteChange: (episodeId: number, isFavorite: boolean) => void;
 }
 
-function SortableQueueItem({ episode, podcast, index, onRemove }: SortableQueueItemProps) {
+function SortableQueueItem({
+  episode,
+  podcast,
+  index,
+  onRemove,
+  onFavoriteChange,
+}: SortableQueueItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: episode.id,
   });
@@ -55,6 +64,11 @@ function SortableQueueItem({ episode, podcast, index, onRemove }: SortableQueueI
   const isFailed = isCurrent && status === "failed";
   const playTitle = isFailed ? "Reintentar" : isPlaying ? "Pausar" : "Reproducir";
   const duration = formatDuration(episode.durationSec);
+  const favorite = useEpisodeFavorite({
+    episodeId: episode.id,
+    isFavorite: Boolean(episode.isFavorite),
+    onChange: (next) => onFavoriteChange(episode.id, next),
+  });
 
   const handlePlay = (): void => {
     if (!podcast) return;
@@ -121,6 +135,11 @@ function SortableQueueItem({ episode, podcast, index, onRemove }: SortableQueueI
           <Play className="size-4" />
         )}
       </button>
+      <EpisodeFavoriteButton
+        isFavorite={favorite.isFavorite}
+        pending={favorite.pending}
+        onToggle={favorite.toggle}
+      />
       <button
         type="button"
         onClick={() => onRemove(episode.id)}
@@ -177,6 +196,12 @@ function QueuePanelList({
   const visibleItems =
     hiddenEpisodeId === null ? items : items.filter((item) => item.id !== hiddenEpisodeId);
 
+  const handleFavoriteChange = (episodeId: number, isFavorite: boolean): void => {
+    setItems((current) =>
+      current.map((item) => (item.id === episodeId ? { ...item, isFavorite } : item)),
+    );
+  };
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }),
@@ -231,6 +256,7 @@ function QueuePanelList({
               podcast={podcasts.get(episode.podcastId)}
               index={index}
               onRemove={onRemove}
+              onFavoriteChange={handleFavoriteChange}
             />
           ))}
         </ul>

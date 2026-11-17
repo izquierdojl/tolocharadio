@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { PodcastQueueService } from "../src/services/podcasts/queue.js";
 import { request, setupServer } from "./helpers.js";
 
 afterEach(() => {
@@ -61,7 +62,7 @@ async function setupFeed() {
     .send({ podcastId })
     .expect(201);
 
-  return { srv, token, podcastId, episodes };
+  return { srv, token, podcastId, episodes, userId: reg.body.user.id as number };
 }
 
 describe("Cola sincronizada de podcasts", () => {
@@ -162,6 +163,29 @@ describe("Cola sincronizada de podcasts", () => {
         .send({ episodeId: 999_999 })
         .expect(404);
       expect(missingEpisode.body.error.code).toBe("EPISODE_NOT_FOUND");
+    } finally {
+      srv.db.sqlite.close();
+    }
+  });
+
+  it("nombra la cola de reproducción al rechazar por límite", async () => {
+    const { srv, episodes, userId } = await setupFeed();
+    try {
+      const service = new PodcastQueueService(
+        srv.db.db,
+        { ...srv.config, podcastQueueMax: 2 },
+        srv.ctx.podcastCatalog,
+      );
+      const first = episodes.find((e) => e.title === "Episodio Uno")!;
+      const second = episodes.find((e) => e.title === "Episodio Dos")!;
+      const third = episodes.find((e) => e.title === "Episodio Tres")!;
+
+      service.add(userId, first.id);
+      service.add(userId, second.id);
+
+      expect(() => service.add(userId, third.id)).toThrowError(
+        "La cola de reproducción permite un máximo de 2 episodios",
+      );
     } finally {
       srv.db.sqlite.close();
     }
@@ -421,6 +445,50 @@ describe("Episodios favoritos de podcasts", () => {
         .expect(200);
       expect(afterRemove.body.items).toHaveLength(1);
       expect(afterRemove.body.items[0].id).toBe(second.id);
+    } finally {
+      srv.db.sqlite.close();
+    }
+  });
+
+  it("expone el estado de favorito de los episodios de la cola", async () => {
+    const { srv, token, episodes } = await setupFeed();
+    try {
+      const first = episodes.find((e) => e.title === "Episodio Uno")!;
+
+      await request(srv.app)
+        .post("/api/v1/podcasts/queue")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ episodeId: first.id })
+        .expect(201);
+
+      const before = await request(srv.app)
+        .get("/api/v1/podcasts/queue")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(before.body.queue.items[0]).toMatchObject({ id: first.id, isFavorite: false });
+
+      await request(srv.app)
+        .post("/api/v1/podcasts/favorites")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ episodeId: first.id })
+        .expect(201);
+
+      const afterAdd = await request(srv.app)
+        .get("/api/v1/podcasts/queue")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(afterAdd.body.queue.items[0]).toMatchObject({ id: first.id, isFavorite: true });
+
+      await request(srv.app)
+        .delete(`/api/v1/podcasts/favorites/${first.id}`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      const afterRemove = await request(srv.app)
+        .get("/api/v1/podcasts/queue")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(afterRemove.body.queue.items[0]).toMatchObject({ id: first.id, isFavorite: false });
     } finally {
       srv.db.sqlite.close();
     }

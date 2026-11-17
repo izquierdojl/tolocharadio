@@ -77,7 +77,7 @@ mod imp {
             MediaControlEvent::Stop => {
                 bridge::emit_command(app, bridge::action_command("stop"));
             }
-            // La interfaz decide si hay cola de podcasts que avanzar o retroceder.
+            // La interfaz decide si hay cola de reproducción que avanzar o retroceder.
             MediaControlEvent::Next => {
                 bridge::emit_command(app, bridge::action_command("next"));
             }

@@ -70,6 +70,6 @@ Resumen de endpoints (todos bajo `/api/v1`):
 | `GET` | `/podcasts/stats/categories` | autenticado | Tiempo por categoría (`limit`) |
 | `GET` | `/podcasts/stats/recent` | autenticado | Sesiones de escucha recientes (`limit`) |
 
-`DELETE /podcasts/queue?keepEpisodeId=42` vacía los episodios pendientes y conserva el episodio 42 en la primera posición; sin el parámetro, vacía la cola completa. En ambos casos incrementa `revision` y no detiene la reproducción en curso.
+`DELETE /podcasts/queue?keepEpisodeId=42` vacía los episodios pendientes y conserva el episodio 42 en la primera posición; sin el parámetro, vacía la cola completa. En ambos casos incrementa `revision` y no detiene la reproducción en curso. Los episodios devueltos por `GET /podcasts/queue` y el resumen de la portada incluyen `isFavorite`, de modo que el cliente pinta el estado del favorito sin peticiones adicionales.
 
 Errores en formato `{ "error": { "code", "message", "status", "details?" } }`.

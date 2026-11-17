@@ -96,10 +96,8 @@ export function PodcastQueue() {
             <ArrowLeft className="size-4" />
             Podcasts
           </Link>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Cola de podcasts</h1>
-          <p className="text-sm text-muted">
-            Un episodio en reproducción y el resto en cola. Arrastra para ordenar.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Cola de reproducción</h1>
+          <p className="text-sm text-muted">Episodios a continuación</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {queue ? (

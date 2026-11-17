@@ -1,12 +1,11 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Check, Heart, Pause, Play, RotateCcw, X } from "lucide-react";
-import { toast } from "sonner";
-import { addPodcastFavorite, removePodcastFavorite } from "../../lib/api.js";
+import { Check, Pause, Play, RotateCcw, X } from "lucide-react";
 import type { PodcastEpisode, PodcastSummary } from "../../lib/types.js";
 import { usePlayerStore } from "../../stores/player.js";
+import { EpisodeFavoriteButton } from "./EpisodeFavoriteButton.js";
 import { EpisodeQueueMenu } from "./EpisodeQueueMenu.js";
 import { PodcastCover } from "./PodcastCover.js";
+import { useEpisodeFavorite } from "./useEpisodeFavorite.js";
 
 function formatDuration(rawSec: number | null | undefined): string | null {
   if (rawSec === null || rawSec === undefined || !Number.isFinite(rawSec) || rawSec <= 0) {
@@ -37,7 +36,6 @@ interface EpisodeRowProps {
 }
 
 export function EpisodeRow({ episode, podcast, showPodcast = false, onDismiss }: EpisodeRowProps) {
-  const queryClient = useQueryClient();
   const playEpisode = usePlayerStore((s) => s.playEpisode);
   const togglePlayback = usePlayerStore((s) => s.toggle);
   const retryPlayback = usePlayerStore((s) => s.retry);
@@ -45,6 +43,10 @@ export function EpisodeRow({ episode, podcast, showPodcast = false, onDismiss }:
   const isPlaying = usePlayerStore((s) => s.isPlaying && isCurrent);
   const status = usePlayerStore((s) => (s.episode?.id === episode.id ? s.status : null));
   const isFailed = isCurrent && status === "failed";
+  const favorite = useEpisodeFavorite({
+    episodeId: episode.id,
+    isFavorite: Boolean(episode.isFavorite),
+  });
 
   const playTitle = isFailed ? "Reintentar" : isPlaying ? "Pausar" : "Reproducir";
   const handlePlay = (): void => {
@@ -58,31 +60,6 @@ export function EpisodeRow({ episode, podcast, showPodcast = false, onDismiss }:
     }
     playEpisode(episode, podcast);
   };
-
-  const invalidate = (): void => {
-    void queryClient.invalidateQueries({ queryKey: ["podcast-home"] });
-    void queryClient.invalidateQueries({ queryKey: ["podcast-favorites"] });
-    void queryClient.invalidateQueries({ queryKey: ["podcast-queue"] });
-    void queryClient.invalidateQueries({ queryKey: ["podcast-queue-count"] });
-    void queryClient.invalidateQueries({ queryKey: ["podcast-episodes", podcast.id] });
-  };
-
-  const favoriteMutation = useMutation({
-    mutationFn: async () => {
-      if (episode.isFavorite) {
-        await removePodcastFavorite(episode.id);
-      } else {
-        await addPodcastFavorite(episode.id);
-      }
-    },
-    onSuccess: () => {
-      toast.success(episode.isFavorite ? "Quitado de favoritos" : "Añadido a favoritos");
-      invalidate();
-    },
-    onError: (err) => {
-      toast.error(err instanceof Error ? err.message : "No se pudo actualizar el favorito");
-    },
-  });
 
   const duration = formatDuration(episode.durationSec ?? episode.progress?.durationSec);
   const published = formatEpisodeDate(episode.publishedAt);
@@ -182,19 +159,12 @@ export function EpisodeRow({ episode, podcast, showPodcast = false, onDismiss }:
             {isFailed ? "Reintentar" : isPlaying ? "Pausar" : "Reproducir"}
           </button>
           <EpisodeQueueMenu episodeId={episode.id} />
-          <button
-            type="button"
-            onClick={() => favoriteMutation.mutate()}
-            disabled={favoriteMutation.isPending}
-            title={episode.isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"}
-            aria-label={episode.isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"}
-            aria-pressed={Boolean(episode.isFavorite)}
-            className={`ml-auto inline-flex size-8 items-center justify-center rounded-lg transition hover:bg-surface-soft disabled:opacity-50 ${
-              episode.isFavorite ? "text-rose-400" : "text-muted hover:text-foreground"
-            }`}
-          >
-            <Heart className={`size-4 ${episode.isFavorite ? "fill-current" : ""}`} />
-          </button>
+          <EpisodeFavoriteButton
+            isFavorite={favorite.isFavorite}
+            pending={favorite.pending}
+            onToggle={favorite.toggle}
+            className="ml-auto"
+          />
         </div>
       </div>
     </article>

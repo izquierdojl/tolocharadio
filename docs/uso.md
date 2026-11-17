@@ -10,7 +10,7 @@ TolochaRadio es un cliente web (self-hosted) para explorar y escuchar emisoras d
 - **Podcasts por RSS**: búsqueda en directorio (iTunes/PodcastIndex), alta manual de feeds, suscripciones y exportación/importación OPML.
 - **Reproductor flotante persistente**: `<audio>` gestionado por Zustand con reconexión automática, la música no se interrumpe al navegar; controles de reproducir/pausar, volumen y quitar emisora. Con podcasts añade búsqueda en la pista, ±15/30 s, velocidad 1x–2x y reanudación.
 - **Cuentas propias**: registro (desactivable), inicio de sesión, perfil, cambio de contraseña y restablecimiento con token de un solo uso.
-- **Favoritos e historial**: snapshot de cada emisora guardada o escuchada, aislamiento por usuario, limpieza completa. Los episodios favoritos y la cola de podcasts se guardan aparte.
+- **Favoritos e historial**: snapshot de cada emisora guardada o escuchada, aislamiento por usuario, limpieza completa. Los episodios favoritos y la cola de reproducción se guardan aparte.
 - **Proxy de streaming autenticado**: la API retransmite el stream con tus credenciales; nunca se expone el token en la URL.
 - **API REST documentada** con OpenAPI 3.1 y Swagger UI incluidos.
 - **Tema Tolocha**: modo oscuro por defecto, paleta verde-bosque/ocre-montaña y silueta de sierra en la interfaz.
@@ -47,7 +47,7 @@ La cabecera incorpora un selector **Radio | Podcasts** (visible si el servidor t
 - **Descubrir** (`/podcasts/descubrir`): búsqueda en el directorio configurado (`iTunes` por defecto o PodcastIndex), alta manual de una URL RSS e importación/exportación OPML.
 - **Suscripciones** (`/podcasts/suscripciones`): tus programas y baja de suscripción.
 - **Ficha** (`/podcasts/:podcastId`): portada, descripción y episodios paginados con filtros (sin empezar, en progreso, completados) y orden (recientes, duración, título).
-- **Cola** (`/podcasts/cola`): hasta 200 episodios ordenables por arrastre. El episodio en reproducción se oculta de la lista de pendientes y se controla desde el reproductor persistente; al pausarlo, detenerlo o cambiar de episodio vuelve a su posición. El botón **Vaciar cola** elimina los pendientes sin detener el episodio cargado. La cola se sincroniza por usuario con un número de revisión; si cambia en otro dispositivo, el servidor responde `409` y la vista se recarga.
+- **Cola** (`/podcasts/cola`): hasta 200 episodios ordenables por arrastre. El episodio en reproducción se oculta de la lista de pendientes y se controla desde el reproductor persistente; al pausarlo, detenerlo o cambiar de episodio vuelve a su posición. Cada fila pendiente permite marcar o quitar el episodio como favorito con el corazón. El botón **Vaciar cola** elimina los pendientes sin detener el episodio cargado. La cola se sincroniza por usuario con un número de revisión; si cambia en otro dispositivo, el servidor responde `409` y la vista se recarga.
 - **Episodios favoritos** (`/podcasts/favoritos`): episodios marcados con el corazón, independientes de las emisoras favoritas.
 - **Estadísticas** (`/podcasts/estadisticas`): tiempo de contenido consumido, podcasts distintos, episodios empezados (≥ 30 s) y completados, tasa de finalización, media por episodio, evolución temporal, hábitos horarios, reparto por categoría y sesiones recientes. Son datos privados: solo tú puedes verlos.
 
