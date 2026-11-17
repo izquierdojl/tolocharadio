@@ -12,6 +12,7 @@ import {
 import { ConfirmDialog } from "../../components/ConfirmDialog.js";
 import { EpisodeRow } from "../../components/podcasts/EpisodeRow.js";
 import { PodcastCover } from "../../components/podcasts/PodcastCover.js";
+import { SearchInput } from "../../components/SearchInput.js";
 
 const PAGE_SIZE = 20;
 
@@ -35,6 +36,7 @@ export function PodcastShow() {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["value"]>("all");
   const [sort, setSort] = useState<(typeof SORTS)[number]["value"]>("recent");
+  const [searchTerm, setSearchTerm] = useState("");
   const [offset, setOffset] = useState(0);
   const [confirmUnsubscribeOpen, setConfirmUnsubscribeOpen] = useState(false);
 
@@ -46,8 +48,15 @@ export function PodcastShow() {
   });
 
   const episodesQuery = useQuery({
-    queryKey: ["podcast-episodes", podcastId, filter, sort, offset],
-    queryFn: () => fetchPodcastEpisodes(podcastId, { filter, sort, offset, limit: PAGE_SIZE }),
+    queryKey: ["podcast-episodes", podcastId, filter, sort, searchTerm, offset],
+    queryFn: () =>
+      fetchPodcastEpisodes(podcastId, {
+        filter,
+        sort,
+        q: searchTerm.trim() || undefined,
+        offset,
+        limit: PAGE_SIZE,
+      }),
     enabled: Number.isSafeInteger(podcastId) && podcastId > 0,
     placeholderData: keepPreviousData,
   });
@@ -184,21 +193,33 @@ export function PodcastShow() {
               </button>
             ))}
           </div>
-          <select
-            value={sort}
-            onChange={(event) => {
-              setSort(event.target.value as (typeof SORTS)[number]["value"]);
-              setOffset(0);
-            }}
-            aria-label="Ordenar episodios"
-            className="rounded-lg border border-line-strong bg-surface px-2 py-1.5 text-sm text-foreground"
-          >
-            {SORTS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <div className="flex flex-wrap items-center gap-2">
+            <SearchInput
+              value={searchTerm}
+              onChange={(value) => {
+                setSearchTerm(value);
+                setOffset(0);
+              }}
+              placeholder="Buscar episodios"
+              ariaLabel="Buscar episodios por título"
+              className="w-44 sm:w-56"
+            />
+            <select
+              value={sort}
+              onChange={(event) => {
+                setSort(event.target.value as (typeof SORTS)[number]["value"]);
+                setOffset(0);
+              }}
+              aria-label="Ordenar episodios"
+              className="rounded-lg border border-line-strong bg-surface px-2 py-1.5 text-sm text-foreground"
+            >
+              {SORTS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {episodesQuery.isLoading ? (
@@ -211,7 +232,9 @@ export function PodcastShow() {
           </p>
         ) : !page || page.items.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted">
-            No hay episodios con este filtro.
+            {searchTerm.trim()
+              ? "No hay episodios que coincidan con la búsqueda."
+              : "No hay episodios con este filtro."}
           </p>
         ) : (
           <>

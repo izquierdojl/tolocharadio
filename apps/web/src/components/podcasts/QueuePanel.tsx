@@ -33,9 +33,10 @@ interface SortableQueueItemProps {
   podcast: PodcastSummary | undefined;
   index: number;
   onRemove: (episodeId: number) => void;
+  dragEnabled: boolean;
 }
 
-function SortableQueueItem({ episode, podcast, index, onRemove }: SortableQueueItemProps) {
+function SortableQueueItem({ episode, podcast, index, onRemove, dragEnabled }: SortableQueueItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: episode.id,
   });
@@ -64,16 +65,22 @@ function SortableQueueItem({ episode, podcast, index, onRemove }: SortableQueueI
         isDragging ? "opacity-70" : ""
       }`}
     >
-      <button
-        type="button"
-        {...attributes}
-        {...listeners}
-        title="Reordenar"
-        aria-label="Reordenar episodio"
-        className="cursor-grab touch-none rounded-lg p-1 text-faint hover:bg-surface-soft hover:text-foreground"
-      >
-        <GripVertical className="size-4" />
-      </button>
+      {dragEnabled ? (
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          title="Reordenar"
+          aria-label="Reordenar episodio"
+          className="cursor-grab touch-none rounded-lg p-1 text-faint hover:bg-surface-soft hover:text-foreground"
+        >
+          <GripVertical className="size-4" />
+        </button>
+      ) : (
+        <span className="rounded-lg p-1 text-faint/50" aria-hidden="true">
+          <GripVertical className="size-4" />
+        </span>
+      )}
       <span className="w-5 shrink-0 text-center text-xs text-faint">{index + 1}</span>
       <div className="size-10 shrink-0 overflow-hidden rounded-lg bg-pine-800">
         <PodcastCover src={episode.imageUrl ?? podcast?.imageUrl} alt="" className="size-full" />
@@ -147,6 +154,8 @@ interface QueuePanelProps {
   onRemove: (episodeId: number) => void;
   hiddenEpisodeId?: number | null;
   hasActiveEpisode?: boolean;
+  /** Falso mientras se filtra por título: arrastrar con episodios ocultos alteraría el orden real. */
+  reorderEnabled?: boolean;
 }
 
 export function QueuePanel({
@@ -156,6 +165,7 @@ export function QueuePanel({
   onRemove,
   hiddenEpisodeId = null,
   hasActiveEpisode = false,
+  reorderEnabled = true,
 }: QueuePanelProps) {
   // La clave por revisión reinicia el orden local cuando el servidor confirma cambios.
   return (
@@ -167,6 +177,7 @@ export function QueuePanel({
       onRemove={onRemove}
       hiddenEpisodeId={hiddenEpisodeId}
       hasActiveEpisode={hasActiveEpisode}
+      reorderEnabled={reorderEnabled}
     />
   );
 }
@@ -178,6 +189,7 @@ function QueuePanelList({
   onRemove,
   hiddenEpisodeId,
   hasActiveEpisode,
+  reorderEnabled = true,
 }: QueuePanelProps) {
   const [order, setOrder] = useState(() => queue.items.map((item) => item.id));
   const items = applyQueueOrder(queue.items, order);
@@ -191,6 +203,7 @@ function QueuePanelList({
   );
 
   const handleDragEnd = (event: DragEndEvent): void => {
+    if (!reorderEnabled) return;
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const oldIndex = visibleItems.findIndex((item) => item.id === active.id);
@@ -234,6 +247,7 @@ function QueuePanelList({
               podcast={podcasts.get(episode.podcastId)}
               index={index}
               onRemove={onRemove}
+              dragEnabled={reorderEnabled}
             />
           ))}
         </ul>

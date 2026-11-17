@@ -6,11 +6,18 @@ import { toast } from "sonner";
 import {
   fetchPodcastOpml,
   fetchPodcastSubscriptions,
+  searchPodcastEpisodes,
   unsubscribePodcast,
 } from "../../lib/api.js";
 import { PodcastList } from "../../components/podcasts/PodcastList.js";
+import { EpisodeRow } from "../../components/podcasts/EpisodeRow.js";
+import {
+  SubscriptionSearchBar,
+  type SubscriptionSearchScope,
+} from "../../components/podcasts/SubscriptionSearchBar.js";
 import { ConfirmDialog } from "../../components/ConfirmDialog.js";
 import { EmptyState } from "../../components/EmptyState.js";
+import { filterByTitle } from "../../lib/textMatch.js";
 import type { PodcastSummary } from "../../lib/types.js";
 import {
   SUBSCRIPTION_SORT_OPTIONS,
@@ -24,9 +31,21 @@ export function PodcastSubscriptions() {
   const sortOrder = useSubscriptionSortStore((s) => s.order);
   const setSortOrder = useSubscriptionSortStore((s) => s.setOrder);
   const [pendingUnsubscribe, setPendingUnsubscribe] = useState<PodcastSummary | null>(null);
+  const [term, setTerm] = useState("");
+  const [scope, setScope] = useState<SubscriptionSearchScope>("podcasts");
+  const [submittedEpisodeTerm, setSubmittedEpisodeTerm] = useState("");
+
   const subscriptionsQuery = useQuery({
     queryKey: ["podcast-subscriptions"],
     queryFn: fetchPodcastSubscriptions,
+  });
+
+  const showEpisodeResults = scope === "episodios" && submittedEpisodeTerm.length > 0;
+
+  const episodeSearchQuery = useQuery({
+    queryKey: ["podcast-episode-search", submittedEpisodeTerm],
+    queryFn: () => searchPodcastEpisodes(submittedEpisodeTerm),
+    enabled: showEpisodeResults,
   });
 
   const unsubscribeMutation = useMutation({
@@ -60,9 +79,26 @@ export function PodcastSubscriptions() {
 
   const rawItems = subscriptionsQuery.data?.items;
   const items = useMemo(
-    () => sortSubscriptions(rawItems ?? [], sortOrder),
-    [rawItems, sortOrder],
+    () =>
+      scope === "podcasts"
+        ? filterByTitle(sortSubscriptions(rawItems ?? [], sortOrder), term)
+        : sortSubscriptions(rawItems ?? [], sortOrder),
+    [rawItems, sortOrder, term, scope],
   );
+
+  const onTermChange = (value: string): void => {
+    setTerm(value);
+    if (!value.trim()) setSubmittedEpisodeTerm("");
+  };
+
+  const onScopeChange = (nextScope: SubscriptionSearchScope): void => {
+    setScope(nextScope);
+    setSubmittedEpisodeTerm("");
+  };
+
+  const onSubmitSearch = (): void => {
+    if (scope === "episodios" && term.trim()) setSubmittedEpisodeTerm(term.trim());
+  };
 
   return (
     <section className="flex flex-col gap-6">
@@ -110,7 +146,45 @@ export function PodcastSubscriptions() {
         </div>
       </div>
 
-      {subscriptionsQuery.isLoading ? (
+      <SubscriptionSearchBar
+        term={term}
+        scope={scope}
+        onTermChange={onTermChange}
+        onScopeChange={onScopeChange}
+        onSubmit={onSubmitSearch}
+      />
+
+      {showEpisodeResults ? (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold text-foreground">
+            Episodios para “{submittedEpisodeTerm}”
+          </h2>
+          {episodeSearchQuery.isLoading ? (
+            <p className="text-sm text-faint">Buscando episodios…</p>
+          ) : episodeSearchQuery.isError ? (
+            <p className="text-sm text-rose-400">
+              {episodeSearchQuery.error instanceof Error
+                ? episodeSearchQuery.error.message
+                : "No se pudo buscar episodios"}
+            </p>
+          ) : episodeSearchQuery.data?.items.length === 0 ? (
+            <p className="text-sm text-muted">
+              Sin resultados. Prueba con otro título o busca en el directorio.
+            </p>
+          ) : (
+            <div className="grid gap-2 xl:grid-cols-2">
+              {episodeSearchQuery.data?.items.map((item) => (
+                <EpisodeRow
+                  key={item.id}
+                  episode={item}
+                  podcast={item.podcast}
+                  showPodcast
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      ) : subscriptionsQuery.isLoading ? (
         <p className="py-10 text-center text-faint">Cargando suscripciones…</p>
       ) : subscriptionsQuery.isError ? (
         <p className="text-sm text-rose-400">
@@ -118,7 +192,7 @@ export function PodcastSubscriptions() {
             ? subscriptionsQuery.error.message
             : "No se pudieron cargar las suscripciones"}
         </p>
-      ) : items.length === 0 ? (
+      ) : (rawItems ?? []).length === 0 ? (
         <EmptyState
           icon={<Rss className="size-7" />}
           title="Sin suscripciones"
@@ -133,6 +207,10 @@ export function PodcastSubscriptions() {
             </Link>
           }
         />
+      ) : items.length === 0 ? (
+        <p className="py-10 text-center text-sm text-muted">
+          No hay suscripciones que coincidan con «{term.trim()}».
+        </p>
       ) : (
         <PodcastList
           podcasts={items}

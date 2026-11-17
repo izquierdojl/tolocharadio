@@ -10,6 +10,7 @@ import {
 import { badRequest, notFound } from "../../errors.js";
 import { fetchAndParsePodcastFeed } from "./feedFetcher.js";
 import { resolveSafeHttpUrl, type ParsedPodcastFeed } from "./feedParser.js";
+import { textMatches } from "./textMatch.js";
 
 export interface PodcastSummary {
   id: number;
@@ -58,8 +59,13 @@ export type EpisodeFilter = "all" | "unplayed" | "in_progress" | "completed";
 export interface ListEpisodesParams {
   sort?: EpisodeSort;
   filter?: EpisodeFilter;
+  q?: string;
   offset?: number;
   limit?: number;
+}
+
+export interface PodcastEpisodeSearchItem extends PodcastEpisodeItem {
+  podcast: PodcastSummary;
 }
 
 export interface PodcastHomeView {
@@ -534,6 +540,7 @@ export class PodcastCatalogService {
     this.getPodcastRow(podcastId);
     const sort: EpisodeSort = params.sort ?? "recent";
     const filter: EpisodeFilter = params.filter ?? "all";
+    const q = params.q?.trim() ?? "";
     const offset = Math.max(0, Math.trunc(params.offset ?? 0));
     const limit = Math.min(
       100,
@@ -558,6 +565,7 @@ export class PodcastCatalogService {
     const favoritesSet = this.loadUserFavoritesSet(_userId, allRows.map((r) => r.id));
 
     const filtered = allRows.filter((row) => {
+      if (q && !textMatches(q, row.title)) return false;
       if (filter === "all") return true;
       const prog = progressMap.get(row.id);
       if (filter === "completed") return Boolean(prog?.completed);
@@ -574,6 +582,71 @@ export class PodcastCatalogService {
         toEpisodeItem(r, progressMap.get(r.id) ?? null, favoritesSet.has(r.id)),
       ),
       pagination: { offset, limit, hasMore },
+    };
+  }
+
+  /**
+   * Episodios de las suscripciones del usuario cuyo titulo contiene el termino,
+   * sin distinguir mayusculas ni acentos, ordenados por fecha de publicacion
+   * descendente y paginados, con progreso, favorito y resumen del podcast.
+   */
+  searchEpisodesForUser(
+    userId: number,
+    q: string,
+    params: ListEpisodesParams = {},
+  ): {
+    items: PodcastEpisodeSearchItem[];
+    pagination: { offset: number; limit: number; hasMore: boolean };
+  } {
+    const term = q.trim();
+    const offset = Math.max(0, Math.trunc(params.offset ?? 0));
+    const limit = Math.min(
+      100,
+      Math.max(1, Math.trunc(params.limit ?? this.config.podcastEpisodesPageSize)),
+    );
+
+    const allRows = this.db
+      .select({ episode: podcastEpisodes, podcast: podcasts })
+      .from(podcastEpisodes)
+      .innerJoin(
+        podcastSubscriptions,
+        and(
+          eq(podcastSubscriptions.podcastId, podcastEpisodes.podcastId),
+          eq(podcastSubscriptions.userId, userId),
+        ),
+      )
+      .innerJoin(podcasts, eq(podcasts.id, podcastEpisodes.podcastId))
+      .where(isNull(podcastEpisodes.removedAt))
+      .orderBy(desc(podcastEpisodes.publishedAt), desc(podcastEpisodes.id))
+      .all();
+
+    const matched = allRows.filter((r) => textMatches(term, r.episode.title));
+
+    const slice = matched.slice(offset, offset + limit);
+    const progressMap = this.loadUserProgressMap(userId, slice.map((r) => r.episode.id));
+    const favoritesSet = this.loadUserFavoritesSet(userId, slice.map((r) => r.episode.id));
+
+    // Un conteo por podcast distinto de la pagina, no uno por fila.
+    const episodeCountByPodcast = new Map<number, number>();
+    for (const r of slice) {
+      if (!episodeCountByPodcast.has(r.podcast.id)) {
+        episodeCountByPodcast.set(r.podcast.id, this.countActiveEpisodes(r.podcast.id));
+      }
+    }
+
+    return {
+      items: slice.map((r) => ({
+        ...toEpisodeItem(
+          r.episode,
+          progressMap.get(r.episode.id) ?? null,
+          favoritesSet.has(r.episode.id),
+        ),
+        podcast: this.toSummary(r.podcast, {
+          isSubscribed: true,
+          episodeCount: episodeCountByPodcast.get(r.podcast.id) ?? 0,
+        }),
+      })),
+      pagination: { offset, limit, hasMore: offset + limit < matched.length },
     };
   }
 

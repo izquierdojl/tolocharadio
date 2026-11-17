@@ -139,6 +139,111 @@ describe("Podcasts catalog, subscriptions, discovery, OPML y scheduler", () => {
     }
   });
 
+  it("filtra episodios por titulo con q sin distinguir mayusculas ni acentos, componiendo con filter y hasMore", async () => {
+    const FEED_XML = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+  <channel>
+    <title>Radio Sierra</title>
+    <item>
+      <title>El camión fantasma</title>
+      <guid>camion-1</guid>
+      <pubDate>Mon, 19 Oct 2026 08:00:00 GMT</pubDate>
+      <enclosure url="https://sierra.example.org/camion1.mp3" type="audio/mpeg" />
+    </item>
+    <item>
+      <title>Historia del ferrocarril</title>
+      <guid>ferrocarril</guid>
+      <pubDate>Tue, 20 Oct 2026 08:00:00 GMT</pubDate>
+      <enclosure url="https://sierra.example.org/tren.mp3" type="audio/mpeg" />
+    </item>
+    <item>
+      <title>Camión de radio</title>
+      <guid>camion-3</guid>
+      <pubDate>Wed, 21 Oct 2026 08:00:00 GMT</pubDate>
+      <enclosure url="https://sierra.example.org/camion3.mp3" type="audio/mpeg" />
+    </item>
+  </channel>
+</rss>`;
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(FEED_XML, { status: 200 })));
+
+    const srv = setupServer({ PODCASTS_ENABLED: "true" });
+    try {
+      const token = await registerAndLogin(srv.app);
+      const resolved = await request(srv.app)
+        .post("/api/v1/podcasts/resolve")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ feedUrl: "https://sierra.example.org/feed.xml" })
+        .expect(200);
+      const podcastId = resolved.body.podcast.id as number;
+
+      // Solo los titulos que contienen «camion» (con o sin acento), por recencia
+      const byTitle = await request(srv.app)
+        .get(`/api/v1/podcasts/${podcastId}/episodes?q=camion`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(byTitle.body.items.map((i: { title: string }) => i.title)).toEqual([
+        "Camión de radio",
+        "El camión fantasma",
+      ]);
+      expect(byTitle.body.items[0].audioUrl).toBeUndefined();
+
+      // hasMore refleja el conjunto filtrado
+      const paged = await request(srv.app)
+        .get(`/api/v1/podcasts/${podcastId}/episodes?q=camion&limit=1`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(paged.body.items).toHaveLength(1);
+      expect(paged.body.pagination).toEqual({ offset: 0, limit: 1, hasMore: true });
+
+      // Sin coincidencias
+      const none = await request(srv.app)
+        .get(`/api/v1/podcasts/${podcastId}/episodes?q=inexistente`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(none.body.items).toHaveLength(0);
+      expect(none.body.pagination.hasMore).toBe(false);
+
+      // q se compone con el filtro de estado
+      const camionFantasmaId = byTitle.body.items[1].id as number;
+      await request(srv.app)
+        .put(`/api/v1/podcasts/episodes/${camionFantasmaId}/progress`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          sessionId: "s1",
+          sequence: 0,
+          positionSec: 60,
+          listenedMs: 60_000,
+          completed: true,
+        })
+        .expect(200);
+
+      const unplayed = await request(srv.app)
+        .get(`/api/v1/podcasts/${podcastId}/episodes?q=camion&filter=unplayed`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(unplayed.body.items.map((i: { title: string }) => i.title)).toEqual([
+        "Camión de radio",
+      ]);
+
+      const completed = await request(srv.app)
+        .get(`/api/v1/podcasts/${podcastId}/episodes?q=camion&filter=completed`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(completed.body.items.map((i: { title: string }) => i.title)).toEqual([
+        "El camión fantasma",
+      ]);
+
+      // Sin q el comportamiento no cambia
+      const all = await request(srv.app)
+        .get(`/api/v1/podcasts/${podcastId}/episodes`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(all.body.items).toHaveLength(3);
+    } finally {
+      srv.db.sqlite.close();
+    }
+  });
+
   it("busca en iTunes con cache y respeta PODCAST_DISCOVERY_PROVIDER=none", async () => {
     const fetchMock = vi.fn(async () =>
       new Response(

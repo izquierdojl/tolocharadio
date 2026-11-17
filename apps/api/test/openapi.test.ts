@@ -47,6 +47,7 @@ describe("OpenAPI spec", () => {
       "/playback/{stationId}/now-playing",
       "/podcasts/search",
       "/podcasts/resolve",
+      "/podcasts/episodes/search",
       "/podcasts/subscriptions",
       "/podcasts/subscriptions/bulk",
       "/podcasts/subscriptions/opml",
