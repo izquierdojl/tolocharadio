@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { Download, Loader2, Rss, Search, Upload } from "lucide-react";
+import { Download, Loader2, Rss, Search, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   bulkSubscribePodcasts,
@@ -12,6 +12,7 @@ import {
   subscribePodcast,
 } from "../../lib/api.js";
 import { parseOpmlFeedUrls } from "../../lib/podcastQueue.js";
+import { runOpmlImport } from "../../lib/opmlImport.js";
 import { PodcastCover } from "../../components/podcasts/PodcastCover.js";
 import type { PodcastSearchResult } from "../../lib/types.js";
 
@@ -26,7 +27,7 @@ function SearchResultCard({
   result: PodcastSearchResult;
   onSubscribe: (feedUrl: string) => void;
   pending: boolean;
-}) {
+}): React.JSX.Element {
   return (
     <article className="flex gap-3 rounded-2xl border border-line bg-surface-raised p-3">
       <div className="size-20 shrink-0 overflow-hidden rounded-xl bg-pine-800">
@@ -62,12 +63,66 @@ function SearchResultCard({
   );
 }
 
+interface OpmlImportState {
+  status: "importing" | "done";
+  processed: number;
+  total: number;
+  imported: number;
+  skipped: number;
+  failed: number;
+  result?: "done" | "cancelled" | "failed";
+  error?: string;
+}
+
+function importOutcomeLabel(result: OpmlImportState["result"]): string {
+  if (result === "cancelled") return "Importación cancelada";
+  if (result === "failed") return "Importación interrumpida";
+  return "Importación completada";
+}
+
+function importErrorMessage(error: unknown): string | undefined {
+  if (typeof error === "string" && error) return error;
+  if (error instanceof Error) return error.message;
+  if (error === undefined || error === null) return undefined;
+  return "No se pudo importar el OPML";
+}
+
+function ImportCounters({
+  imported,
+  skipped,
+  failed,
+}: {
+  imported: number;
+  skipped: number;
+  failed: number;
+}) {
+  return (
+    <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+      <div className="flex gap-1">
+        <dt>Importados:</dt>
+        <dd className="font-medium text-foreground">{imported}</dd>
+      </div>
+      <div className="flex gap-1">
+        <dt>Ya suscritos:</dt>
+        <dd className="font-medium text-foreground">{skipped}</dd>
+      </div>
+      <div className="flex gap-1">
+        <dt>Fallidos:</dt>
+        <dd className="font-medium text-foreground">{failed}</dd>
+      </div>
+    </dl>
+  );
+}
+
 export function PodcastSearch() {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
+  const opmlCancelledRef = useRef(false);
   const [term, setTerm] = useState("");
   const [submitted, setSubmitted] = useState("");
   const [rssUrl, setRssUrl] = useState("");
+  const [opmlImport, setOpmlImport] = useState<OpmlImportState | null>(null);
+  const [opmlCancelling, setOpmlCancelling] = useState(false);
 
   const configQuery = useQuery({
     queryKey: ["config"],
@@ -105,22 +160,6 @@ export function PodcastSearch() {
     },
   });
 
-  const bulkMutation = useMutation({
-    mutationFn: (feedUrls: string[]) => bulkSubscribePodcasts(feedUrls),
-    onSuccess: (result) => {
-      toast.success(
-        `Importados ${result.imported} podcasts${result.skipped ? `, ${result.skipped} ya suscritos` : ""}${
-          result.failed ? `, ${result.failed} con error` : ""
-        }`,
-      );
-      void queryClient.invalidateQueries({ queryKey: ["podcast-subscriptions"] });
-      void queryClient.invalidateQueries({ queryKey: ["podcast-home"] });
-    },
-    onError: (err) => {
-      toast.error(err instanceof Error ? err.message : "No se pudo importar el OPML");
-    },
-  });
-
   const exportMutation = useMutation({
     mutationFn: fetchPodcastOpml,
     onSuccess: (xml) => {
@@ -151,18 +190,77 @@ export function PodcastSearch() {
     resolveMutation.mutate(value);
   };
 
+  const importing = opmlImport?.status === "importing";
+
+  const onCancelImport = (): void => {
+    opmlCancelledRef.current = true;
+    setOpmlCancelling(true);
+  };
+
   const onImportOpml = async (file: File | null): Promise<void> => {
-    if (!file) return;
+    if (!file || importing) return;
     const xml = await file.text();
     const feedUrls = parseOpmlFeedUrls(xml);
     if (feedUrls.length === 0) {
       toast.error("El archivo OPML no contiene feeds válidos");
       return;
     }
-    bulkMutation.mutate(feedUrls);
+    const maxFeeds = configQuery.data?.limits?.podcastOpmlMaxFeeds ?? 200;
+    if (feedUrls.length > maxFeeds) {
+      toast.error(`No se pueden importar más de ${maxFeeds} feeds a la vez`);
+      return;
+    }
+
+    opmlCancelledRef.current = false;
+    setOpmlCancelling(false);
+    setOpmlImport({
+      status: "importing",
+      processed: 0,
+      total: feedUrls.length,
+      imported: 0,
+      skipped: 0,
+      failed: 0,
+    });
+
+    const outcome = await runOpmlImport({
+      feedUrls,
+      importBatch: bulkSubscribePodcasts,
+      isCancelled: () => opmlCancelledRef.current,
+      onProgress: (progress) => {
+        setOpmlImport({
+          status: "importing",
+          processed: progress.processed,
+          total: progress.total,
+          imported: progress.imported,
+          skipped: progress.skipped,
+          failed: progress.failed,
+        });
+      },
+    });
+
+    setOpmlImport({
+      status: "done",
+      processed: outcome.processed,
+      total: feedUrls.length,
+      imported: outcome.summary.imported,
+      skipped: outcome.summary.skipped,
+      failed: outcome.summary.failed,
+      result: outcome.status,
+      error: importErrorMessage(outcome.error),
+    });
+    setOpmlCancelling(false);
+
+    if (outcome.summary.imported > 0) {
+      void queryClient.invalidateQueries({ queryKey: ["podcast-subscriptions"] });
+      void queryClient.invalidateQueries({ queryKey: ["podcast-home"] });
+    }
   };
 
   const busy = subscribeMutation.isPending || resolveMutation.isPending;
+  const opmlPercentage =
+    opmlImport && opmlImport.total > 0
+      ? Math.round((opmlImport.processed / opmlImport.total) * 100)
+      : 0;
 
   return (
     <section className="flex flex-col gap-6">
@@ -228,16 +326,20 @@ export function PodcastSearch() {
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              disabled={bulkMutation.isPending}
+              disabled={importing}
               className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-3 py-1.5 text-xs text-foreground transition hover:border-pine-500 disabled:opacity-50"
             >
-              <Upload className="size-3.5" />
+              {importing ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Upload className="size-3.5" />
+              )}
               Importar OPML
             </button>
             <button
               type="button"
               onClick={() => exportMutation.mutate()}
-              disabled={exportMutation.isPending}
+              disabled={exportMutation.isPending || importing}
               className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-3 py-1.5 text-xs text-foreground transition hover:border-pine-500 disabled:opacity-50"
             >
               <Download className="size-3.5" />
@@ -248,12 +350,84 @@ export function PodcastSearch() {
               type="file"
               accept=".opml,.xml,text/xml,application/xml"
               className="hidden"
+              disabled={importing}
               onChange={(event) => {
                 void onImportOpml(event.target.files?.[0] ?? null);
                 event.target.value = "";
               }}
             />
           </div>
+
+          {opmlImport ? (
+            <div className="rounded-xl border border-line bg-surface p-3">
+              {opmlImport.status === "importing" ? (
+                <>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-medium text-foreground" aria-live="polite">
+                      {opmlImport.processed} de {opmlImport.total} feeds
+                    </p>
+                    <button
+                      type="button"
+                      onClick={onCancelImport}
+                      disabled={opmlCancelling}
+                      className="inline-flex items-center gap-1 rounded-lg border border-line-strong px-2 py-1 text-xs text-foreground transition hover:border-pine-500 disabled:opacity-50"
+                    >
+                      <X className="size-3" />
+                      {opmlCancelling ? "Cancelando…" : "Cancelar"}
+                    </button>
+                  </div>
+                  <div
+                    className="mt-2 h-2 overflow-hidden rounded-full bg-pine-800"
+                    role="progressbar"
+                    aria-label="Progreso de la importación OPML"
+                    aria-valuemin={0}
+                    aria-valuemax={opmlImport.total}
+                    aria-valuenow={opmlImport.processed}
+                  >
+                    <div
+                      className="h-full rounded-full bg-pine-600 transition-[width] duration-300"
+                      style={{ width: `${opmlPercentage}%` }}
+                    />
+                  </div>
+                  <ImportCounters
+                    imported={opmlImport.imported}
+                    skipped={opmlImport.skipped}
+                    failed={opmlImport.failed}
+                  />
+                </>
+              ) : (
+                <>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-medium text-foreground">
+                      {importOutcomeLabel(opmlImport.result)}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setOpmlImport(null)}
+                      aria-label="Cerrar resumen de la importación"
+                      className="rounded-lg p-1 text-muted transition hover:text-foreground"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs text-muted">
+                    {opmlImport.processed} de {opmlImport.total} feeds procesados
+                    {opmlImport.result === "cancelled"
+                      ? ` · ${opmlImport.total - opmlImport.processed} sin procesar`
+                      : ""}
+                  </p>
+                  {opmlImport.error ? (
+                    <p className="mt-1 text-xs text-rose-400">{opmlImport.error}</p>
+                  ) : null}
+                  <ImportCounters
+                    imported={opmlImport.imported}
+                    skipped={opmlImport.skipped}
+                    failed={opmlImport.failed}
+                  />
+                </>
+              )}
+            </div>
+          ) : null}
         </form>
       </div>
 
