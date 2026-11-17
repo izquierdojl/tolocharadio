@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Heart } from "lucide-react";
@@ -5,14 +6,18 @@ import { fetchPodcastFavorites } from "../../lib/api.js";
 import { EpisodeRow } from "../../components/podcasts/EpisodeRow.js";
 import { usePodcastSummaries } from "../../components/podcasts/usePodcastSummaries.js";
 import { EmptyState } from "../../components/EmptyState.js";
+import { SearchInput } from "../../components/SearchInput.js";
+import { filterByTitle } from "../../lib/textMatch.js";
 
 export function PodcastFavorites() {
   const favoritesQuery = useQuery({
     queryKey: ["podcast-favorites"],
     queryFn: fetchPodcastFavorites,
   });
-  const items = favoritesQuery.data?.items ?? [];
-  const podcasts = usePodcastSummaries(items.map((episode) => episode.podcastId));
+  const [term, setTerm] = useState("");
+  const allItems = useMemo(() => favoritesQuery.data?.items ?? [], [favoritesQuery.data]);
+  const items = useMemo(() => filterByTitle(allItems, term), [allItems, term]);
+  const podcasts = usePodcastSummaries(allItems.map((episode) => episode.podcastId));
 
   return (
     <section className="flex flex-col gap-6">
@@ -28,6 +33,15 @@ export function PodcastFavorites() {
         <p className="text-sm text-muted">Los episodios de podcast que has guardado.</p>
       </div>
 
+      <SearchInput
+        id="filtrar-favoritos"
+        value={term}
+        onChange={setTerm}
+        placeholder="Filtrar por título"
+        ariaLabel="Filtrar episodios favoritos por título"
+        className="w-full sm:w-72"
+      />
+
       {favoritesQuery.isLoading ? (
         <p className="py-10 text-center text-faint">Cargando favoritos…</p>
       ) : favoritesQuery.isError ? (
@@ -35,6 +49,10 @@ export function PodcastFavorites() {
           {favoritesQuery.error instanceof Error
             ? favoritesQuery.error.message
             : "No se pudieron cargar los favoritos"}
+        </p>
+      ) : items.length === 0 && term.trim() ? (
+        <p className="py-10 text-center text-sm text-muted">
+          No hay episodios favoritos que coincidan con «{term.trim()}».
         </p>
       ) : items.length === 0 ? (
         <EmptyState

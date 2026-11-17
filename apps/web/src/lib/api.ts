@@ -5,6 +5,7 @@ import type {
   PodcastEpisode,
   PodcastEpisodePage,
   PodcastEpisodeProgress,
+  PodcastEpisodeSearchPage,
   PodcastHome,
   PodcastQueue,
   PodcastSearchResult,
@@ -290,15 +291,28 @@ export function fetchPodcast(podcastId: number): Promise<{ podcast: PodcastSumma
 
 export function fetchPodcastEpisodes(
   podcastId: number,
-  params: { sort?: string; filter?: string; offset?: number; limit?: number } = {},
+  params: { sort?: string; filter?: string; q?: string; offset?: number; limit?: number } = {},
 ): Promise<PodcastEpisodePage> {
   const q = new URLSearchParams();
   if (params.sort) q.set("sort", params.sort);
   if (params.filter) q.set("filter", params.filter);
+  if (params.q) q.set("q", params.q);
   if (params.offset !== undefined) q.set("offset", String(params.offset));
   if (params.limit !== undefined) q.set("limit", String(params.limit));
   const suffix = q.toString() ? `?${q.toString()}` : "";
   return api.get<PodcastEpisodePage>(`/podcasts/${podcastId}/episodes${suffix}`);
+}
+
+export function searchPodcastEpisodes(
+  q: string,
+  params: { offset?: number; limit?: number } = {},
+): Promise<PodcastEpisodeSearchPage> {
+  const search = new URLSearchParams({ q });
+  if (params.offset !== undefined) search.set("offset", String(params.offset));
+  if (params.limit !== undefined) search.set("limit", String(params.limit));
+  return api.get<PodcastEpisodeSearchPage>(
+    `/podcasts/episodes/search?${search.toString()}`,
+  );
 }
 
 export function fetchPodcastSubscriptions(): Promise<{ items: PodcastSummary[] }> {

@@ -163,6 +163,15 @@ export interface PodcastEpisodePage {
   pagination: { offset: number; limit: number; hasMore: boolean };
 }
 
+export interface PodcastEpisodeSearchItem extends PodcastEpisode {
+  podcast: PodcastSummary;
+}
+
+export interface PodcastEpisodeSearchPage {
+  items: PodcastEpisodeSearchItem[];
+  pagination: { offset: number; limit: number; hasMore: boolean };
+}
+
 export interface PodcastQueue {
   revision: number;
   updatedAt: number | null;

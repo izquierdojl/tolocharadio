@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { ArrowLeft, ListMusic, Trash2 } from "lucide-react";
@@ -11,20 +11,28 @@ import {
   reorderPodcastQueue,
 } from "../../lib/api.js";
 import { isQueueEpisodeActive } from "../../lib/podcastQueue.js";
+import { filterByTitle } from "../../lib/textMatch.js";
 import { ConfirmDialog } from "../../components/ConfirmDialog.js";
 import { QueuePanel } from "../../components/podcasts/QueuePanel.js";
+import { SearchInput } from "../../components/SearchInput.js";
 import { usePodcastSummaries } from "../../components/podcasts/usePodcastSummaries.js";
 import { usePlayerStore } from "../../stores/player.js";
 
 export function PodcastQueue() {
   const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [term, setTerm] = useState("");
   const queueQuery = useQuery({
     queryKey: ["podcast-queue"],
     queryFn: fetchPodcastQueue,
   });
 
   const queue = queueQuery.data?.queue;
+  const filteredQueue = useMemo(() => {
+    const trimmed = term.trim();
+    if (!queue || !trimmed) return queue;
+    return { ...queue, items: filterByTitle(queue.items, trimmed) };
+  }, [queue, term]);
   const podcasts = usePodcastSummaries(queue?.items.map((episode) => episode.podcastId) ?? []);
   const activeEpisodeId = usePlayerStore((s) =>
     s.kind === "podcast" && s.episode && isQueueEpisodeActive(s.status) ? s.episode.id : null,
@@ -119,18 +127,32 @@ export function PodcastQueue() {
         </div>
       </div>
 
+      <SearchInput
+        id="filtrar-cola"
+        value={term}
+        onChange={setTerm}
+        placeholder="Filtrar por título"
+        ariaLabel="Filtrar episodios de la cola por título"
+        className="w-full sm:w-72"
+      />
+
       {queueQuery.isLoading ? (
         <p className="py-10 text-center text-faint">Cargando cola…</p>
       ) : queueQuery.isError ? (
         <p className="text-sm text-rose-400">
           {queueQuery.error instanceof Error ? queueQuery.error.message : "No se pudo cargar la cola"}
         </p>
-      ) : !queue ? null : (
+      ) : !queue ? null : (filteredQueue?.items.length ?? 0) === 0 && term.trim() ? (
+        <p className="py-10 text-center text-sm text-muted">
+          No hay episodios en la cola que coincidan con «{term.trim()}».
+        </p>
+      ) : (
         <QueuePanel
-          queue={queue}
+          queue={filteredQueue ?? queue}
           podcasts={podcasts}
           hiddenEpisodeId={activeEpisodeId}
           hasActiveEpisode={activeEpisodeId !== null}
+          reorderEnabled={!term.trim()}
           onReorder={(episodeIds) =>
             reorderMutation.mutate({ baseRevision: queue.revision, episodeIds })
           }

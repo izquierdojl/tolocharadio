@@ -414,6 +414,37 @@ export function podcastsRouter(ctx: AppContext): Router {
     }
   });
 
+  router.get("/podcasts/episodes/search", auth, (req, res, next) => {
+    try {
+      const user = req.authUser;
+      if (!user) throw unauthorized();
+      const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+      if (!q) {
+        throw badRequest("VALIDATION_ERROR", "El parametro de busqueda 'q' es obligatorio");
+      }
+
+      const rawOffset = typeof req.query.offset === "string" ? Number(req.query.offset) : 0;
+      const rawLimit =
+        typeof req.query.limit === "string"
+          ? Number(req.query.limit)
+          : ctx.config.podcastEpisodesPageSize;
+      if (!Number.isFinite(rawOffset) || rawOffset < 0) {
+        throw badRequest("VALIDATION_ERROR", "Parametro offset invalido");
+      }
+      if (!Number.isFinite(rawLimit) || rawLimit < 1 || rawLimit > 100) {
+        throw badRequest("VALIDATION_ERROR", "Parametro limit invalido");
+      }
+
+      const page = ctx.podcastCatalog.searchEpisodesForUser(user.id, q, {
+        offset: rawOffset,
+        limit: rawLimit,
+      });
+      res.json(page);
+    } catch (err) {
+      next(err);
+    }
+  });
+
   router.get("/podcasts/:podcastId/episodes", auth, (req, res, next) => {
     try {
       const user = req.authUser;
@@ -428,6 +459,7 @@ export function podcastsRouter(ctx: AppContext): Router {
       if (!["all", "unplayed", "in_progress", "completed"].includes(rawFilter)) {
         throw badRequest("VALIDATION_ERROR", "Parametro filter invalido");
       }
+      const rawQuery = typeof req.query.q === "string" ? req.query.q.trim() : "";
 
       const rawOffset = typeof req.query.offset === "string" ? Number(req.query.offset) : 0;
       const rawLimit =
@@ -444,6 +476,7 @@ export function podcastsRouter(ctx: AppContext): Router {
       const page = ctx.podcastCatalog.listEpisodesForUser(podcastId, user.id, {
         sort: rawSort as EpisodeSort,
         filter: rawFilter as EpisodeFilter,
+        q: rawQuery,
         offset: rawOffset,
         limit: rawLimit,
       });

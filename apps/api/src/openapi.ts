@@ -2120,6 +2120,14 @@ export function buildOpenApi(): Record<string, unknown> {
               },
             },
             {
+              name: "q",
+              in: "query",
+              required: false,
+              description:
+                "Filtra los episodios por titulo con coincidencia parcial, sin distinguir mayusculas ni acentos",
+              schema: { type: "string", minLength: 1 },
+            },
+            {
               name: "offset",
               in: "query",
               required: false,
@@ -2163,6 +2171,77 @@ export function buildOpenApi(): Record<string, unknown> {
             "401": errorResponses["401"],
             "403": errorResponses["403"],
             "404": errorResponses["404"],
+          },
+        },
+      },
+      "/podcasts/episodes/search": {
+        get: {
+          tags: ["Podcasts"],
+          summary: "Buscar episodios por titulo en todas las suscripciones del usuario",
+          ...requireAuth,
+          parameters: [
+            {
+              name: "q",
+              in: "query",
+              required: true,
+              description:
+                "Termino de busqueda con coincidencia parcial por titulo, sin distinguir mayusculas ni acentos",
+              schema: { type: "string", minLength: 1 },
+            },
+            {
+              name: "offset",
+              in: "query",
+              required: false,
+              schema: { type: "integer", minimum: 0, default: 0 },
+            },
+            {
+              name: "limit",
+              in: "query",
+              required: false,
+              schema: { type: "integer", minimum: 1, maximum: 100, default: 50 },
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Pagina de episodios con el resumen del podcast de cada uno",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["items", "pagination"],
+                    properties: {
+                      items: {
+                        type: "array",
+                        items: {
+                          allOf: [
+                            { $ref: "#/components/schemas/PodcastEpisode" },
+                            {
+                              type: "object",
+                              required: ["podcast"],
+                              properties: {
+                                podcast: { $ref: "#/components/schemas/PodcastSummary" },
+                              },
+                            },
+                          ],
+                        },
+                      },
+                      pagination: {
+                        type: "object",
+                        required: ["offset", "limit", "hasMore"],
+                        properties: {
+                          offset: { type: "integer" },
+                          limit: { type: "integer" },
+                          hasMore: { type: "boolean" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
           },
         },
       },
