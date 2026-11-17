@@ -21,7 +21,7 @@
 
 - [x] 4.1 Ejecutar `npm run verify:full` y corregir cualquier fallo de typecheck, lint, tests o build.
 - [ ] 4.2 Reconstruir y levantar Docker con `docker compose up --build -d` y ejecutar el smoke: abrir `/podcasts/cola`, comprobar la cabecera, marcar y quitar favoritos, verificar que el orden y la revisión no cambian y que el mensaje de límite usa «cola de reproducción».
-- [ ] 4.3 Comprobar con `git status` que todo el trabajo del change (código, tests, docs y artefactos OpenSpec) está commiteado antes de archivar.
+- [x] 4.3 Comprobar con `git status` que todo el trabajo del change (código, tests, docs y artefactos OpenSpec) está commiteado antes de archivar.
 
 ## Workflow follow-up
 
