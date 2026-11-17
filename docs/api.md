@@ -59,6 +59,8 @@ Resumen de endpoints (todos bajo `/api/v1`):
 | `GET` | `/podcasts/:podcastId/episodes` | autenticado | Episodios paginados (sort, filter, offset, limit) |
 | `POST` | `/podcasts/episodes/:episodeId/playback` | autenticado | Emite URL firmada de reproducción (`6h` TTL) |
 | `GET` | `/podcasts/episodes/:episodeId/stream` | firma HMAC | Stream de audio del episodio (`Range`, `206`/`416`) |
+| `POST` | `/podcasts/episodes/:episodeId/download` | autenticado | Emite URL firmada de descarga del archivo original (`6h` TTL) |
+| `GET` | `/podcasts/episodes/:episodeId/download` | firma HMAC | Descarga el archivo original con `Content-Disposition` (`Range`, `206`/`416`) |
 | `GET` | `/podcasts/episodes/:episodeId/progress` | autenticado | Consulta el progreso guardado del episodio |
 | `PUT` | `/podcasts/episodes/:episodeId/progress` | autenticado | Registra progreso y sesión de escucha (idempotente) |
 | `POST` | `/podcasts/episodes/:episodeId/progress` | autenticado | Alias de progreso para `keepalive`/`sendBeacon` |
@@ -71,5 +73,7 @@ Resumen de endpoints (todos bajo `/api/v1`):
 | `GET` | `/podcasts/stats/recent` | autenticado | Sesiones de escucha recientes (`limit`) |
 
 `DELETE /podcasts/queue?keepEpisodeId=42` vacía los episodios pendientes y conserva el episodio 42 en la primera posición; sin el parámetro, vacía la cola completa. En ambos casos incrementa `revision` y no detiene la reproducción en curso. Los episodios devueltos por `GET /podcasts/queue` y el resumen de la portada incluyen `isFavorite`, de modo que el cliente pinta el estado del favorito sin peticiones adicionales.
+
+`GET /podcasts/episodes/:episodeId/download` descarga siempre el archivo original a través del proxy, aunque `PODCAST_STREAM_MODE=redirect`, para poder fijar `Content-Disposition: attachment` y un nombre `tolocharadio_<título del episodio>` saneado. La firma de descarga usa un contexto HMAC distinto al de reproducción: un token de reproducción no sirve para descargar y viceversa. `features.podcastDownloads` de `GET /config` indica si la función está disponible.
 
 Errores en formato `{ "error": { "code", "message", "status", "details?" } }`.

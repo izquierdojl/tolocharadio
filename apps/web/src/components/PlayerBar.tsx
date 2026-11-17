@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { useNowPlaying } from "../hooks/useNowPlaying.js";
+import { useEpisodeDetailStore } from "../stores/episodeDetail.js";
 import { usePlayerStore } from "../stores/player.js";
 import { EpisodePlayerControls } from "./podcasts/EpisodePlayerControls.js";
 
@@ -41,6 +42,7 @@ export function PlayerBar() {
     nowPlaying,
   } = usePlayerStore();
   useNowPlaying();
+  const openEpisodeDetail = useEpisodeDetailStore((s) => s.open);
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -119,9 +121,20 @@ export function PlayerBar() {
               >
                 {isPodcast ? "PODCAST" : "EN DIRECTO"}
               </span>
-              <span className="truncate font-medium text-pine-100">
-                {isPodcast ? episode.title : station?.name}
-              </span>
+              {isPodcast ? (
+                <button
+                  type="button"
+                  onClick={(event) =>
+                    openEpisodeDetail(episode, podcast, event.currentTarget)
+                  }
+                  title={episode.title}
+                  className="min-w-0 truncate text-left font-medium text-pine-100 hover:underline"
+                >
+                  {episode.title}
+                </button>
+              ) : (
+                <span className="truncate font-medium text-pine-100">{station?.name}</span>
+              )}
             </div>
 
             {statusText ? (

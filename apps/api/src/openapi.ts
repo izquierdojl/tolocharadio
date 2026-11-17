@@ -2221,6 +2221,89 @@ export function buildOpenApi(): Record<string, unknown> {
           },
         },
       },
+      "/podcasts/episodes/{episodeId}/download": {
+        post: {
+          tags: ["Podcasts"],
+          summary: "Emitir token y URL firmada de descarga para un episodio",
+          ...requireAuth,
+          parameters: [
+            { name: "episodeId", in: "path", required: true, schema: { type: "integer" } },
+          ],
+          responses: {
+            "200": {
+              description: "URL firmada de descarga y expiracion; no incluye la URL original del enclosure",
+              headers: {
+                "Cache-Control": {
+                  description: "Siempre no-store",
+                  schema: { type: "string" },
+                },
+              },
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["url", "expiresAt"],
+                    properties: {
+                      url: { type: "string" },
+                      expiresAt: { type: "integer" },
+                    },
+                  },
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+            "404": errorResponses["404"],
+          },
+        },
+        get: {
+          tags: ["Podcasts"],
+          summary:
+            "Descargar el archivo original de un episodio mediante proxy (Content-Disposition attachment; soporta Range 206/416)",
+          security: [],
+          parameters: [
+            { name: "episodeId", in: "path", required: true, schema: { type: "integer" } },
+            { name: "u", in: "query", required: true, schema: { type: "integer" } },
+            { name: "exp", in: "query", required: true, schema: { type: "integer" } },
+            { name: "sig", in: "query", required: true, schema: { type: "string" } },
+          ],
+          responses: {
+            "200": {
+              description: "Archivo original con Content-Disposition attachment",
+              headers: {
+                "Content-Disposition": {
+                  description: "Nombre de archivo saneado (filename ASCII y filename* UTF-8)",
+                  schema: { type: "string" },
+                },
+              },
+            },
+            "206": {
+              description: "Contenido parcial (Range) con Content-Disposition attachment",
+              headers: {
+                "Content-Disposition": {
+                  description: "Nombre de archivo saneado (filename ASCII y filename* UTF-8)",
+                  schema: { type: "string" },
+                },
+                "Content-Range": {
+                  description: "Rango devuelto por el origen",
+                  schema: { type: "string" },
+                },
+                "Accept-Ranges": {
+                  description: "Rangos aceptados por el origen",
+                  schema: { type: "string" },
+                },
+              },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+            "404": errorResponses["404"],
+            "416": { description: "Rango no satisfacible (Range Not Satisfiable)" },
+            "503": errorResponses["503"],
+          },
+        },
+      },
       "/podcasts/episodes/{episodeId}/progress": {
         get: {
           tags: ["Podcasts"],

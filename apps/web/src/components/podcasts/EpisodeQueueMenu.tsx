@@ -8,9 +8,11 @@ type QueuePosition = "next" | "end";
 
 interface EpisodeQueueMenuProps {
   episodeId: number;
+  /** Dirección del desplegable; en la ficha se abre hacia arriba. */
+  direction?: "down" | "up";
 }
 
-export function EpisodeQueueMenu({ episodeId }: EpisodeQueueMenuProps) {
+export function EpisodeQueueMenu({ episodeId, direction = "down" }: EpisodeQueueMenuProps) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -83,7 +85,9 @@ export function EpisodeQueueMenu({ episodeId }: EpisodeQueueMenuProps) {
         <div
           role="menu"
           aria-label="Añadir a la cola"
-          className="absolute right-0 top-full z-20 mt-1 w-52 rounded-xl border border-line bg-surface-raised p-1 shadow-xl shadow-black/30"
+          className={`absolute right-0 z-20 w-52 rounded-xl border border-line bg-surface-raised p-1 shadow-xl shadow-black/30 ${
+            direction === "up" ? "bottom-full mb-1" : "top-full mt-1"
+          }`}
         >
           <button
             type="button"

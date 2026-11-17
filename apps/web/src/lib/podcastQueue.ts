@@ -23,6 +23,14 @@ export function mergeQueueOrder(
   return merged;
 }
 
+/// Aplica un orden local de IDs sobre los episodios vigentes del servidor.
+export function applyQueueOrder(items: PodcastEpisode[], order: number[]): PodcastEpisode[] {
+  const byId = new Map(items.map((item) => [item.id, item]));
+  return order
+    .map((id) => byId.get(id))
+    .filter((item): item is PodcastEpisode => item !== undefined);
+}
+
 /// Escoge el siguiente episodio de la cola tras terminar `endedEpisodeId`.
 export function nextQueueEpisode(
   items: PodcastEpisode[],

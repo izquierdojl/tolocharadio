@@ -18,69 +18,37 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, ListMusic, Pause, Play, RotateCcw, Trash2 } from "lucide-react";
-import { mergeQueueOrder } from "../../lib/podcastQueue.js";
+import { formatEpisodeDuration } from "../../lib/podcastFormat.js";
+import { applyQueueOrder, mergeQueueOrder } from "../../lib/podcastQueue.js";
 import type { PodcastEpisode, PodcastQueue, PodcastSummary } from "../../lib/types.js";
-import { usePlayerStore } from "../../stores/player.js";
+import { useEpisodeDetailStore } from "../../stores/episodeDetail.js";
+import { EpisodeDownloadButton } from "./EpisodeDownloadButton.js";
 import { EpisodeFavoriteButton } from "./EpisodeFavoriteButton.js";
 import { PodcastCover } from "./PodcastCover.js";
 import { useEpisodeFavorite } from "./useEpisodeFavorite.js";
-
-function formatDuration(rawSec: number | null | undefined): string | null {
-  if (rawSec === null || rawSec === undefined || !Number.isFinite(rawSec) || rawSec <= 0) {
-    return null;
-  }
-  const total = Math.round(rawSec);
-  const hh = Math.floor(total / 3600);
-  const mm = Math.floor((total % 3600) / 60);
-  const ss = total % 60;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return hh > 0 ? `${hh}:${pad(mm)}:${pad(ss)}` : `${mm}:${pad(ss)}`;
-}
+import { useEpisodePlayback } from "./useEpisodePlayback.js";
 
 interface SortableQueueItemProps {
   episode: PodcastEpisode;
   podcast: PodcastSummary | undefined;
   index: number;
   onRemove: (episodeId: number) => void;
-  onFavoriteChange: (episodeId: number, isFavorite: boolean) => void;
 }
 
-function SortableQueueItem({
-  episode,
-  podcast,
-  index,
-  onRemove,
-  onFavoriteChange,
-}: SortableQueueItemProps) {
+function SortableQueueItem({ episode, podcast, index, onRemove }: SortableQueueItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: episode.id,
   });
-  const playEpisode = usePlayerStore((s) => s.playEpisode);
-  const togglePlayback = usePlayerStore((s) => s.toggle);
-  const retryPlayback = usePlayerStore((s) => s.retry);
-  const isCurrent = usePlayerStore((s) => s.kind === "podcast" && s.episode?.id === episode.id);
-  const isPlaying = usePlayerStore((s) => s.isPlaying && isCurrent);
-  const status = usePlayerStore((s) => (s.episode?.id === episode.id ? s.status : null));
-  const isFailed = isCurrent && status === "failed";
-  const playTitle = isFailed ? "Reintentar" : isPlaying ? "Pausar" : "Reproducir";
-  const duration = formatDuration(episode.durationSec);
+  const openDetail = useEpisodeDetailStore((s) => s.open);
+  const playback = useEpisodePlayback(episode, podcast ?? null);
+  const duration = formatEpisodeDuration(episode.durationSec);
   const favorite = useEpisodeFavorite({
     episodeId: episode.id,
     isFavorite: Boolean(episode.isFavorite),
-    onChange: (next) => onFavoriteChange(episode.id, next),
   });
 
-  const handlePlay = (): void => {
-    if (!podcast) return;
-    if (isCurrent) {
-      if (isFailed) {
-        retryPlayback();
-      } else {
-        togglePlayback();
-      }
-      return;
-    }
-    playEpisode(episode, podcast);
+  const openEpisodeDetail = (trigger?: HTMLElement): void => {
+    if (podcast) openDetail(episode, podcast, trigger ?? null);
   };
 
   const style = {
@@ -110,10 +78,28 @@ function SortableQueueItem({
       <div className="size-10 shrink-0 overflow-hidden rounded-lg bg-pine-800">
         <PodcastCover src={episode.imageUrl ?? podcast?.imageUrl} alt="" className="size-full" />
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-foreground" title={episode.title}>
-          {episode.title}
-        </p>
+      <div
+        className="min-w-0 flex-1 cursor-pointer"
+        onClick={(event) => {
+          if ((event.target as HTMLElement).closest("button, a, input, select, textarea")) return;
+          const titleButton = event.currentTarget.querySelector<HTMLButtonElement>("button");
+          openEpisodeDetail(titleButton ?? undefined);
+        }}
+      >
+        {podcast ? (
+          <button
+            type="button"
+            onClick={(event) => openEpisodeDetail(event.currentTarget)}
+            title={episode.title}
+            className="block w-full truncate text-left text-sm font-medium text-foreground hover:underline"
+          >
+            {episode.title}
+          </button>
+        ) : (
+          <p className="truncate text-sm font-medium text-foreground" title={episode.title}>
+            {episode.title}
+          </p>
+        )}
         <p className="truncate text-xs text-muted">
           {podcast?.title ?? "Podcast"}
           {duration ? ` · ${duration}` : ""}
@@ -121,20 +107,21 @@ function SortableQueueItem({
       </div>
       <button
         type="button"
-        onClick={handlePlay}
+        onClick={playback.handlePlay}
         disabled={!podcast}
-        title={playTitle}
-        aria-label={playTitle}
+        title={playback.playTitle}
+        aria-label={playback.playTitle}
         className="inline-flex size-8 items-center justify-center rounded-lg text-muted transition hover:bg-surface-soft hover:text-foreground disabled:opacity-40"
       >
-        {isFailed ? (
+        {playback.isFailed ? (
           <RotateCcw className="size-4" />
-        ) : isPlaying ? (
+        ) : playback.isPlaying ? (
           <Pause className="size-4" />
         ) : (
           <Play className="size-4" />
         )}
       </button>
+      <EpisodeDownloadButton episodeId={episode.id} episodeTitle={episode.title} />
       <EpisodeFavoriteButton
         isFavorite={favorite.isFavorite}
         pending={favorite.pending}
@@ -192,15 +179,10 @@ function QueuePanelList({
   hiddenEpisodeId,
   hasActiveEpisode,
 }: QueuePanelProps) {
-  const [items, setItems] = useState(queue.items);
+  const [order, setOrder] = useState(() => queue.items.map((item) => item.id));
+  const items = applyQueueOrder(queue.items, order);
   const visibleItems =
     hiddenEpisodeId === null ? items : items.filter((item) => item.id !== hiddenEpisodeId);
-
-  const handleFavoriteChange = (episodeId: number, isFavorite: boolean): void => {
-    setItems((current) =>
-      current.map((item) => (item.id === episodeId ? { ...item, isFavorite } : item)),
-    );
-  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -220,11 +202,7 @@ function QueuePanelList({
       nextVisible.map((item) => item.id),
       hiddenEpisodeId,
     );
-    const byId = new Map(items.map((item) => [item.id, item]));
-    const nextItems = nextOrder
-      .map((id) => byId.get(id))
-      .filter((item): item is PodcastEpisode => item !== undefined);
-    setItems(nextItems);
+    setOrder(nextOrder);
     onReorder(nextOrder);
   };
 
@@ -256,7 +234,6 @@ function QueuePanelList({
               podcast={podcasts.get(episode.podcastId)}
               index={index}
               onRemove={onRemove}
-              onFavoriteChange={handleFavoriteChange}
             />
           ))}
         </ul>

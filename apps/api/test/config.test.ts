@@ -140,7 +140,7 @@ describe("GET /api/v1/config", () => {
         podcastQueue: true,
         podcastFavorites: true,
         podcastStats: true,
-        podcastDownloads: false,
+        podcastDownloads: true,
       });
     } finally {
       srv.db.sqlite.close();
