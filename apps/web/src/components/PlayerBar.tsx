@@ -171,22 +171,24 @@ export function PlayerBar() {
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={canRetry ? retry : toggle}
-            title={canRetry ? "Reintentar" : isPlaying ? "Pausar" : "Reproducir"}
-            className="flex size-11 shrink-0 items-center justify-center rounded-full bg-ochre-500 text-pine-950 shadow-lg shadow-ochre-900/30 transition hover:bg-ochre-400"
-          >
-            {isBuffering && !canRetry ? (
-              <Loader2 className="size-5 animate-spin" />
-            ) : canRetry ? (
-              <RotateCcw className="size-5" />
-            ) : isPlaying ? (
-              <Pause className="size-5" />
-            ) : (
-              <Play className="ml-0.5 size-5" />
-            )}
-          </button>
+          {!isPodcast && (
+            <button
+              type="button"
+              onClick={canRetry ? retry : toggle}
+              title={canRetry ? "Reintentar" : isPlaying ? "Pausar" : "Reproducir"}
+              className="flex size-11 shrink-0 items-center justify-center rounded-full bg-ochre-500 text-pine-950 shadow-lg shadow-ochre-900/30 transition hover:bg-ochre-400"
+            >
+              {isBuffering && !canRetry ? (
+                <Loader2 className="size-5 animate-spin" />
+              ) : canRetry ? (
+                <RotateCcw className="size-5" />
+              ) : isPlaying ? (
+                <Pause className="size-5" />
+              ) : (
+                <Play className="ml-0.5 size-5" />
+              )}
+            </button>
+          )}
 
           <div className="hidden items-center gap-2 sm:flex">
             <button
@@ -228,10 +230,13 @@ export function PlayerBar() {
             episode={episode}
             podcast={podcast}
             isPlaying={isPlaying}
+            isBuffering={isBuffering}
+            canRetry={canRetry}
             currentTime={currentTime}
             duration={duration}
             playbackRate={playbackRate}
             onToggle={toggle}
+            onRetry={retry}
             onSeek={seek}
             onSkip={skip}
             onChangeRate={setPlaybackRate}

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { RotateCcw, RotateCw } from "lucide-react";
+import { Loader2, Pause, Play, RotateCcw, RotateCw } from "lucide-react";
 import type { PlaybackRate, PodcastEpisode, PodcastSummary } from "../../lib/types.js";
 
 const PLAYBACK_RATES: PlaybackRate[] = [1, 1.25, 1.5, 2];
@@ -23,10 +23,13 @@ export interface EpisodePlayerControlsProps {
   episode: PodcastEpisode;
   podcast: PodcastSummary;
   isPlaying: boolean;
+  isBuffering: boolean;
+  canRetry: boolean;
   currentTime: number;
   duration: number;
   playbackRate: PlaybackRate;
   onToggle: () => void;
+  onRetry: () => void;
   onSeek: (sec: number) => void;
   onSkip: (deltaSec: number) => void;
   onChangeRate: (rate: PlaybackRate) => void;
@@ -36,10 +39,13 @@ export function EpisodePlayerControls({
   episode,
   podcast,
   isPlaying,
+  isBuffering,
+  canRetry,
   currentTime,
   duration,
   playbackRate,
   onToggle,
+  onRetry,
   onSeek,
   onSkip,
   onChangeRate,
@@ -107,31 +113,51 @@ export function EpisodePlayerControls({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-      <button
-        type="button"
-        onClick={() => onSkip(-15)}
-        title="Retroceder 15 segundos"
-        aria-label="Retroceder 15 segundos"
-        className="flex items-center gap-0.5 rounded-full bg-pine-800 px-2.5 py-1 text-xs font-medium text-pine-200 transition hover:bg-pine-700 hover:text-pine-100"
-      >
-        <RotateCcw className="size-3.5" />
-        <span>15s</span>
-      </button>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-center gap-4 sm:gap-6">
+        <button
+          type="button"
+          onClick={() => onSkip(-15)}
+          title="Retroceder 15 segundos"
+          aria-label="Retroceder 15 segundos"
+          className="flex size-11 shrink-0 flex-col items-center justify-center gap-0.5 rounded-full bg-pine-800 text-pine-200 transition hover:bg-pine-700 hover:text-pine-100"
+        >
+          <RotateCcw className="size-5" />
+          <span className="text-[10px] font-semibold leading-none">15 s</span>
+        </button>
 
-      <button
-        type="button"
-        onClick={() => onSkip(30)}
-        title="Avanzar 30 segundos"
-        aria-label="Avanzar 30 segundos"
-        className="flex items-center gap-0.5 rounded-full bg-pine-800 px-2.5 py-1 text-xs font-medium text-pine-200 transition hover:bg-pine-700 hover:text-pine-100"
-      >
-        <RotateCw className="size-3.5" />
-        <span>30s</span>
-      </button>
+        <button
+          type="button"
+          onClick={canRetry ? onRetry : onToggle}
+          title={canRetry ? "Reintentar" : isPlaying ? "Pausar" : "Reproducir"}
+          aria-label={canRetry ? "Reintentar" : isPlaying ? "Pausar" : "Reproducir"}
+          className="flex size-14 shrink-0 items-center justify-center rounded-full bg-ochre-500 text-pine-950 shadow-lg shadow-ochre-900/30 transition hover:bg-ochre-400"
+        >
+          {isBuffering && !canRetry ? (
+            <Loader2 className="size-6 animate-spin" />
+          ) : canRetry ? (
+            <RotateCcw className="size-6" />
+          ) : isPlaying ? (
+            <Pause className="size-6" />
+          ) : (
+            <Play className="ml-0.5 size-6" />
+          )}
+        </button>
 
-      <div className="flex min-w-36 flex-1 items-center gap-2">
-        <span className="w-11 text-right font-mono text-[11px] text-pine-300">
+        <button
+          type="button"
+          onClick={() => onSkip(30)}
+          title="Avanzar 30 segundos"
+          aria-label="Avanzar 30 segundos"
+          className="flex size-11 shrink-0 flex-col items-center justify-center gap-0.5 rounded-full bg-pine-800 text-pine-200 transition hover:bg-pine-700 hover:text-pine-100"
+        >
+          <RotateCw className="size-5" />
+          <span className="text-[10px] font-semibold leading-none">30 s</span>
+        </button>
+      </div>
+
+      <div className="flex items-center gap-2 sm:gap-3">
+        <span className="w-11 shrink-0 text-right font-mono text-[11px] text-pine-300">
           {formatAudioSeconds(currentTime)}
         </span>
         <input
@@ -143,22 +169,21 @@ export function EpisodePlayerControls({
           disabled={effectiveDuration <= 0}
           onChange={(e) => onSeek(Number(e.target.value))}
           aria-label="Posición del episodio"
-          className="h-1.5 flex-1 cursor-pointer accent-ochre-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-1.5 min-w-0 flex-1 cursor-pointer accent-ochre-500 disabled:cursor-not-allowed disabled:opacity-50"
         />
-        <span className="w-11 font-mono text-[11px] text-pine-400">
+        <span className="w-11 shrink-0 font-mono text-[11px] text-pine-400">
           {formatAudioSeconds(effectiveDuration)}
         </span>
+        <button
+          type="button"
+          onClick={cycleRate}
+          title="Cambiar velocidad de reproducción"
+          aria-label={`Velocidad ${playbackRate}x`}
+          className="shrink-0 rounded-full bg-pine-800 px-2.5 py-1 text-xs font-semibold text-ochre-300 transition hover:bg-pine-700"
+        >
+          {playbackRate}×
+        </button>
       </div>
-
-      <button
-        type="button"
-        onClick={cycleRate}
-        title="Cambiar velocidad de reproducción"
-        aria-label={`Velocidad ${playbackRate}x`}
-        className="rounded-full bg-pine-800 px-2.5 py-1 text-xs font-semibold text-ochre-300 transition hover:bg-pine-700"
-      >
-        {playbackRate}×
-      </button>
     </div>
   );
 }
