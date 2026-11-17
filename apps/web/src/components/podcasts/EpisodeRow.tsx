@@ -1,32 +1,15 @@
+import type { MouseEvent } from "react";
 import { Link } from "react-router-dom";
 import { Check, Pause, Play, RotateCcw, X } from "lucide-react";
 import type { PodcastEpisode, PodcastSummary } from "../../lib/types.js";
-import { usePlayerStore } from "../../stores/player.js";
+import { formatEpisodeDate, formatEpisodeDuration } from "../../lib/podcastFormat.js";
+import { useEpisodeDetailStore } from "../../stores/episodeDetail.js";
+import { EpisodeDownloadButton } from "./EpisodeDownloadButton.js";
 import { EpisodeFavoriteButton } from "./EpisodeFavoriteButton.js";
 import { EpisodeQueueMenu } from "./EpisodeQueueMenu.js";
 import { PodcastCover } from "./PodcastCover.js";
 import { useEpisodeFavorite } from "./useEpisodeFavorite.js";
-
-function formatDuration(rawSec: number | null | undefined): string | null {
-  if (rawSec === null || rawSec === undefined || !Number.isFinite(rawSec) || rawSec <= 0) {
-    return null;
-  }
-  const total = Math.round(rawSec);
-  const hh = Math.floor(total / 3600);
-  const mm = Math.floor((total % 3600) / 60);
-  const ss = total % 60;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return hh > 0 ? `${hh}:${pad(mm)}:${pad(ss)}` : `${mm}:${pad(ss)}`;
-}
-
-function formatEpisodeDate(ts: number | null): string | null {
-  if (!ts) return null;
-  return new Date(ts).toLocaleDateString("es-ES", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
+import { useEpisodePlayback } from "./useEpisodePlayback.js";
 
 interface EpisodeRowProps {
   episode: PodcastEpisode;
@@ -36,32 +19,14 @@ interface EpisodeRowProps {
 }
 
 export function EpisodeRow({ episode, podcast, showPodcast = false, onDismiss }: EpisodeRowProps) {
-  const playEpisode = usePlayerStore((s) => s.playEpisode);
-  const togglePlayback = usePlayerStore((s) => s.toggle);
-  const retryPlayback = usePlayerStore((s) => s.retry);
-  const isCurrent = usePlayerStore((s) => s.kind === "podcast" && s.episode?.id === episode.id);
-  const isPlaying = usePlayerStore((s) => s.isPlaying && isCurrent);
-  const status = usePlayerStore((s) => (s.episode?.id === episode.id ? s.status : null));
-  const isFailed = isCurrent && status === "failed";
+  const openDetail = useEpisodeDetailStore((s) => s.open);
+  const playback = useEpisodePlayback(episode, podcast);
   const favorite = useEpisodeFavorite({
     episodeId: episode.id,
     isFavorite: Boolean(episode.isFavorite),
   });
 
-  const playTitle = isFailed ? "Reintentar" : isPlaying ? "Pausar" : "Reproducir";
-  const handlePlay = (): void => {
-    if (isCurrent) {
-      if (isFailed) {
-        retryPlayback();
-      } else {
-        togglePlayback();
-      }
-      return;
-    }
-    playEpisode(episode, podcast);
-  };
-
-  const duration = formatDuration(episode.durationSec ?? episode.progress?.durationSec);
+  const duration = formatEpisodeDuration(episode.durationSec ?? episode.progress?.durationSec);
   const published = formatEpisodeDate(episode.publishedAt);
   const progress = episode.progress;
   const progressPct =
@@ -69,8 +34,20 @@ export function EpisodeRow({ episode, podcast, showPodcast = false, onDismiss }:
       ? Math.min(100, Math.round((progress.positionSec / progress.durationSec) * 100))
       : null;
 
+  const handleCardClick = (event: MouseEvent<HTMLElement>): void => {
+    const target = event.target as HTMLElement;
+    if (target.closest("button, a, input, select, textarea")) return;
+    const titleButton = event.currentTarget.querySelector<HTMLButtonElement>(
+      "[data-episode-title]",
+    );
+    openDetail(episode, podcast, titleButton);
+  };
+
   return (
-    <article className="flex gap-3 rounded-xl border border-line bg-surface-raised p-3 transition hover:border-pine-600">
+    <article
+      onClick={handleCardClick}
+      className="flex cursor-pointer gap-3 rounded-xl border border-line bg-surface-raised p-3 transition hover:border-pine-600"
+    >
       <div className="relative hidden size-16 shrink-0 overflow-hidden rounded-lg bg-pine-800 sm:block">
         <PodcastCover
           src={episode.imageUrl ?? podcast.imageUrl}
@@ -79,14 +56,26 @@ export function EpisodeRow({ episode, podcast, showPodcast = false, onDismiss }:
         />
         <button
           type="button"
-          onClick={handlePlay}
-          title={isFailed ? "Reintentar episodio" : isPlaying ? "Pausar episodio" : "Reproducir episodio"}
-          aria-label={isFailed ? "Reintentar episodio" : isPlaying ? "Pausar episodio" : "Reproducir episodio"}
+          onClick={playback.handlePlay}
+          title={
+            playback.isFailed
+              ? "Reintentar episodio"
+              : playback.isPlaying
+                ? "Pausar episodio"
+                : "Reproducir episodio"
+          }
+          aria-label={
+            playback.isFailed
+              ? "Reintentar episodio"
+              : playback.isPlaying
+                ? "Pausar episodio"
+                : "Reproducir episodio"
+          }
           className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 transition hover:opacity-100 focus:opacity-100"
         >
-          {isFailed ? (
+          {playback.isFailed ? (
             <RotateCcw className="size-5" />
-          ) : isPlaying ? (
+          ) : playback.isPlaying ? (
             <Pause className="size-5" />
           ) : (
             <Play className="ml-0.5 size-5" />
@@ -105,8 +94,16 @@ export function EpisodeRow({ episode, podcast, showPodcast = false, onDismiss }:
                 {podcast.title}
               </Link>
             ) : null}
-            <h3 className="truncate font-semibold text-foreground" title={episode.title}>
-              {episode.title}
+            <h3 className="min-w-0 font-semibold text-foreground">
+              <button
+                type="button"
+                data-episode-title
+                onClick={(event) => openDetail(episode, podcast, event.currentTarget)}
+                title={episode.title}
+                className="block w-full truncate text-left hover:underline"
+              >
+                {episode.title}
+              </button>
             </h3>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-faint">
               {published ? <span>{published}</span> : null}
@@ -141,24 +138,25 @@ export function EpisodeRow({ episode, podcast, showPodcast = false, onDismiss }:
           </div>
         ) : null}
 
-        <div className="mt-1 flex items-center gap-1">
+        <div className="mt-1 flex flex-wrap items-center gap-1">
           <button
             type="button"
-            onClick={handlePlay}
-            title={playTitle}
-            aria-label={playTitle}
+            onClick={playback.handlePlay}
+            title={playback.playTitle}
+            aria-label={playback.playTitle}
             className="inline-flex items-center gap-1 rounded-lg bg-pine-700 px-2.5 py-1 text-xs font-medium text-pine-100 transition hover:bg-pine-600"
           >
-            {isFailed ? (
+            {playback.isFailed ? (
               <RotateCcw className="size-3.5" />
-            ) : isPlaying ? (
+            ) : playback.isPlaying ? (
               <Pause className="size-3.5" />
             ) : (
               <Play className="size-3.5" />
             )}
-            {isFailed ? "Reintentar" : isPlaying ? "Pausar" : "Reproducir"}
+            {playback.playTitle}
           </button>
           <EpisodeQueueMenu episodeId={episode.id} />
+          <EpisodeDownloadButton episodeId={episode.id} episodeTitle={episode.title} />
           <EpisodeFavoriteButton
             isFavorite={favorite.isFavorite}
             pending={favorite.pending}

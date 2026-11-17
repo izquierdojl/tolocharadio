@@ -51,7 +51,11 @@ La cabecera incorpora un selector **Radio | Podcasts** (visible si el servidor t
 - **Episodios favoritos** (`/podcasts/favoritos`): episodios marcados con el corazón, independientes de las emisoras favoritas.
 - **Estadísticas** (`/podcasts/estadisticas`): tiempo de contenido consumido, podcasts distintos, episodios empezados (≥ 30 s) y completados, tasa de finalización, media por episodio, evolución temporal, hábitos horarios, reparto por categoría y sesiones recientes. Son datos privados: solo tú puedes verlos.
 
-En las listas de episodios (inicio, ficha y favoritos), cada fila ofrece **Reproducir/Pausar** y un menú **A la cola** con **A continuación** y **Al final**; si el episodio ya estaba en la cola, se mueve a la posición elegida en vez de duplicarse.
+En las listas de episodios (inicio, ficha y favoritos), cada fila ofrece **Reproducir/Pausar**, un menú **A la cola** con **A continuación** y **Al final**, el botón de descarga y el favorito; si el episodio ya estaba en la cola, se mueve a la posición elegida en vez de duplicarse.
+
+El **título** de un episodio en cualquier lista y la **tarjeta** abren una ficha en modal sin salir de la página ni detener la reproducción. La ficha muestra portada, podcast, fecha, duración, temporada/episodio, explícito, progreso y la descripción completa, y permite reproducir/pausar/reintentar, encolar, marcar o quitar favorito y descargar. El título del episodio en el reproductor persistente también abre la ficha. Se cierra con la X, Escape o un clic fuera, y devuelve el foco al elemento que la abrió.
+
+Cuando el servidor publica la capacidad de descarga, cada fila y la ficha muestran un botón para guardar el archivo original. La descarga la gestiona el navegador o el escritorio, con el nombre `tolocharadio_<título del episodio>` que envía el servidor; la aplicación no mantiene una biblioteca offline ni reproduce sin conexión. Si el archivo ya no está disponible en el origen, se muestra un aviso de error.
 
 Al terminar un episodio se marca como completado, se retira de la cola y suena automáticamente el siguiente. Al vaciar la cola, el episodio cargado en el reproductor sigue sonando. En el cliente de escritorio las teclas multimedia **Siguiente** y **Anterior** controlan la cola.
 

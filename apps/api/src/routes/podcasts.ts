@@ -14,8 +14,11 @@ import { fetchFollowingRedirects } from "../lib/upstream.js";
 import { parseBody } from "../lib/validation.js";
 import { requireAuth } from "../middleware/auth.js";
 import type { EpisodeFilter, EpisodeSort } from "../services/podcasts/catalog.js";
+import { resolveDownloadFilename } from "../services/podcasts/downloadFilename.js";
 import {
+  issuePodcastDownloadToken,
   issuePodcastPlaybackToken,
+  validatePodcastDownloadQuery,
   validatePodcastPlaybackQuery,
 } from "../services/podcasts/playbackToken.js";
 
@@ -471,20 +474,57 @@ export function podcastsRouter(ctx: AppContext): Router {
     }
   });
 
-  const handleEpisodeStream = async (req: Request, res: Response, next: NextFunction) => {
+  router.post("/podcasts/episodes/:episodeId/download", auth, (req, res, next) => {
+    try {
+      const user = req.authUser;
+      if (!user) throw unauthorized();
+      const episodeId = parseIdParam(req, "episodeId");
+      ctx.podcastCatalog.getEpisodeRow(episodeId);
+
+      const issued = issuePodcastDownloadToken({
+        secret: ctx.config.jwtAccessSecret,
+        basePath: req.baseUrl,
+        userId: user.id,
+        episodeId,
+        ttlMs: ctx.config.podcastPlaybackTokenTtlMs,
+      });
+      res.setHeader("Cache-Control", "no-store");
+      res.json(issued);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  const proxyEpisodeAudio = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+    options: { download: boolean },
+  ) => {
+    const { download } = options;
     try {
       const episodeId = parseIdParam(req, "episodeId");
-      validatePodcastPlaybackQuery({
-        secret: ctx.config.jwtAccessSecret,
-        episodeId,
-        rawUserId: req.query.u,
-        rawExp: req.query.exp,
-        rawSig: req.query.sig,
-      });
+      if (download) {
+        validatePodcastDownloadQuery({
+          secret: ctx.config.jwtAccessSecret,
+          episodeId,
+          rawUserId: req.query.u,
+          rawExp: req.query.exp,
+          rawSig: req.query.sig,
+        });
+      } else {
+        validatePodcastPlaybackQuery({
+          secret: ctx.config.jwtAccessSecret,
+          episodeId,
+          rawUserId: req.query.u,
+          rawExp: req.query.exp,
+          rawSig: req.query.sig,
+        });
+      }
 
       const episode = ctx.podcastCatalog.getEpisodeRow(episodeId);
 
-      if (ctx.config.podcastStreamMode === "redirect") {
+      if (!download && ctx.config.podcastStreamMode === "redirect") {
         res.redirect(302, episode.audioUrl);
         return;
       }
@@ -508,22 +548,37 @@ export function podcastsRouter(ctx: AppContext): Router {
       }
 
       let origin: globalThis.Response;
+      let finalUrl: string;
       try {
-        ({ response: origin } = await fetchFollowingRedirects(episode.audioUrl, headers, {
+        ({ response: origin, finalUrl } = await fetchFollowingRedirects(episode.audioUrl, headers, {
           signal: controller.signal,
         }));
       } catch (err) {
         if (err instanceof AppError) throw err;
         throw serviceUnavailable(
-          "STREAM_UNAVAILABLE",
+          download ? "DOWNLOAD_UNAVAILABLE" : "STREAM_UNAVAILABLE",
           "No se pudo conectar con el servidor de audio del episodio",
         );
       }
+
+      const resolvedFilename = download
+        ? resolveDownloadFilename({
+            episodeId,
+            episodeTitle: episode.title,
+            finalUrl,
+            contentType: origin.headers.get("content-type"),
+            originContentDisposition: origin.headers.get("content-disposition"),
+          })
+        : null;
 
       if (origin.status === 416) {
         for (const name of ["content-range", "accept-ranges"] as const) {
           const val = origin.headers.get(name);
           if (val) res.setHeader(name, val);
+        }
+        if (resolvedFilename) {
+          res.setHeader("Content-Disposition", resolvedFilename.contentDisposition);
+          res.setHeader("Cache-Control", "private, no-store");
         }
         origin.body?.cancel().catch(() => {});
         res.status(416).end();
@@ -533,14 +588,20 @@ export function podcastsRouter(ctx: AppContext): Router {
       if (!origin.ok) {
         origin.body?.cancel().catch(() => {});
         throw serviceUnavailable(
-          "STREAM_UNAVAILABLE",
-          "El audio del episodio no esta disponible en este momento",
+          download ? "DOWNLOAD_UNAVAILABLE" : "STREAM_UNAVAILABLE",
+          download
+            ? "El archivo del episodio no esta disponible en este momento"
+            : "El audio del episodio no esta disponible en este momento",
         );
       }
 
       for (const name of STREAM_COPY_HEADERS) {
         const value = origin.headers.get(name);
         if (value) res.setHeader(name, value);
+      }
+      if (resolvedFilename) {
+        res.setHeader("Content-Disposition", resolvedFilename.contentDisposition);
+        res.setHeader("Cache-Control", "private, no-store");
       }
       if (!res.getHeader("accept-ranges")) {
         res.setHeader("accept-ranges", "bytes");
@@ -566,8 +627,15 @@ export function podcastsRouter(ctx: AppContext): Router {
     }
   };
 
-  router.get("/podcasts/episodes/:episodeId/stream", handleEpisodeStream);
-  router.head("/podcasts/episodes/:episodeId/stream", handleEpisodeStream);
+  router.get("/podcasts/episodes/:episodeId/stream", (req, res, next) =>
+    proxyEpisodeAudio(req, res, next, { download: false }),
+  );
+  router.head("/podcasts/episodes/:episodeId/stream", (req, res, next) =>
+    proxyEpisodeAudio(req, res, next, { download: false }),
+  );
+  router.get("/podcasts/episodes/:episodeId/download", (req, res, next) =>
+    proxyEpisodeAudio(req, res, next, { download: true }),
+  );
 
   router.get("/podcasts/episodes/:episodeId/progress", auth, (req, res, next) => {
     try {

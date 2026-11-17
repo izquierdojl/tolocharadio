@@ -223,6 +223,14 @@ export function issueEpisodePlaybackToken(episodeId: number): Promise<IssuedPlay
   return api.post<IssuedPlaybackToken>(`/podcasts/episodes/${episodeId}/playback`);
 }
 
+export type IssuedPodcastDownloadToken = IssuedPlaybackToken;
+
+export function requestPodcastDownload(
+  episodeId: number,
+): Promise<IssuedPodcastDownloadToken> {
+  return api.post<IssuedPodcastDownloadToken>(`/podcasts/episodes/${episodeId}/download`);
+}
+
 export interface UpsertEpisodeProgressPayload {
   sessionId: string;
   sequence: number;

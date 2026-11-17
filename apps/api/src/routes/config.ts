@@ -35,7 +35,7 @@ export function configRouter(ctx: AppContext): Router {
         podcastQueue: config.podcastsEnabled,
         podcastFavorites: config.podcastsEnabled,
         podcastStats: config.podcastsEnabled,
-        podcastDownloads: false,
+        podcastDownloads: config.podcastsEnabled,
       },
       limits: {
         podcastQueueMax: config.podcastQueueMax,

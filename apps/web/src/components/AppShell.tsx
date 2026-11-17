@@ -20,6 +20,7 @@ import {
 import { fetchPodcastQueueCount, fetchPublicConfig } from "../lib/api.js";
 import { useAuthStore } from "../stores/auth.js";
 import { AboutSection } from "./AboutSection.js";
+import { EpisodeDetailDialog } from "./podcasts/EpisodeDetailDialog.js";
 import { PodcastAutoAdvance } from "./podcasts/PodcastAutoAdvance.js";
 import { SierraEmblem } from "./SierraEmblem.js";
 import { PlayerBar } from "./PlayerBar.js";
@@ -445,6 +446,7 @@ export function AppShell() {
       </main>
       <MountainWall />
       <PlayerBar />
+      <EpisodeDetailDialog />
     </div>
   );
 }

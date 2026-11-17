@@ -54,6 +54,7 @@ describe("OpenAPI spec", () => {
       "/podcasts/{podcastId}",
       "/podcasts/{podcastId}/episodes",
       "/podcasts/episodes/{episodeId}/playback",
+      "/podcasts/episodes/{episodeId}/download",
       "/podcasts/episodes/{episodeId}/stream",
       "/podcasts/episodes/{episodeId}/progress",
       "/podcasts/episodes/{episodeId}/dismiss",
@@ -137,5 +138,23 @@ describe("OpenAPI spec", () => {
     );
     expect(keep?.in).toBe("query");
     expect(keep?.schema?.type).toBe("integer");
+  });
+
+  it("documenta la emisión y descarga firmada del archivo original", () => {
+    const path = spec.paths["/podcasts/episodes/{episodeId}/download"] as {
+      post?: { security?: unknown };
+      get?: {
+        security?: unknown;
+        parameters?: Array<{ name: string }>;
+        responses?: Record<string, { headers?: Record<string, unknown> }>;
+      };
+    };
+    expect(path.post?.security).toBeDefined();
+    expect(path.get?.security).toEqual([]);
+    expect((path.get?.parameters ?? []).map((parameter) => parameter.name)).toEqual(
+      expect.arrayContaining(["episodeId", "u", "exp", "sig"]),
+    );
+    expect(path.get?.responses?.["200"]?.headers).toHaveProperty("Content-Disposition");
+    expect(path.get?.responses?.["206"]?.headers).toHaveProperty("Content-Disposition");
   });
 });

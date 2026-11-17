@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyQueueOrder,
   isQueueEpisodeActive,
   mergeQueueOrder,
   nextQueueEpisode,
@@ -42,6 +43,25 @@ describe("isQueueEpisodeActive", () => {
     expect(isQueueEpisodeActive("paused")).toBe(false);
     expect(isQueueEpisodeActive("failed")).toBe(false);
     expect(isQueueEpisodeActive("idle")).toBe(false);
+  });
+});
+
+describe("applyQueueOrder", () => {
+  it("aplica el orden local sobre los episodios vigentes", () => {
+    const items = [episode(1), episode(2), episode(3)];
+    expect(applyQueueOrder(items, [3, 1, 2]).map((item) => item.id)).toEqual([3, 1, 2]);
+  });
+
+  it("omite IDs que ya no están en la cola del servidor", () => {
+    const items = [episode(1), episode(2)];
+    expect(applyQueueOrder(items, [2, 99, 1]).map((item) => item.id)).toEqual([2, 1]);
+  });
+
+  it("refleja campos actualizados como isFavorite sin cambiar el orden", () => {
+    const updated = [{ ...episode(1), isFavorite: true }, episode(2)];
+    const result = applyQueueOrder(updated, [2, 1]);
+    expect(result.map((item) => item.id)).toEqual([2, 1]);
+    expect(result.find((item) => item.id === 1)?.isFavorite).toBe(true);
   });
 });
 
