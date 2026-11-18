@@ -171,6 +171,73 @@ body {
   animation: fade-out 150ms ease-out forwards;
 }
 
+@keyframes pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-slide-down {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes dialog-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes eq-bounce {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+
+.pop-enter {
+  animation: pop 200ms ease-out;
+}
+
+.slide-up-enter {
+  animation: slide-up 200ms ease-out both;
+}
+
+.fade-slide-enter {
+  animation: fade-slide-down 150ms ease-out both;
+  transform-origin: top right;
+}
+
+.dialog-pop-enter {
+  animation: dialog-pop 180ms ease-out both;
+}
+
+.eq-bar {
+  display: inline-block;
+  width: 3px;
+  border-radius: 9999px;
+  transform-origin: bottom;
+  animation: eq-bounce 1s ease-in-out infinite;
+}
+
+.eq-paused .eq-bar {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-enter,
+  .fade-exit,
+  .pop-enter,
+  .slide-up-enter,
+  .fade-slide-enter,
+  .dialog-pop-enter,
+  .eq-bar {
+    animation: none !important;
+  }
+}
+
 .editing-border {
   border-style: dashed;
   border-color: var(--line-strong);

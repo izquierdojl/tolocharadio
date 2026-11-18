@@ -90,7 +90,7 @@ export function PlayerBar() {
     : (station?.favicon ?? null);
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-pine-800 bg-gradient-to-r from-pine-900 via-pine-850 to-pine-900/95 px-4 py-2 md:px-6">
+    <div className="slide-up-enter fixed inset-x-0 bottom-0 z-40 border-t border-pine-800 bg-gradient-to-r from-pine-900 via-pine-850 to-pine-900/95 px-4 py-2 md:px-6">
       <div className="mx-auto flex max-w-6xl flex-col gap-2">
         <div className="flex items-center gap-3 md:gap-4">
           {coverUrl ? (
@@ -121,6 +121,14 @@ export function PlayerBar() {
               >
                 {isPodcast ? "PODCAST" : "EN DIRECTO"}
               </span>
+              <span
+                aria-hidden="true"
+                className={`flex h-3.5 shrink-0 items-end gap-0.5 ${isPlaying ? "" : "eq-paused"}`}
+              >
+                <span className="eq-bar h-full bg-ochre-400" style={{ animationDelay: "0ms" }} />
+                <span className="eq-bar h-full bg-ochre-400" style={{ animationDelay: "200ms" }} />
+                <span className="eq-bar h-full bg-ochre-400" style={{ animationDelay: "400ms" }} />
+              </span>
               {isPodcast ? (
                 <button
                   type="button"
@@ -138,15 +146,15 @@ export function PlayerBar() {
             </div>
 
             {statusText ? (
-              <span className="truncate text-xs text-ochre-300">{statusText}</span>
+              <span key={statusText} className="fade-enter truncate text-xs text-ochre-300">{statusText}</span>
             ) : isPodcast ? (
-              <span className="truncate text-xs text-pine-300">{podcast.title}</span>
+              <span key={episode?.id} className="fade-enter truncate text-xs text-pine-300">{podcast.title}</span>
             ) : nowPlaying ? (
-              <span className="truncate text-xs text-pine-300" title={nowPlaying} aria-live="polite">
+              <span key={nowPlaying} className="fade-enter truncate text-xs text-pine-300" title={nowPlaying} aria-live="polite">
                 <span className="font-medium text-ochre-400">Ahora suena</span> · {nowPlaying}
               </span>
             ) : (
-              <span className="truncate text-xs text-pine-400">
+              <span key={station?.id} className="fade-enter truncate text-xs text-pine-400">
                 {[station?.country, station?.language].filter(Boolean).join(" · ") || "Emisora de radio"}
               </span>
             )}
@@ -162,7 +170,7 @@ export function PlayerBar() {
               type="button"
               onClick={copyLink}
               title={copied ? "Enlace copiado" : "Copiar enlace de emisión"}
-              className={`hidden shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition sm:flex ${
+              className={`hidden shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-150 active:scale-95 sm:flex ${
                 copied
                   ? "bg-pine-700 text-pine-200"
                   : "bg-pine-800 text-pine-300 hover:bg-pine-700 hover:text-pine-100"
@@ -177,7 +185,7 @@ export function PlayerBar() {
             <button
               type="button"
               onClick={retry}
-              className="hidden shrink-0 items-center gap-1.5 rounded-full bg-ochre-600 px-3 py-1.5 text-xs font-semibold text-pine-950 transition hover:bg-ochre-500 sm:flex"
+              className="hidden shrink-0 items-center gap-1.5 rounded-full bg-ochre-600 px-3 py-1.5 text-xs font-semibold text-pine-950 transition-all duration-150 active:scale-95 hover:bg-ochre-500 sm:flex"
             >
               <RotateCcw className="size-3.5" />
               Reintentar
@@ -189,7 +197,7 @@ export function PlayerBar() {
               type="button"
               onClick={canRetry ? retry : toggle}
               title={canRetry ? "Reintentar" : isPlaying ? "Pausar" : "Reproducir"}
-              className="flex size-11 shrink-0 items-center justify-center rounded-full bg-ochre-500 text-pine-950 shadow-lg shadow-ochre-900/30 transition hover:bg-ochre-400"
+              className="flex size-11 shrink-0 items-center justify-center rounded-full bg-ochre-500 text-pine-950 shadow-lg shadow-ochre-900/30 transition-all duration-150 active:scale-95 hover:scale-105 hover:bg-ochre-400"
             >
               {isBuffering && !canRetry ? (
                 <Loader2 className="size-5 animate-spin" />
@@ -208,7 +216,7 @@ export function PlayerBar() {
               type="button"
               onClick={toggleMute}
               aria-label={muted ? "Reactivar sonido" : "Silenciar"}
-              className="cursor-pointer"
+              className="cursor-pointer transition-transform duration-150 active:scale-95"
             >
               {muted || volume === 0 ? (
                 <VolumeX className="size-4 text-pine-400" />
@@ -232,7 +240,7 @@ export function PlayerBar() {
             type="button"
             onClick={stop}
             title={isPodcast ? "Detener episodio" : "Quitar emisora"}
-            className="flex size-9 shrink-0 items-center justify-center rounded-full text-pine-400 transition hover:bg-pine-800 hover:text-pine-100"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full text-pine-400 transition-all duration-150 active:scale-95 hover:bg-pine-800 hover:text-pine-100"
           >
             <X className="size-4" />
           </button>

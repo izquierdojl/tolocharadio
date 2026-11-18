@@ -14,6 +14,7 @@ export function FavoriteButton({ station }: FavoriteButtonProps) {
   const queryClient = useQueryClient();
   const status = useAuthStore((s) => s.status);
   const [busy, setBusy] = useState(false);
+  const [popKey, setPopKey] = useState(0);
 
   const { data: favorites } = useQuery({
     queryKey: ["favorites"],
@@ -36,6 +37,7 @@ export function FavoriteButton({ station }: FavoriteButtonProps) {
         toast.success("Añadida a favoritos");
       }
       void queryClient.invalidateQueries({ queryKey: ["favorites"] });
+      setPopKey((k) => k + 1);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "No se pudo actualizar favoritos");
     } finally {
@@ -50,13 +52,13 @@ export function FavoriteButton({ station }: FavoriteButtonProps) {
       disabled={busy}
       title={isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"}
       aria-label={isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"}
-      className={`flex size-9 items-center justify-center rounded-full backdrop-blur transition ${
+      className={`flex size-9 items-center justify-center rounded-full backdrop-blur transition-transform duration-150 active:scale-95 ${
         isFavorite
           ? "bg-ochre-500 text-pine-950"
           : "bg-black/40 text-pine-100 hover:bg-ochre-500 hover:text-pine-950"
       }`}
     >
-      <Heart className={`size-4 ${isFavorite ? "fill-current" : ""}`} />
+      <Heart key={popKey} className={`size-4 ${isFavorite ? "fill-current" : ""} ${popKey > 0 ? "pop-enter" : ""}`} />
     </button>
   );
 }

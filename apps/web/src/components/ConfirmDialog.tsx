@@ -56,7 +56,7 @@ export function ConfirmDialog({
         if (event.target === event.currentTarget && !pending) onCancel();
       }}
     >
-      <div className="w-full max-w-sm rounded-2xl border border-line bg-surface-raised p-5 shadow-2xl shadow-black/40">
+      <div className="dialog-pop-enter w-full max-w-sm rounded-2xl border border-line bg-surface-raised p-5 shadow-2xl shadow-black/40">
         <h2 id={titleId} className="text-lg font-semibold text-foreground">
           {title}
         </h2>
@@ -67,7 +67,7 @@ export function ConfirmDialog({
             type="button"
             onClick={onCancel}
             disabled={pending}
-            className="rounded-lg border border-line-strong px-3 py-1.5 text-sm text-foreground transition hover:border-pine-500 hover:bg-surface-soft disabled:opacity-50"
+            className="rounded-lg border border-line-strong px-3 py-1.5 text-sm text-foreground transition-all duration-150 active:scale-95 hover:border-pine-500 hover:bg-surface-soft disabled:opacity-50"
           >
             {cancelLabel}
           </button>
@@ -75,7 +75,7 @@ export function ConfirmDialog({
             type="button"
             onClick={onConfirm}
             disabled={pending}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium text-white transition disabled:opacity-50 ${
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium text-white transition-all duration-150 active:scale-95 disabled:opacity-50 ${
               destructive ? "bg-rose-600 hover:bg-rose-500" : "bg-pine-600 hover:bg-pine-500"
             }`}
           >

@@ -23,7 +23,7 @@ export function ViewModeToggle({ menuItem = false, onClose }: ViewModeToggleProp
           setViewMode(next);
           onClose?.();
         }}
-        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-surface-soft hover:text-foreground"
+        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted transition-all duration-150 active:scale-[0.98] hover:bg-surface-soft hover:text-foreground"
       >
         <Icon className="size-4" />
         {viewMode === "card" ? "Vista de lista" : "Vista de tarjetas"}
@@ -37,7 +37,7 @@ export function ViewModeToggle({ menuItem = false, onClose }: ViewModeToggleProp
       onClick={() => setViewMode(next)}
       title={label}
       aria-label={label}
-      className="flex size-8 items-center justify-center rounded-lg text-muted transition hover:bg-surface-soft hover:text-foreground"
+      className="flex size-8 items-center justify-center rounded-lg text-muted transition-all duration-150 active:scale-95 hover:bg-surface-soft hover:text-foreground"
     >
       <Icon className="size-4" />
     </button>

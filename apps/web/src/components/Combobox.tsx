@@ -103,7 +103,7 @@ export function Combobox({ id, value, onChange, options, placeholder, className,
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-line-strong bg-surface-raised py-1 shadow-xl shadow-black/40"
+          className="fade-slide-enter absolute z-20 mt-1 max-h-60 w-full origin-top overflow-auto rounded-lg border border-line-strong bg-surface-raised py-1 shadow-xl shadow-black/40"
         >
           {visible.length === 0 ? (
             <li className="px-3 py-2 text-sm text-faint">Sin resultados</li>

@@ -11,7 +11,7 @@ export function StationListItem({ station, isEditing = false, playedAt }: { stat
   const isPlaying = usePlayerStore((s) => s.isPlaying && s.station?.id === station.id);
 
   return (
-    <article className={`group flex items-center gap-3 rounded-xl border border-line bg-surface-raised p-2.5 transition hover:border-pine-600 hover:bg-surface-soft ${isEditing ? "editing-border" : ""}`}>
+    <article className={`group flex items-center gap-3 rounded-xl border border-line bg-surface-raised p-2.5 transition-all duration-200 hover:-translate-y-px hover:border-pine-600 hover:bg-surface-soft focus-within:border-pine-600 ${isEditing ? "editing-border" : ""}`}>
       <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-pine-800">
         {station.isCustom ? (
           <SierraEmblem className="size-9 rounded-md" />
@@ -37,7 +37,7 @@ export function StationListItem({ station, isEditing = false, playedAt }: { stat
             }}
             title={isPlaying ? "Reproduciendo" : "Reproducir"}
             aria-label={isPlaying ? "Reproduciendo" : "Reproducir"}
-            className={`absolute inset-0 flex items-center justify-center transition ${
+            className={`absolute inset-0 flex items-center justify-center transition-all duration-150 active:scale-[0.98] ${
               isPlaying
                 ? "bg-pine-950/50 text-ochre-500"
                 : "bg-black/40 text-pine-100"

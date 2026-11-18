@@ -177,7 +177,7 @@ function UserMenu() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-muted transition hover:bg-surface-soft hover:text-foreground"
+        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-muted transition-all duration-150 active:scale-[0.98] hover:bg-surface-soft hover:text-foreground"
       >
         <span className="flex size-7 items-center justify-center rounded-full bg-pine-700 text-xs font-semibold uppercase text-pine-100">
           {(user.name ?? user.email).slice(0, 2)}
@@ -189,7 +189,7 @@ function UserMenu() {
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 z-40 mt-2 w-52 overflow-hidden rounded-xl border border-line bg-surface-raised p-1.5 shadow-xl shadow-black/30"
+          className="fade-slide-enter absolute right-0 z-40 mt-2 w-52 origin-top-right overflow-hidden rounded-xl border border-line bg-surface-raised p-1.5 shadow-xl shadow-black/30"
         >
           <NavLink
             to="/perfil"
@@ -329,14 +329,14 @@ function Header() {
             onClick={() => setMenuOpen((v) => !v)}
             aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
             aria-expanded={menuOpen}
-            className="flex size-9 items-center justify-center rounded-lg text-muted transition hover:bg-surface-soft hover:text-foreground"
+            className="flex size-9 items-center justify-center rounded-lg text-muted transition-all duration-150 active:scale-95 hover:bg-surface-soft hover:text-foreground"
           >
             {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>
           {menuOpen && (
             <div
               role="menu"
-              className="absolute right-0 z-40 mt-2 w-56 overflow-hidden rounded-xl border border-line bg-surface-raised p-1.5 shadow-xl shadow-black/30"
+              className="fade-slide-enter absolute right-0 z-40 mt-2 w-56 origin-top-right overflow-hidden rounded-xl border border-line bg-surface-raised p-1.5 shadow-xl shadow-black/30"
             >
               {podcastsEnabled ? (
                 <div className="mb-1 px-1 py-1">

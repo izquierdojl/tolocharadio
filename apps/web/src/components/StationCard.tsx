@@ -11,7 +11,7 @@ export function StationCard({ station, isEditing = false, playedAt }: { station:
   const isPlaying = usePlayerStore((s) => s.isPlaying && s.station?.id === station.id);
 
   return (
-    <article className={`group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-surface-raised transition hover:border-pine-600 hover:shadow-xl hover:shadow-black/30 ${isEditing ? "editing-border" : ""}`}>
+    <article className={`group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-surface-raised transition-all duration-200 hover:-translate-y-0.5 hover:border-pine-600 hover:shadow-xl hover:shadow-black/30 focus-within:-translate-y-0.5 ${isEditing ? "editing-border" : ""}`}>
       <div className="relative aspect-video w-full overflow-hidden bg-pine-800">
         {station.isCustom ? (
           <div className="flex size-full items-center justify-center bg-gradient-to-br from-pine-600 to-pine-800">
@@ -25,7 +25,7 @@ export function StationCard({ station, isEditing = false, playedAt }: { station:
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
             }}
-            className="size-full object-cover"
+            className="size-full object-cover transition-transform duration-200 group-hover:scale-105"
           />
         ) : (
           <div className="flex size-full items-center justify-center bg-gradient-to-br from-pine-700 to-pine-900">
@@ -41,7 +41,7 @@ export function StationCard({ station, isEditing = false, playedAt }: { station:
               toast.dismiss();
             }}
             title={isPlaying ? "Reproduciendo" : "Reproducir"}
-            className={`absolute bottom-2 left-2 flex size-10 items-center justify-center rounded-full shadow-lg transition ${
+            className={`absolute bottom-2 left-2 flex size-10 items-center justify-center rounded-full shadow-lg transition-transform duration-150 active:scale-95 hover:scale-105 ${
               isPlaying
                 ? "bg-ochre-500 text-pine-950"
                 : "bg-black/50 text-pine-100"
