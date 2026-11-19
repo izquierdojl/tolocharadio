@@ -158,10 +158,12 @@ export class PodcastProgressService {
         clampedPosSec >= Math.floor(effectiveDurationSec * 0.95) &&
         totalEpisodeListenedMs >= Math.floor(effectiveDurationSec * 1000 * 0.8);
 
+      // Un `completed: false` explícito desmarca el episodio; si se omite,
+      // se conserva el estado previo o se aplica el auto-completado.
       const isCompleted =
-        Boolean(input.completed) ||
+        input.completed === true ||
         autoCompleted ||
-        Boolean(existingProgress?.completedAt !== null && existingProgress?.completedAt !== undefined);
+        (input.completed !== false && existingProgress?.completedAt != null);
 
       const completedAt = isCompleted
         ? existingProgress?.completedAt ?? occurredAt
