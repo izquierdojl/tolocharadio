@@ -20,7 +20,7 @@ const FEED_XML = `<?xml version="1.0" encoding="UTF-8"?>
 </rss>`;
 
 describe("Progreso idempotente de episodios y sesiones de escucha", () => {
-  it("actualiza posicion, no duplica tiempo en reintentos y marca completado al superar 95% posicion y 80% escuchado", async () => {
+  it("actualiza posicion, no duplica tiempo, marca completado al superar 95% y permite desmarcar con completed=false", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => new Response(FEED_XML, { status: 200 })),
@@ -104,6 +104,38 @@ describe("Progreso idempotente de episodios y sesiones de escucha", () => {
         .expect(200);
       expect(completedEps.body.items).toHaveLength(1);
       expect(completedEps.body.items[0].progress.completed).toBe(true);
+
+      // Desmarcar: un completed=false explícito vuelve a pendiente
+      const pending = await request(srv.app)
+        .put(`/api/v1/podcasts/episodes/${episodeId}/progress`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          sessionId: "sess-2",
+          sequence: 1,
+          positionSec: 0,
+          durationSec: 100,
+          listenedMs: 0,
+          completed: false,
+          source: "android",
+        })
+        .expect(200);
+      expect(pending.body.progress).toMatchObject({
+        positionSec: 0,
+        completed: false,
+        completedAt: null,
+      });
+
+      const completedAfterReset = await request(srv.app)
+        .get(`/api/v1/podcasts/${resolved.body.podcast.id}/episodes?filter=completed`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(completedAfterReset.body.items).toHaveLength(0);
+
+      const unplayedAfterReset = await request(srv.app)
+        .get(`/api/v1/podcasts/${resolved.body.podcast.id}/episodes?filter=unplayed`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(unplayedAfterReset.body.items).toHaveLength(1);
     } finally {
       srv.db.sqlite.close();
     }
