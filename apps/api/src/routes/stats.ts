@@ -13,6 +13,16 @@ export function statsRouter(ctx: AppContext): Router {
   const router = Router();
   const auth = requireAuth(ctx);
 
+  router.delete("/stats/me", auth, (req, res, next) => {
+    try {
+      const user = req.authUser;
+      if (!user) throw unauthorized();
+      res.json(ctx.stats.reset(user.id));
+    } catch (err) {
+      next(err);
+    }
+  });
+
   router.get("/stats/me/top", auth, (req, res, next) => {
     try {
       const user = req.authUser;

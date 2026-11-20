@@ -324,3 +324,61 @@ describe("StatsService consultas", () => {
     ]);
   });
 });
+
+describe("StatsService reinicio", () => {
+  it("borra las estadisticas y sesiones solo del usuario indicado", async () => {
+    const { server, stats } = makeService();
+    const userId = await createUser(server, "reset-one@example.com");
+    const otherId = await createUser(server, "reset-two@example.com");
+
+    for (const id of [userId, otherId]) {
+      await server.ctx.db
+        .insert(userStationStatsHourly)
+        .values({ userId: id, stationId: STATION_A.id, bucket: "2026-09-28T10", totalMs: 3_600_000 });
+      await server.ctx.db.insert(playbackSessions).values({
+        userId: id,
+        stationId: STATION_A.id,
+        snapshot: JSON.stringify(STATION_A),
+        source: "direct",
+        startedAt: Date.UTC(2026, 8, 28, 10, 0),
+        endedAt: Date.UTC(2026, 8, 28, 11, 0),
+        durationMs: 3_600_000,
+      });
+    }
+
+    expect(stats.reset(userId)).toEqual({ ok: true });
+
+    expect(stats.topStations(userId, { from: null, to: null }, 10)).toEqual([]);
+    expect(stats.recent(userId, 10)).toEqual([]);
+    expect(stats.topStations(otherId, { from: null, to: null }, 10)).toHaveLength(1);
+    expect(stats.recent(otherId, 10)).toHaveLength(1);
+  });
+
+  it("reinicia la escucha en curso y solo acumula el tiempo posterior", async () => {
+    const { server, stats, clock } = makeService();
+    const userId = await createUser(server, "reset-live@example.com");
+
+    const end = stats.startListening(userId, STATION_A, "direct");
+    clock.now += 5_000;
+    stats.pulse(userId, STATION_A, "direct");
+    stats.flush();
+    expect(hourlyRows(server)[0]!.totalMs).toBe(5_000);
+
+    const resetAt = clock.now;
+    stats.reset(userId);
+    expect(hourlyRows(server)).toHaveLength(0);
+    expect(sessionRows(server)).toHaveLength(0);
+
+    clock.now += 2_000;
+    stats.pulse(userId, STATION_A, "direct");
+    stats.flush();
+    clock.now += 1_000;
+    end();
+
+    expect(hourlyRows(server)[0]!.totalMs).toBe(3_000);
+    const sessions = sessionRows(server);
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0]!.startedAt).toBe(resetAt);
+    expect(sessions[0]!.durationMs).toBe(3_000);
+  });
+});

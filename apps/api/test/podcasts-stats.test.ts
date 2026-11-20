@@ -385,4 +385,226 @@ describe("Estadisticas de podcasts", () => {
       srv.db.sqlite.close();
     }
   });
+
+  it("reinicia las estadisticas y conserva suscripciones, favoritos, cola y progreso", async () => {
+    const fixture = await setupStatsFixture();
+    const { srv, token } = fixture;
+    const auth = { Authorization: `Bearer ${token}` };
+    try {
+      await request(srv.app)
+        .post("/api/v1/podcasts/subscriptions")
+        .set(auth)
+        .send({ podcastId: fixture.podcastOne })
+        .expect(201);
+      await request(srv.app)
+        .post("/api/v1/podcasts/favorites")
+        .set(auth)
+        .send({ episodeId: fixture.episodeA })
+        .expect(201);
+      await request(srv.app)
+        .post("/api/v1/podcasts/queue")
+        .set(auth)
+        .send({ episodeId: fixture.episodeB })
+        .expect(201);
+
+      const reset = await request(srv.app)
+        .delete("/api/v1/podcasts/stats")
+        .set(auth)
+        .expect(200);
+      expect(reset.body).toEqual({ ok: true });
+
+      const summary = await request(srv.app)
+        .get("/api/v1/podcasts/stats/summary")
+        .set(auth)
+        .expect(200);
+      expect(summary.body).toEqual({
+        totalMs: 0,
+        episodesStarted: 0,
+        episodesCompleted: 0,
+        completionRate: 0,
+        podcastsCount: 0,
+        averageEpisodeMs: 0,
+      });
+
+      for (const path of [
+        "/api/v1/podcasts/stats/top-podcasts",
+        "/api/v1/podcasts/stats/top-episodes",
+        "/api/v1/podcasts/stats/categories",
+        "/api/v1/podcasts/stats/recent",
+        "/api/v1/podcasts/stats/habits",
+      ]) {
+        const res = await request(srv.app).get(path).set(auth).expect(200);
+        expect(res.body.items).toEqual([]);
+      }
+
+      const timeline = await request(srv.app)
+        .get(
+          `/api/v1/podcasts/stats/timeline?from=${fixture.dayZero}&to=${fixture.dayTwo}&granularity=day`,
+        )
+        .set(auth)
+        .expect(200);
+      expect(timeline.body.items).toHaveLength(3);
+      expect(
+        (timeline.body.items as Array<{ totalMs: number }>).every((item) => item.totalMs === 0),
+      ).toBe(true);
+
+      const subscriptions = await request(srv.app)
+        .get("/api/v1/podcasts/subscriptions")
+        .set(auth)
+        .expect(200);
+      expect(subscriptions.body.items).toHaveLength(1);
+      const favorites = await request(srv.app)
+        .get("/api/v1/podcasts/favorites")
+        .set(auth)
+        .expect(200);
+      expect(favorites.body.items).toHaveLength(1);
+      const queue = await request(srv.app)
+        .get("/api/v1/podcasts/queue")
+        .set(auth)
+        .expect(200);
+      expect(queue.body.queue.items).toHaveLength(1);
+
+      const progress = await request(srv.app)
+        .get(`/api/v1/podcasts/episodes/${fixture.episodeA}/progress`)
+        .set(auth)
+        .expect(200);
+      expect(progress.body.progress.positionSec).toBe(30);
+      const completedProgress = await request(srv.app)
+        .get(`/api/v1/podcasts/episodes/${fixture.episodeB}/progress`)
+        .set(auth)
+        .expect(200);
+      expect(completedProgress.body.progress.completed).toBe(true);
+
+      await request(srv.app).delete("/api/v1/podcasts/stats").set(auth).expect(200);
+      const afterSecondReset = await request(srv.app)
+        .get("/api/v1/podcasts/stats/summary")
+        .set(auth)
+        .expect(200);
+      expect(afterSecondReset.body.totalMs).toBe(0);
+    } finally {
+      srv.db.sqlite.close();
+    }
+  });
+
+  it("aplica el corte a las sesiones anteriores y solo suma el delta posterior", async () => {
+    const fixture = await setupStatsFixture();
+    const { srv, token } = fixture;
+    const auth = { Authorization: `Bearer ${token}` };
+    try {
+      await request(srv.app).delete("/api/v1/podcasts/stats").set(auth).expect(200);
+
+      await request(srv.app)
+        .put(`/api/v1/podcasts/episodes/${fixture.episodeA}/progress`)
+        .set(auth)
+        .send({
+          sessionId: "stats-a",
+          sequence: 2,
+          positionSec: 45,
+          durationSec: 600,
+          listenedMs: 75_000,
+          occurredAt: Date.now(),
+          source: "web",
+        })
+        .expect(200);
+
+      const summary = await request(srv.app)
+        .get("/api/v1/podcasts/stats/summary")
+        .set(auth)
+        .expect(200);
+      expect(summary.body).toMatchObject({
+        totalMs: 15_000,
+        episodesStarted: 0,
+        episodesCompleted: 0,
+        podcastsCount: 0,
+      });
+      const recent = await request(srv.app)
+        .get("/api/v1/podcasts/stats/recent")
+        .set(auth)
+        .expect(200);
+      expect(recent.body.items).toEqual([]);
+
+      const today = new Date().toISOString().slice(0, 10);
+      const timeline = await request(srv.app)
+        .get(`/api/v1/podcasts/stats/timeline?from=${today}&to=${today}&granularity=day`)
+        .set(auth)
+        .expect(200);
+      expect(timeline.body.items).toEqual([{ bucket: today, totalMs: 15_000 }]);
+
+      await request(srv.app)
+        .put(`/api/v1/podcasts/episodes/${fixture.episodeC}/progress`)
+        .set(auth)
+        .send({
+          sessionId: "after-reset",
+          sequence: 1,
+          positionSec: 20,
+          durationSec: 600,
+          listenedMs: 40_000,
+          occurredAt: Date.now(),
+          source: "web",
+        })
+        .expect(200);
+
+      const afterNewSession = await request(srv.app)
+        .get("/api/v1/podcasts/stats/summary")
+        .set(auth)
+        .expect(200);
+      expect(afterNewSession.body).toMatchObject({
+        totalMs: 55_000,
+        episodesStarted: 1,
+        podcastsCount: 1,
+      });
+      const newRecent = await request(srv.app)
+        .get("/api/v1/podcasts/stats/recent")
+        .set(auth)
+        .expect(200);
+      expect(newRecent.body.items).toHaveLength(1);
+      expect(newRecent.body.items[0].episodeId).toBe(fixture.episodeC);
+    } finally {
+      srv.db.sqlite.close();
+    }
+  });
+
+  it("protege el reinicio y aisla las estadisticas entre usuarios", async () => {
+    const fixture = await setupStatsFixture();
+    const { srv, token } = fixture;
+    try {
+      await request(srv.app).delete("/api/v1/podcasts/stats").expect(401);
+
+      const second = await request(srv.app)
+        .post("/api/v1/auth/register")
+        .send({ email: "stats-other@example.com", password: "Password123!" })
+        .expect(201);
+      const secondToken = second.body.accessToken as string;
+      await request(srv.app)
+        .put(`/api/v1/podcasts/episodes/${fixture.episodeA}/progress`)
+        .set("Authorization", `Bearer ${secondToken}`)
+        .send({
+          sessionId: "other-session",
+          sequence: 1,
+          positionSec: 30,
+          durationSec: 600,
+          listenedMs: 60_000,
+          occurredAt: Date.now(),
+          source: "web",
+        })
+        .expect(200);
+
+      await request(srv.app)
+        .delete("/api/v1/podcasts/stats")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      const secondSummary = await request(srv.app)
+        .get("/api/v1/podcasts/stats/summary")
+        .set("Authorization", `Bearer ${secondToken}`)
+        .expect(200);
+      expect(secondSummary.body).toMatchObject({
+        totalMs: 60_000,
+        episodesStarted: 1,
+        podcastsCount: 1,
+      });
+    } finally {
+      srv.db.sqlite.close();
+    }
+  });
 });

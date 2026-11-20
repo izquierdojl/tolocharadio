@@ -1,8 +1,10 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { type FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../lib/api.js";
+import { api, fetchPublicConfig } from "../lib/api.js";
+import { ConfirmDialog } from "../components/ConfirmDialog.js";
+import { StatsResetSection, type StatsResetTarget } from "../components/StatsResetSection.js";
 import { DEFAULT_VIEW_OPTIONS } from "../lib/defaultView.js";
 import type { User, UserDefaultSection, UserDefaultView } from "../lib/types.js";
 import { useAuthStore } from "../stores/auth.js";
@@ -18,6 +20,19 @@ function formatDate(ts: number): string {
   });
 }
 
+const RESET_COPY: Record<StatsResetTarget, { title: string; description: string }> = {
+  radio: {
+    title: "Reiniciar estadísticas de radio",
+    description:
+      "Se borrarán tus estadísticas y gráficas de radio de forma permanente. Tu historial, favoritos y emisoras personalizadas no se verán afectados.",
+  },
+  podcast: {
+    title: "Reiniciar estadísticas de podcasts",
+    description:
+      "Se borrarán tus estadísticas y gráficas de podcasts de forma permanente. Tus suscripciones, favoritos, cola, descargas y progreso de episodios no se verán afectados.",
+  },
+};
+
 export function Profile() {
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
@@ -30,6 +45,13 @@ export function Profile() {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [passwordStep, setPasswordStep] = useState(false);
+  const [resetTarget, setResetTarget] = useState<StatsResetTarget | null>(null);
+  const { data: config } = useQuery({
+    queryKey: ["config"],
+    queryFn: fetchPublicConfig,
+    staleTime: Infinity,
+  });
+  const podcastsEnabled = Boolean(config?.features?.podcasts);
 
   const updateName = useMutation({
     mutationFn: () => api.patch<{ user: User }>("/users/me", { name: name.trim() || null }),
@@ -78,6 +100,41 @@ export function Profile() {
       toast.error(err instanceof Error ? err.message : "No se pudo cambiar la contraseña");
     },
   });
+
+  const resetRadio = useMutation({
+    mutationFn: () => api.delete<{ ok: true }>("/stats/me"),
+    onSuccess: () => {
+      toast.success("Estadísticas de radio reiniciadas");
+      setResetTarget(null);
+      void queryClient.invalidateQueries({ queryKey: ["stats"] });
+    },
+    onError: (err) => {
+      toast.error(
+        err instanceof Error ? err.message : "No se pudieron reiniciar las estadísticas de radio",
+      );
+      setResetTarget(null);
+    },
+  });
+
+  const resetPodcasts = useMutation({
+    mutationFn: () => api.delete<{ ok: true }>("/podcasts/stats"),
+    onSuccess: () => {
+      toast.success("Estadísticas de podcasts reiniciadas");
+      setResetTarget(null);
+      void queryClient.invalidateQueries({ queryKey: ["podcast-stats"] });
+    },
+    onError: (err) => {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "No se pudieron reiniciar las estadísticas de podcasts",
+      );
+      setResetTarget(null);
+    },
+  });
+
+  const resetPending = resetRadio.isPending || resetPodcasts.isPending;
+  const activeReset = resetTarget ? RESET_COPY[resetTarget] : null;
 
   const onSubmitName = (e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
@@ -214,6 +271,12 @@ export function Profile() {
         </button>
       </form>
 
+      <StatsResetSection
+        podcastsEnabled={podcastsEnabled}
+        pending={resetTarget}
+        onRequestReset={setResetTarget}
+      />
+
       <form
         onSubmit={onSubmitPassword}
         className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-5"
@@ -283,6 +346,25 @@ export function Profile() {
         </Link>
         .
       </p>
+
+      <ConfirmDialog
+        open={resetTarget !== null}
+        title={activeReset?.title ?? ""}
+        description={activeReset?.description ?? ""}
+        confirmLabel="Sí, reiniciar"
+        destructive
+        pending={resetPending}
+        onCancel={() => {
+          if (!resetPending) setResetTarget(null);
+        }}
+        onConfirm={() => {
+          if (resetTarget === "radio") {
+            resetRadio.mutate();
+          } else if (resetTarget === "podcast") {
+            resetPodcasts.mutate();
+          }
+        }}
+      />
     </section>
   );
 }

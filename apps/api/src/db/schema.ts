@@ -8,6 +8,7 @@ export const users = sqliteTable("users", {
   theme: text("theme").notNull().default("dark"),
   defaultView: text("default_view").notNull().default("explorar"),
   defaultSection: text("default_section").notNull().default("radio"),
+  podcastStatsResetAt: integer("podcast_stats_reset_at").notNull().default(0),
   createdAt: integer("created_at").notNull(),
 });
 

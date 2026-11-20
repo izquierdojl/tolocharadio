@@ -319,6 +319,16 @@ export function podcastsRouter(ctx: AppContext): Router {
     }
   });
 
+  router.delete("/podcasts/stats", auth, (req, res, next) => {
+    try {
+      const user = req.authUser;
+      if (!user) throw unauthorized();
+      res.json(ctx.podcastStats.reset(user.id));
+    } catch (err) {
+      next(err);
+    }
+  });
+
   router.get("/podcasts/stats/summary", auth, (req, res, next) => {
     try {
       const user = req.authUser;

@@ -33,6 +33,7 @@ Resumen de endpoints (todos bajo `/api/v1`):
 | `DELETE` | `/favorites/:stationId` | autenticado | Quita un favorito |
 | `GET` | `/history` | autenticado | Historial reciente |
 | `DELETE` | `/history` | autenticado | Limpia el historial |
+| `DELETE` | `/stats/me` | autenticado | Reinicia las estadísticas de radio del usuario |
 | `GET` | `/stats/me/top` | autenticado | Emisoras más escuchadas (from/to/limit) |
 | `GET` | `/stats/me/timeline` | autenticado | Evolución temporal (from/to/granularity) |
 | `GET` | `/stats/me/habits` | autenticado | Hábitos por hora y día (from/to) |
@@ -71,6 +72,9 @@ Resumen de endpoints (todos bajo `/api/v1`):
 | `GET` | `/podcasts/stats/habits` | autenticado | Tiempo por día de la semana y hora |
 | `GET` | `/podcasts/stats/categories` | autenticado | Tiempo por categoría (`limit`) |
 | `GET` | `/podcasts/stats/recent` | autenticado | Sesiones de escucha recientes (`limit`) |
+| `DELETE` | `/podcasts/stats` | autenticado | Reinicia las estadísticas de podcasts del usuario |
+
+`DELETE /stats/me` borra los agregados y las sesiones de radio del usuario; no afecta a su historial, favoritos ni emisoras personalizadas. `DELETE /podcasts/stats` reinicia las estadísticas de podcasts y deja de contabilizar las sesiones anteriores; no afecta a suscripciones, favoritos, cola, descargas ni progreso de episodios. Ambos endpoints son independientes y responden `{ "ok": true }`.
 
 `DELETE /podcasts/queue?keepEpisodeId=42` vacía los episodios pendientes y conserva el episodio 42 en la primera posición; sin el parámetro, vacía la cola completa. En ambos casos incrementa `revision` y no detiene la reproducción en curso. Los episodios devueltos por `GET /podcasts/queue` y el resumen de la portada incluyen `isFavorite`, de modo que el cliente pinta el estado del favorito sin peticiones adicionales.
 

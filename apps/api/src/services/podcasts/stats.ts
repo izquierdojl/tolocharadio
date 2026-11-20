@@ -1,12 +1,12 @@
-import { and, desc, eq, gte, inArray, isNotNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import type { Config } from "../../config/env.js";
 import type { DB } from "../../db/client.js";
 import {
   podcastEpisodes,
   podcastListenSessions,
-  podcastProgress,
   podcasts,
   userPodcastStatsHourly,
+  users,
 } from "../../db/schema.js";
 import {
   bucketKey,
@@ -119,14 +119,30 @@ export class PodcastStatsService {
     return result.changes;
   }
 
+  /// Pone a cero las estadisticas del usuario y oculta sus sesiones anteriores.
+  reset(userId: number): { ok: true } {
+    const now = this.now();
+    this.db.transaction((tx) => {
+      tx.delete(userPodcastStatsHourly)
+        .where(eq(userPodcastStatsHourly.userId, userId))
+        .run();
+      tx.update(users)
+        .set({ podcastStatsResetAt: now })
+        .where(eq(users.id, userId))
+        .run();
+    });
+    return { ok: true };
+  }
+
   summary(userId: number, range: StatsRange): PodcastStatsSummary {
+    const resetAt = this.resetAt(userId);
     const totalMs = this.totalMs(userId, range);
-    const episodesStarted = this.startedEpisodeIds(userId, range).length;
-    const episodesCompleted = this.completedEpisodeCount(userId, range);
+    const episodesStarted = this.startedEpisodeIds(userId, range, resetAt).length;
+    const episodesCompleted = this.completedEpisodeCount(userId, range, resetAt);
     const podcastsCount = this.db
       .select({ podcastId: podcastListenSessions.podcastId })
       .from(podcastListenSessions)
-      .where(and(...this.sessionConditions(userId, range)))
+      .where(and(...this.sessionConditions(userId, range, resetAt)))
       .groupBy(podcastListenSessions.podcastId)
       .all().length;
 
@@ -164,8 +180,9 @@ export class PodcastStatsService {
         .map((podcast) => [podcast.id, podcast]),
     );
 
-    const startedByPodcast = this.startedCountByPodcast(userId, range);
-    const completedByPodcast = this.completedCountByPodcast(userId, range);
+    const resetAt = this.resetAt(userId);
+    const startedByPodcast = this.startedCountByPodcast(userId, range, resetAt);
+    const completedByPodcast = this.completedCountByPodcast(userId, range, resetAt);
 
     return rows.flatMap((row) => {
       const podcast = podcastsById.get(row.podcastId);
@@ -218,6 +235,7 @@ export class PodcastStatsService {
     const completed = this.completedEpisodeIds(
       userId,
       rows.map((row) => row.episodeId),
+      this.resetAt(userId),
     );
 
     return rows.map((row) => ({
@@ -336,6 +354,7 @@ export class PodcastStatsService {
   }
 
   recent(userId: number, limit: number): RecentPodcastEntry[] {
+    const resetAt = this.resetAt(userId);
     return this.db
       .select({
         episodeId: podcastListenSessions.episodeId,
@@ -354,7 +373,12 @@ export class PodcastStatsService {
       .from(podcastListenSessions)
       .innerJoin(podcastEpisodes, eq(podcastListenSessions.episodeId, podcastEpisodes.id))
       .innerJoin(podcasts, eq(podcastListenSessions.podcastId, podcasts.id))
-      .where(eq(podcastListenSessions.userId, userId))
+      .where(
+        and(
+          eq(podcastListenSessions.userId, userId),
+          gte(podcastListenSessions.startedAt, resetAt),
+        ),
+      )
       .orderBy(desc(podcastListenSessions.startedAt))
       .limit(limit)
       .all()
@@ -373,6 +397,15 @@ export class PodcastStatsService {
       }));
   }
 
+  private resetAt(userId: number): number {
+    const row = this.db
+      .select({ resetAt: users.podcastStatsResetAt })
+      .from(users)
+      .where(eq(users.id, userId))
+      .get();
+    return row?.resetAt ?? 0;
+  }
+
   private totalMs(userId: number, range: StatsRange): number {
     const totalMs = sql<number>`sum(${userPodcastStatsHourly.totalMs})`;
     const row = this.db
@@ -383,24 +416,24 @@ export class PodcastStatsService {
     return Number(row?.totalMs ?? 0);
   }
 
-  private startedEpisodeIds(userId: number, range: StatsRange): number[] {
+  private startedEpisodeIds(userId: number, range: StatsRange, resetAt: number): number[] {
     return this.db
       .select({ episodeId: podcastListenSessions.episodeId })
       .from(podcastListenSessions)
-      .where(and(...this.sessionConditions(userId, range)))
+      .where(and(...this.sessionConditions(userId, range, resetAt)))
       .groupBy(podcastListenSessions.episodeId)
       .having(sql`sum(${podcastListenSessions.listenedMs}) >= ${PODCAST_STARTED_THRESHOLD_MS}`)
       .all()
       .map((row) => row.episodeId);
   }
 
-  private completedEpisodeCount(userId: number, range: StatsRange): number {
+  private completedEpisodeCount(userId: number, range: StatsRange, resetAt: number): number {
     return this.db
       .select({ episodeId: podcastListenSessions.episodeId })
       .from(podcastListenSessions)
       .where(
         and(
-          ...this.sessionConditions(userId, range),
+          ...this.sessionConditions(userId, range, resetAt),
           eq(podcastListenSessions.completed, 1),
         ),
       )
@@ -408,14 +441,18 @@ export class PodcastStatsService {
       .all().length;
   }
 
-  private startedCountByPodcast(userId: number, range: StatsRange): Map<number, number> {
+  private startedCountByPodcast(
+    userId: number,
+    range: StatsRange,
+    resetAt: number,
+  ): Map<number, number> {
     const rows = this.db
       .select({
         podcastId: podcastListenSessions.podcastId,
         episodeId: podcastListenSessions.episodeId,
       })
       .from(podcastListenSessions)
-      .where(and(...this.sessionConditions(userId, range)))
+      .where(and(...this.sessionConditions(userId, range, resetAt)))
       .groupBy(podcastListenSessions.podcastId, podcastListenSessions.episodeId)
       .having(sql`sum(${podcastListenSessions.listenedMs}) >= ${PODCAST_STARTED_THRESHOLD_MS}`)
       .all();
@@ -427,7 +464,11 @@ export class PodcastStatsService {
     return counts;
   }
 
-  private completedCountByPodcast(userId: number, range: StatsRange): Map<number, number> {
+  private completedCountByPodcast(
+    userId: number,
+    range: StatsRange,
+    resetAt: number,
+  ): Map<number, number> {
     const rows = this.db
       .select({
         podcastId: podcastListenSessions.podcastId,
@@ -436,7 +477,7 @@ export class PodcastStatsService {
       .from(podcastListenSessions)
       .where(
         and(
-          ...this.sessionConditions(userId, range),
+          ...this.sessionConditions(userId, range, resetAt),
           eq(podcastListenSessions.completed, 1),
         ),
       )
@@ -450,24 +491,33 @@ export class PodcastStatsService {
     return counts;
   }
 
-  private completedEpisodeIds(userId: number, episodeIds: number[]): Set<number> {
+  private completedEpisodeIds(
+    userId: number,
+    episodeIds: number[],
+    resetAt: number,
+  ): Set<number> {
     if (episodeIds.length === 0) return new Set();
     const rows = this.db
-      .select({ episodeId: podcastProgress.episodeId })
-      .from(podcastProgress)
+      .select({ episodeId: podcastListenSessions.episodeId })
+      .from(podcastListenSessions)
       .where(
         and(
-          eq(podcastProgress.userId, userId),
-          inArray(podcastProgress.episodeId, episodeIds),
-          isNotNull(podcastProgress.completedAt),
+          eq(podcastListenSessions.userId, userId),
+          gte(podcastListenSessions.startedAt, resetAt),
+          eq(podcastListenSessions.completed, 1),
+          inArray(podcastListenSessions.episodeId, episodeIds),
         ),
       )
+      .groupBy(podcastListenSessions.episodeId)
       .all();
     return new Set(rows.map((row) => row.episodeId));
   }
 
-  private sessionConditions(userId: number, range: StatsRange) {
-    const conditions = [eq(podcastListenSessions.userId, userId)];
+  private sessionConditions(userId: number, range: StatsRange, resetAt: number) {
+    const conditions = [
+      eq(podcastListenSessions.userId, userId),
+      gte(podcastListenSessions.startedAt, resetAt),
+    ];
     if (range.from) {
       conditions.push(
         gte(

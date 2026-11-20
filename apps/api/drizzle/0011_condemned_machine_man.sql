@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `podcast_stats_reset_at` integer DEFAULT 0 NOT NULL;

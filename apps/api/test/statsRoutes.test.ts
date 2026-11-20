@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { playbackSessions, userStationStatsHourly } from "../src/db/schema.js";
+import {
+  customStations,
+  favorites,
+  history,
+  playbackSessions,
+  userStationStatsHourly,
+} from "../src/db/schema.js";
 import { normalizeStation } from "../src/services/normalize.js";
 import { RAW_STATION, rawFromJson } from "./fixtures.js";
 import { request, setupServer, type TestServer } from "./helpers.js";
@@ -87,10 +93,11 @@ afterEach(() => {
 });
 
 describe("stats me", () => {
-  it("requiere autenticacion en los seis endpoints", async () => {
+  it("requiere autenticacion en las consultas y el reinicio", async () => {
     for (const path of PATHS) {
       await request(server.app).get(path).expect(401);
     }
+    await request(server.app).delete("/api/v1/stats/me").expect(401);
   });
 
   it("devuelve el contrato de los seis endpoints", async () => {
@@ -188,6 +195,72 @@ describe("stats me", () => {
     }
 
     const secondTop = await get("/api/v1/stats/me/top", first.token).expect(200);
+    expect(secondTop.body.items).toHaveLength(2);
+  });
+
+  it("reinicia las estadisticas de radio y conserva los datos funcionales", async () => {
+    const user = await registerUser("stats7@example.com");
+    await seed(user.id);
+    await server.ctx.db.insert(history).values({
+      userId: user.id,
+      stationId: STATION_A.id,
+      snapshot: JSON.stringify(STATION_A),
+      playedAt: 1,
+    });
+    await server.ctx.db.insert(favorites).values({
+      userId: user.id,
+      stationId: STATION_A.id,
+      snapshot: JSON.stringify(STATION_A),
+      createdAt: 1,
+    });
+    await server.ctx.db.insert(customStations).values({
+      userId: user.id,
+      stationId: "custom-reset",
+      name: "Mi emisora",
+      url: "https://stream.example.org/live",
+      snapshot: JSON.stringify(STATION_A),
+      createdAt: 1,
+    });
+
+    const reset = await request(server.app)
+      .delete("/api/v1/stats/me")
+      .set("Authorization", `Bearer ${user.token}`)
+      .expect(200);
+    expect(reset.body).toEqual({ ok: true });
+
+    for (const path of PATHS) {
+      const res = await get(path, user.token).expect(200);
+      expect(res.body.items).toEqual([]);
+    }
+
+    expect(server.ctx.db.select().from(history).all()).toHaveLength(1);
+    expect(server.ctx.db.select().from(favorites).all()).toHaveLength(1);
+    expect(server.ctx.db.select().from(customStations).all()).toHaveLength(1);
+
+    await request(server.app)
+      .delete("/api/v1/stats/me")
+      .set("Authorization", `Bearer ${user.token}`)
+      .expect(200);
+    for (const path of PATHS) {
+      const res = await get(path, user.token).expect(200);
+      expect(res.body.items).toEqual([]);
+    }
+  });
+
+  it("el reinicio de radio no afecta a las estadisticas de otros usuarios", async () => {
+    const first = await registerUser("stats8@example.com");
+    const second = await registerUser("stats9@example.com");
+    await seed(first.id);
+    await seed(second.id);
+
+    await request(server.app)
+      .delete("/api/v1/stats/me")
+      .set("Authorization", `Bearer ${first.token}`)
+      .expect(200);
+
+    const firstTop = await get("/api/v1/stats/me/top", first.token).expect(200);
+    expect(firstTop.body.items).toEqual([]);
+    const secondTop = await get("/api/v1/stats/me/top", second.token).expect(200);
     expect(secondTop.body.items).toHaveLength(2);
   });
 });

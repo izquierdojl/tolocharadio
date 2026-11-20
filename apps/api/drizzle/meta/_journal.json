@@ -78,6 +78,13 @@
       "when": 1794854424396,
       "tag": "0010_far_hawkeye",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1795214769254,
+      "tag": "0011_condemned_machine_man",
+      "breakpoints": true
     }
   ]
 }

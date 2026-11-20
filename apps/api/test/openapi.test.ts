@@ -34,6 +34,7 @@ describe("OpenAPI spec", () => {
       "/favorites",
       "/favorites/{stationId}",
       "/history",
+      "/stats/me",
       "/stats/me/top",
       "/stats/me/timeline",
       "/stats/me/habits",
@@ -63,6 +64,7 @@ describe("OpenAPI spec", () => {
       "/podcasts/queue/count",
       "/podcasts/queue/order",
       "/podcasts/queue/{episodeId}",
+      "/podcasts/stats",
     ];
     for (const path of expected) {
       expect(spec.paths).toHaveProperty(path);
@@ -128,6 +130,11 @@ describe("OpenAPI spec", () => {
     );
     expect(granularity?.schema?.enum).toEqual(["day", "week", "month"]);
     expect(granularity?.schema?.default).toBe("day");
+
+    const resetRadio = spec.paths["/stats/me"]!.delete! as { security?: unknown };
+    expect(resetRadio.security).toBeDefined();
+    const resetPodcasts = spec.paths["/podcasts/stats"]!.delete! as { security?: unknown };
+    expect(resetPodcasts.security).toBeDefined();
   });
 
   it("documenta el vaciado de la cola con keepEpisodeId", () => {

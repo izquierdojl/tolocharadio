@@ -1034,6 +1034,24 @@ export function buildOpenApi(): Record<string, unknown> {
           },
         },
       },
+      "/stats/me": {
+        delete: {
+          tags: ["Estadisticas"],
+          summary: "Reiniciar las estadisticas de radio del usuario",
+          ...requireAuth,
+          responses: {
+            "200": {
+              description: "Estadisticas de radio reiniciadas",
+              content: {
+                "application/json": {
+                  schema: { type: "object", properties: { ok: { type: "boolean" } } },
+                },
+              },
+            },
+            "401": errorResponses["401"],
+          },
+        },
+      },
       "/stats/me/top": {
         get: {
           tags: ["Estadisticas"],
@@ -1863,6 +1881,25 @@ export function buildOpenApi(): Record<string, unknown> {
               },
             },
             "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+          },
+        },
+      },
+      "/podcasts/stats": {
+        delete: {
+          tags: ["Podcasts"],
+          summary: "Reiniciar las estadisticas de podcasts del usuario",
+          ...requireAuth,
+          responses: {
+            "200": {
+              description: "Estadisticas de podcasts reiniciadas",
+              content: {
+                "application/json": {
+                  schema: { type: "object", properties: { ok: { type: "boolean" } } },
+                },
+              },
+            },
             "401": errorResponses["401"],
             "403": errorResponses["403"],
           },

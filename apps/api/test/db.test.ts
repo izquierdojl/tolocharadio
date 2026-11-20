@@ -19,6 +19,27 @@ describe("db schema", () => {
     expect(user!.email).toBe("db@example.com");
   });
 
+  it("inicializa el corte de estadisticas de podcasts y permite actualizarlo", async () => {
+    const server = setupServer();
+    const [user] = await server.ctx.db
+      .insert(users)
+      .values({ email: "db-reset@example.com", passwordHash: "x", createdAt: 1 })
+      .returning();
+    expect(user!.podcastStatsResetAt).toBe(0);
+
+    const resetAt = Date.UTC(2026, 10, 20, 12, 0);
+    await server.ctx.db
+      .update(users)
+      .set({ podcastStatsResetAt: resetAt })
+      .where(eq(users.id, user!.id));
+
+    const [updated] = await server.ctx.db
+      .select()
+      .from(users)
+      .where(eq(users.id, user!.id));
+    expect(updated!.podcastStatsResetAt).toBe(resetAt);
+  });
+
   it("hace unico el par (usuario, emisora) en favoritos", async () => {
     const server = setupServer();
     const [user] = await server.ctx.db.insert(users).values({ email: "db2@example.com", passwordHash: "x", createdAt: 1 }).returning();

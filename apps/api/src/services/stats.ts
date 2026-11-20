@@ -162,6 +162,27 @@ export class StatsService {
     }
   }
 
+  reset(userId: number): { ok: true } {
+    const now = this.now();
+    for (const session of this.active.values()) {
+      if (session.userId !== userId) continue;
+      session.pending.clear();
+      session.startedAt = now;
+      session.lastPulseAt = now;
+      session.accountedUpTo = now;
+      session.accountedMs = 0;
+    }
+
+    this.db.transaction((tx) => {
+      tx.delete(userStationStatsHourly)
+        .where(eq(userStationStatsHourly.userId, userId))
+        .run();
+      tx.delete(playbackSessions).where(eq(playbackSessions.userId, userId)).run();
+    });
+
+    return { ok: true };
+  }
+
   topStations(userId: number, range: StatsRange, limit: number): TopStationEntry[] {
     const totalMs = sql<number>`sum(${userStationStatsHourly.totalMs})`;
     const rows = this.db
