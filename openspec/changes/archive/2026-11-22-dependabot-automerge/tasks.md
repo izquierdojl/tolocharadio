@@ -8,7 +8,7 @@
 ## 2. Verificación
 
 - [x] 2.1 Ejecutar `npm run verify` y verificar que sigue en verde
-- [ ] 2.2 Tras mergear, comprobar en el siguiente PR de Dependabot minor/patch que queda con auto-merge activado (`gh pr view <n> --json autoMergeRequest`)
+- [x] 2.2 Tras mergear, comprobar en el siguiente PR de Dependabot minor/patch que queda con auto-merge activado (`gh pr view <n> --json autoMergeRequest`)
 
 ## Workflow follow-up
 
