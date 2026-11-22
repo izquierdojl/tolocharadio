@@ -116,6 +116,19 @@ export function podcastsRouter(ctx: AppContext): Router {
     }
   });
 
+  router.get("/podcasts/top", auth, async (req, res, next) => {
+    try {
+      if (!req.authUser) throw unauthorized();
+      const country = typeof req.query.country === "string" ? req.query.country : undefined;
+      const genre = typeof req.query.genre === "string" ? req.query.genre : undefined;
+      const rawLimit = typeof req.query.limit === "string" ? Number(req.query.limit) : undefined;
+      const items = await ctx.podcastDiscovery.getTop(country, genre, rawLimit);
+      res.json({ items });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   router.post("/podcasts/resolve", auth, async (req, res, next) => {
     try {
       const user = req.authUser;

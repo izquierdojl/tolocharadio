@@ -277,6 +277,16 @@ export function searchPodcasts(q: string, limit = 20): Promise<{ items: PodcastS
   return api.get<{ items: PodcastSearchResult[] }>(`/podcasts/search?${params.toString()}`);
 }
 
+export function fetchTopPodcasts(
+  country: string,
+  genre?: string | null,
+  limit = 50,
+): Promise<{ items: PodcastSearchResult[] }> {
+  const params = new URLSearchParams({ country, limit: String(limit) });
+  if (genre) params.set("genre", genre);
+  return api.get<{ items: PodcastSearchResult[] }>(`/podcasts/top?${params.toString()}`);
+}
+
 export function resolvePodcastFeed(
   feedUrl: string,
 ): Promise<{ podcast: PodcastSummary; episodes: PodcastEpisodePage }> {
