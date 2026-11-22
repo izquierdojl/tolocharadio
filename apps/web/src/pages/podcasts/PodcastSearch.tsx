@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import {
   bulkSubscribePodcasts,
   fetchPodcastOpml,
+  fetchTopPodcasts,
   fetchPublicConfig,
   resolvePodcastFeed,
   searchPodcasts,
@@ -13,55 +14,12 @@ import {
 } from "../../lib/api.js";
 import { parseOpmlFeedUrls } from "../../lib/podcastQueue.js";
 import { runOpmlImport } from "../../lib/opmlImport.js";
-import { PodcastCover } from "../../components/podcasts/PodcastCover.js";
-import type { PodcastSearchResult } from "../../lib/types.js";
+import { PodcastSearchResultCard } from "../../components/podcasts/PodcastSearchResultCard.js";
+import { TopPodcastsSection } from "../../components/podcasts/TopPodcastsSection.js";
+import { useTopChartsStore } from "../../stores/topCharts.js";
 
 const inputClass =
   "w-full rounded-lg border border-line-strong bg-surface px-3 py-2.5 text-sm text-foreground placeholder:text-faint focus:border-pine-500 focus:outline-none";
-
-function SearchResultCard({
-  result,
-  onSubscribe,
-  pending,
-}: {
-  result: PodcastSearchResult;
-  onSubscribe: (feedUrl: string) => void;
-  pending: boolean;
-}): React.JSX.Element {
-  return (
-    <article className="flex gap-3 rounded-2xl border border-line bg-surface-raised p-3">
-      <div className="size-20 shrink-0 overflow-hidden rounded-xl bg-pine-800">
-        <PodcastCover src={result.imageUrl} alt={result.title} className="size-full" />
-      </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <h3 className="truncate font-semibold text-foreground">{result.title}</h3>
-        <p className="truncate text-xs text-muted">{result.author ?? "Podcast"}</p>
-        {result.description ? (
-          <p className="line-clamp-2 text-sm text-muted">{result.description}</p>
-        ) : null}
-        <div className="mt-auto flex items-center gap-2">
-          {result.categories.slice(0, 2).map((category) => (
-            <span
-              key={category}
-              className="rounded-full bg-pine-800 px-2 py-0.5 text-[10px] uppercase tracking-wide text-pine-300"
-            >
-              {category}
-            </span>
-          ))}
-          <button
-            type="button"
-            onClick={() => onSubscribe(result.feedUrl)}
-            disabled={pending}
-            className="ml-auto inline-flex items-center gap-1 rounded-lg bg-pine-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-pine-500 disabled:opacity-50"
-          >
-            <Rss className="size-3.5" />
-            Suscribirse
-          </button>
-        </div>
-      </div>
-    </article>
-  );
-}
 
 interface OpmlImportState {
   status: "importing" | "done";
@@ -136,6 +94,30 @@ export function PodcastSearch() {
     queryFn: () => searchPodcasts(submitted),
     enabled: submitted.length > 0 && provider !== "none",
   });
+
+  const topCountry = useTopChartsStore((s) => s.country);
+  const topGenre = useTopChartsStore((s) => s.genre);
+  const setTopCountry = useTopChartsStore((s) => s.setCountry);
+  const setTopGenre = useTopChartsStore((s) => s.setGenre);
+  const showTop = provider === "itunes" && !submitted;
+
+  const topQuery = useQuery({
+    queryKey: ["podcast-top", topCountry, topGenre],
+    queryFn: () => fetchTopPodcasts(topCountry, topGenre),
+    enabled: showTop,
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+  });
+  // Si falla el filtro por categoria, se mantiene el ranking general.
+  const topFallbackQuery = useQuery({
+    queryKey: ["podcast-top", topCountry, null],
+    queryFn: () => fetchTopPodcasts(topCountry, null),
+    enabled: showTop && topGenre !== null && topQuery.isError,
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+  });
+  const genreUnavailable = topGenre !== null && topQuery.isError && !topFallbackQuery.isError;
+  const topActive = topGenre !== null && topQuery.isError ? topFallbackQuery : topQuery;
 
   const subscribeMutation = useMutation({
     mutationFn: (input: { podcastId?: number; feedUrl?: string }) => subscribePodcast(input),
@@ -278,7 +260,10 @@ export function PodcastSearch() {
           <div className="flex gap-2">
             <input
               value={term}
-              onChange={(event) => setTerm(event.target.value)}
+              onChange={(event) => {
+                setTerm(event.target.value);
+                if (!event.target.value.trim()) setSubmitted("");
+              }}
               className={inputClass}
               placeholder="Nombre del podcast"
               aria-label="Buscar podcasts"
@@ -447,7 +432,7 @@ export function PodcastSearch() {
           ) : (
             <div className="grid gap-3 xl:grid-cols-2">
               {searchQuery.data?.items.map((result) => (
-                <SearchResultCard
+                <PodcastSearchResultCard
                   key={result.feedUrl}
                   result={result}
                   onSubscribe={(feedUrl) => subscribeMutation.mutate({ feedUrl })}
@@ -457,6 +442,30 @@ export function PodcastSearch() {
             </div>
           )}
         </section>
+      ) : null}
+
+      {showTop ? (
+        <TopPodcastsSection
+          country={topCountry}
+          genre={topGenre}
+          items={topActive.data?.items}
+          loading={topActive.isLoading || (topGenre !== null && topQuery.isError && topFallbackQuery.isPending)}
+          error={
+            topActive.isError
+              ? topActive.error instanceof Error
+                ? topActive.error.message
+                : "No se pudo cargar el ranking"
+              : null
+          }
+          genreUnavailable={genreUnavailable}
+          subscribePending={subscribeMutation.isPending}
+          onCountryChange={setTopCountry}
+          onGenreChange={setTopGenre}
+          onSubscribe={(feedUrl) => subscribeMutation.mutate({ feedUrl })}
+          onRetry={() => {
+            void topQuery.refetch();
+          }}
+        />
       ) : null}
 
       <p className="text-sm text-muted">

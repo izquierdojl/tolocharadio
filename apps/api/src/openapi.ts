@@ -1316,6 +1316,44 @@ export function buildOpenApi(): Record<string, unknown> {
           },
         },
       },
+      "/podcasts/top": {
+        get: {
+          tags: ["Podcasts"],
+          summary: "Ranking de podcasts populares del directorio de Apple",
+          ...requireAuth,
+          parameters: [
+            {
+              name: "country",
+              in: "query",
+              required: false,
+              schema: { type: "string", pattern: "^[a-zA-Z]{2}$", default: "es" },
+            },
+            {
+              name: "genre",
+              in: "query",
+              required: false,
+              description: "Identificador numerico de categoria de Apple (p. ej. 1303 = Comedia)",
+              schema: { type: "string", pattern: "^[0-9]{1,6}$" },
+            },
+            {
+              name: "limit",
+              in: "query",
+              required: false,
+              schema: { type: "integer", minimum: 1, maximum: 100, default: 50 },
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Ranking ordenado por posicion",
+              content: { "application/json": { schema: listOf("PodcastSearchResult") } },
+            },
+            "400": errorResponses["400"],
+            "401": errorResponses["401"],
+            "403": errorResponses["403"],
+            "503": errorResponses["503"],
+          },
+        },
+      },
       "/podcasts/search": {
         get: {
           tags: ["Podcasts"],
