@@ -1,8 +1,9 @@
 version: 2
 
 updates:
-  # Dependencias npm (raíz + workspaces). Los parches de desarrollo y las
-  # actualizaciones de GitHub Actions se fusionan solas tras pasar CI.
+  # Dependencias npm (raíz + workspaces). Las actualizaciones minor/patch de
+  # npm y de GitHub Actions activan el auto-merge (workflow dependabot-automerge)
+  # y se fusionan cuando pasa CI; las versiones mayores se revisan a mano.
   - package-ecosystem: "npm"
     directory: "/"
     schedule:

@@ -1,0 +1,36 @@
+name: dependabot-automerge
+
+# Activa el auto-merge (squash) en los PR de Dependabot que son seguros:
+# minor/patch de npm y de GitHub Actions. Las versiones mayores y los crates de
+# Rust (la CI no compila Rust) quedan para revisión manual.
+# El merge real lo hace GitHub cuando pasan los checks requeridos de `main`.
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Metadatos de Dependabot
+        id: metadata
+        uses: dependabot/fetch-metadata@v2.4.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Activar auto-merge
+        # Los PR agrupados solo contienen minor/patch por configuración de dependabot.yml.
+        if: >-
+          (steps.metadata.outputs.package-ecosystem == 'npm_and_yarn' ||
+           steps.metadata.outputs.package-ecosystem == 'github_actions') &&
+          (steps.metadata.outputs.dependency-group != '' ||
+           steps.metadata.outputs.update-type != 'version-update:semver-major')
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
